@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.0
+// @version      1.9.3
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -31,7 +31,12 @@
     HOST_ID: 'pagetrace-floating-widget',
     apiKey: 'AIzaSyA91weJPSAeO58tB0cYS38-q-XpXJTbjLc',
     projectId: 'page-trace-app',
-    authAppUrl: 'https://page-trace-app.web.app/auth.html',
+    get authAppUrl() {
+      if (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') {
+        return `${window.location.origin}/auth.html`;
+      }
+      return 'https://page-trace-app.web.app/auth.html';
+    },
     get idToken() { return GM_getValue('pt_id_token', ''); },
     get refreshToken() { return GM_getValue('pt_refresh_token', ''); },
     get uid() { return GM_getValue('pt_uid', ''); },
@@ -195,30 +200,47 @@
   }
 
   // ==========================================
-  // 5. Auth 桥接：接收来自 Web Auth 页面的认证同步
+  // 5. Auth 桥接：接收来自 Web Auth 页面与看板的双向认证同步
   // ==========================================
   function setupAuthBridgeListener() {
     window.addEventListener('message', (event) => {
       const data = event.data;
-      if (!data || data.source !== 'PAGETRACE_AUTH_SUCCESS') return;
+      if (!data) return;
 
-      const { idToken, refreshToken, uid, expiresIn, apiKey, projectId } = data.payload || {};
-      if (idToken && uid) {
-        GM_setValue('pt_id_token', idToken);
-        GM_setValue('pt_uid', uid);
-        if (refreshToken) GM_setValue('pt_refresh_token', refreshToken);
-        if (apiKey) GM_setValue('pt_api_key', apiKey);
-        if (projectId) GM_setValue('pt_project_id', projectId);
-        GM_setValue('pt_token_expiry', Date.now() + (Number(expiresIn) || 3600) * 1000);
+      if (data.source === 'PAGETRACE_AUTH_SUCCESS') {
+        const { idToken, refreshToken, uid, expiresIn, apiKey, projectId } = data.payload || {};
+        if (idToken && uid) {
+          GM_setValue('pt_id_token', idToken);
+          GM_setValue('pt_uid', uid);
+          if (refreshToken) GM_setValue('pt_refresh_token', refreshToken);
+          if (apiKey) GM_setValue('pt_api_key', apiKey);
+          if (projectId) GM_setValue('pt_project_id', projectId);
+          GM_setValue('pt_token_expiry', Date.now() + (Number(expiresIn) || 3600) * 1000);
 
-        if (window.opener) {
-          try {
-            window.opener.postMessage({ source: 'PAGETRACE_AUTH_CONFIRMED' }, '*');
-          } catch (_) {}
+          if (window.opener) {
+            try {
+              window.opener.postMessage({ source: 'PAGETRACE_AUTH_CONFIRMED' }, '*');
+            } catch (_) {}
+          }
+          // 仅在独立授权弹窗页面 (auth.html) 执行自动关闭，切勿关闭看板页面 (index.html)
+          if (window.location.pathname.includes('auth.html')) {
+            setTimeout(() => {
+              try { window.close(); } catch (_) {}
+            }, 800);
+          }
         }
-        alert('🎉 PageTrace 认证授权已同步至油猴脚本！您可以关闭此页面并开始使用。');
+      } else if (data.source === 'PAGETRACE_AUTH_LOGOUT') {
+        GM_deleteValue('pt_id_token');
+        GM_deleteValue('pt_refresh_token');
+        GM_deleteValue('pt_uid');
+        GM_deleteValue('pt_token_expiry');
       }
     });
+
+    // 主动向宿主页面握手（若用户已在看板页面登录，立刻静默获取同步凭据）
+    try {
+      window.postMessage({ source: 'PAGETRACE_PING' }, '*');
+    } catch (_) {}
   }
 
   // ==========================================
@@ -437,6 +459,28 @@
         border-color: #93c5fd;
         box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
       }
+      .pt-pill-btn.success {
+        opacity: 1;
+        border-color: #93c5fd;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+      }
+      .pt-check-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        color: #2563eb;
+        opacity: 0;
+        transform: scale(0.6);
+        transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+      }
+      .pt-check-icon.show {
+        opacity: 1;
+        transform: scale(1);
+      }
 
       /* 暗色模式适配 */
       @media (prefers-color-scheme: dark) {
@@ -468,6 +512,14 @@
           border-color: #60a5fa;
           color: #93c5fd;
           box-shadow: 0 6px 20px rgba(96, 165, 250, 0.25);
+        }
+        .pt-pill-btn.success {
+          border-color: #3b82f6;
+          background: #1e293b;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+        }
+        .pt-check-icon {
+          color: #3b82f6;
         }
         .pt-send-btn {
           background: #3b82f6;
@@ -537,6 +589,15 @@
     mainBtn.type = 'button';
     mainBtn.title = '左键：复制 / 右键：速记 / Ctrl+左键：直接保存 / Ctrl+右键：打开看板 / Shift+左键：隐藏';
 
+    const checkIcon = document.createElement('span');
+    checkIcon.className = 'pt-check-icon';
+    checkIcon.innerHTML = `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    mainBtn.appendChild(checkIcon);
+
     bar.append(toast, mainBtn);
     wrap.append(card, bar);
     shadow.append(style, wrap);
@@ -548,6 +609,17 @@
       toast.textContent = msg;
       toast.classList.add('show');
       toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    let checkTimer;
+    function showSuccessCheck(duration = 1800) {
+      clearTimeout(checkTimer);
+      checkIcon.classList.add('show');
+      mainBtn.classList.add('success');
+      checkTimer = setTimeout(() => {
+        checkIcon.classList.remove('show');
+        mainBtn.classList.remove('success');
+      }, duration);
     }
 
     function toggleCard(show) {
@@ -585,7 +657,7 @@
         const copyPayload = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
         copyText(copyPayload).catch(() => {});
 
-        showToast('✓ 已保存到 Firestore');
+        showSuccessCheck();
         textarea.value = '';
         toggleCard(false);
       } catch (err) {
@@ -604,7 +676,7 @@
       const text = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
       try {
         await copyText(text);
-        showToast('已复制');
+        showSuccessCheck();
         toggleCard(false);
       } catch (e) {
         showToast('❌ 复制失败');
@@ -621,13 +693,11 @@
         return;
       }
 
-      showToast('正在保存...');
-
       try {
         await saveToFirestore({ title, url, note: '' });
         const copyPayload = `${title}\n${url}`;
         copyText(copyPayload).catch(() => {});
-        showToast('✓ 已保存 Title & URL');
+        showSuccessCheck();
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
         showToast(`❌ 保存失败: ${err.message || '网络错误'}`);
@@ -675,7 +745,7 @@
     saveBtn.addEventListener('click', submitNote);
 
     textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.shiftKey) {
+      if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         submitNote();
       } else if (e.key === 'Escape') {
@@ -754,6 +824,9 @@
         GM_deleteValue('pt_refresh_token');
         GM_deleteValue('pt_uid');
         GM_deleteValue('pt_token_expiry');
+        try {
+          window.postMessage({ source: 'PAGETRACE_SCRIPT_LOGOUT' }, '*');
+        } catch (_) {}
         alert('已退出登录');
         modal.remove();
       });

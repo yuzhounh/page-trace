@@ -125,45 +125,69 @@
       statusEl.textContent = text;
     }
 
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+
+    async function syncAuthAndClose(user, messagePrefix) {
+      const idToken = await user.getIdToken();
+      const refreshToken = user.refreshToken || '';
+
+      showStatus(`${messagePrefix}: ${user.displayName || user.email}，已向油猴插件同步凭据...`, 'success');
+
+      // 发送给油猴脚本监听 (同域 / postMessage)
+      const payload = {
+        source: 'PAGETRACE_AUTH_SUCCESS',
+        payload: {
+          idToken,
+          refreshToken,
+          uid: user.uid,
+          expiresIn: 3600,
+          apiKey: FIREBASE_CONFIG.apiKey,
+          projectId: FIREBASE_CONFIG.projectId
+        }
+      };
+
+      window.postMessage(payload, '*');
+      if (window.opener) {
+        try {
+          window.opener.postMessage(payload, '*');
+        } catch (_) {}
+      }
+
+      setTimeout(() => {
+        showStatus('🎉 授权已完成，正在自动关闭窗口...', 'success');
+        setTimeout(() => {
+          window.close();
+        }, 800);
+      }, 500);
+    }
+
+    let isManualLoggingIn = false;
+
+    // 若当前同域浏览器已经处于登录状态，直接自动同步并关闭，无需用户重复点击
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (user && !isManualLoggingIn) {
+        try {
+          await syncAuthAndClose(user, '✓ 检测到已登录账号');
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+
     loginBtn.addEventListener('click', async () => {
       try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp(FIREBASE_CONFIG);
-        }
+        isManualLoggingIn = true;
         showStatus('正在呼出 Google 账号选择...', 'info');
 
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await firebase.auth().signInWithPopup(provider);
         const user = result.user;
 
-        const idToken = await user.getIdToken();
-        const refreshToken = user.refreshToken;
-
-        showStatus(`✓ 登录成功: ${user.displayName || user.email}，已向油猴插件同步凭据...`, 'success');
-
-        // 发送给油猴脚本监听 (同域 / postMessage)
-        const payload = {
-          source: 'PAGETRACE_AUTH_SUCCESS',
-          payload: {
-            idToken,
-            refreshToken,
-            uid: user.uid,
-            expiresIn: 3600,
-            apiKey: FIREBASE_CONFIG.apiKey,
-            projectId: FIREBASE_CONFIG.projectId
-          }
-        };
-
-        window.postMessage(payload, '*');
-        if (window.opener) {
-          window.opener.postMessage(payload, '*');
-        }
-
-        setTimeout(() => {
-          showStatus('🎉 授权已完成！您可以关闭此页面返回任意网页使用油猴脚本。', 'success');
-        }, 1000);
-
+        await syncAuthAndClose(user, '✓ 登录成功');
       } catch (err) {
+        isManualLoggingIn = false;
         console.error(err);
         showStatus('登录失败: ' + (err.message || '未知错误'), 'error');
       }

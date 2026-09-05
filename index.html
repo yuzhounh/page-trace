@@ -873,8 +873,8 @@
               <td>文本<strong>换行</strong>，方便编写多行备注或分段</td>
             </tr>
             <tr>
-              <td><span class="doc-kbd">Shift + Enter</span></td>
-              <td><strong>保存</strong>速记到云端 Firestore 并关闭窗口</td>
+              <td><span class="doc-kbd">Shift + Enter</span> / <span class="doc-kbd">Ctrl + Enter</span></td>
+              <td><strong>保存</strong>速记到云端并关闭窗口</td>
             </tr>
             <tr>
               <td><span class="doc-kbd">Esc</span></td>
@@ -1023,8 +1023,31 @@
       return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
     }
 
-    // 监听 Google 登录状态
-    auth.onAuthStateChanged((user) => {
+    // 同步认证凭据给油猴插件
+    async function syncAuthToUserscript(user) {
+      if (!user) return;
+      try {
+        const idToken = await user.getIdToken();
+        const refreshToken = user.refreshToken || '';
+        const payload = {
+          source: 'PAGETRACE_AUTH_SUCCESS',
+          payload: {
+            idToken,
+            refreshToken,
+            uid: user.uid,
+            expiresIn: 3600,
+            apiKey: firebaseConfig.apiKey,
+            projectId: firebaseConfig.projectId
+          }
+        };
+        window.postMessage(payload, '*');
+      } catch (err) {
+        console.warn('[PageTrace] 同步凭据给插件失败:', err);
+      }
+    }
+
+    // 监听 Google 登录状态及 Token 自动刷新
+    auth.onIdTokenChanged(async (user) => {
       currentUser = user;
       if (user) {
         loginBtn.style.display = 'none';
@@ -1047,6 +1070,9 @@
         dropdownEmail.textContent = user.email || '';
 
         bindFirestoreRealtime(user.uid);
+
+        // 同步登录态到油猴插件
+        syncAuthToUserscript(user);
       } else {
         loginBtn.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
@@ -1054,6 +1080,24 @@
         if (unsubscribeNotes) unsubscribeNotes();
         notesData = [];
         renderList();
+
+        // 同步退出登录态到油猴插件
+        window.postMessage({ source: 'PAGETRACE_AUTH_LOGOUT' }, '*');
+      }
+    });
+
+    // 监听来自插件的消息通道（如握手 Ping、插件端退出等）
+    window.addEventListener('message', (e) => {
+      const data = e.data;
+      if (!data) return;
+      if (data.source === 'PAGETRACE_PING') {
+        if (currentUser) {
+          syncAuthToUserscript(currentUser);
+        }
+      } else if (data.source === 'PAGETRACE_SCRIPT_LOGOUT') {
+        if (auth.currentUser) {
+          auth.signOut();
+        }
       }
     });
 
@@ -1331,10 +1375,10 @@
 
     // 新建速记输入框交互：
     // Enter 换行
-    // Shift + Enter 保存发送
+    // Shift + Enter / Ctrl + Enter 保存发送
     // Esc 取消
     createNoteInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.shiftKey) {
+      if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         handleCreateSubmit();
       } else if (e.key === 'Escape') {
@@ -1421,9 +1465,9 @@
 
     btnSaveEdit.addEventListener('click', handleSaveEdit);
 
-    // 编辑弹窗输入框快捷键：Shift+Enter 保存，Esc 取消
+    // 编辑弹窗输入框快捷键：Shift+Enter / Ctrl+Enter 保存，Esc 取消
     editNote.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.shiftKey) {
+      if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         handleSaveEdit();
       } else if (e.key === 'Escape') {
