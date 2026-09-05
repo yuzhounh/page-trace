@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="ptGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#ptGrad)"/>
+  <g stroke="#ffffff" stroke-width="8" stroke-linecap="round">
+    <line x1="34" y1="45" x2="94" y2="45"/>
+    <line x1="34" y1="64" x2="94" y2="64"/>
+    <line x1="34" y1="83" x2="68" y2="83"/>
+  </g>
+</svg>

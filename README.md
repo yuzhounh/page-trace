@@ -1,47 +1,56 @@
-# PageTrace - Web Memo & Cloud Capture
+<p align="center">
+  <img src="logo.svg" width="104" alt="PageTrace Logo" />
+</p>
 
-基于「Copy Title & URL」油猴脚本扩展的云端速记与多端实时同步解决方案。
+<h1 align="center">PageTrace</h1>
 
-## 核心设计特性
+<p align="center">网页速记与云端剪藏，多端实时同步。</p>
 
-1. **极致轻量的油猴端（REST Direct Write）**：
-   - 采用 `GM_xmlhttpRequest` 直连 Firestore REST API，无需将庞大的 Firebase SDK 打包进所有网页。
-   - 保持原脚本毫秒级加载与轻量纯净体验。
+<p align="center">
+  <a href="https://page-trace-app.web.app/">在线访问</a>
+</p>
 
-2. **微交互速记卡片（Shadow DOM）**：
-   - 保留原有右下角优雅磨砂玻璃胶囊。
-   - **左键点击**：快速复制当前网页 Title & URL 到剪贴板。
-   - **右键点击**：展开 4 行速记输入框（显示当前页面 Title 预览 + 向上箭头保存按钮）。
-   - **Ctrl + 左键**：直接将当前 Title & URL 保存至云端 Firestore。
-   - **Ctrl + 右键**：在前台新标签页中打开云端速记看板。
-   - **Shift + 左键**：隐藏浮动按钮。
-   - **Shift + Enter**：保存速记到云端；**Enter**：换行；**Esc**：收起弹窗。
+## 项目简介
 
-3. **优雅的 Google 认证桥接（Auth Bridge）**：
-   - 解决用户在任意第三方域名（Github, 知乎等）无法直接执行 Firebase Google OAuth 的问题。
-   - 提供专属认证页 `auth.html`（可托管在 Firebase Hosting），通过 `window.postMessage` 与油猴脚本进行授权握手。
-   - 内置 Google SecureToken REST API 刷新机制，支持长时间免重复登录。
+PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**油猴扩展插件**与**云端实时速记看板**两部分组成：
 
-4. **单 Document 数据模型（适合实时多端同步）**：
-   - 数据写入路径：`users/{uid}/notes/{noteId}`。
-   - 配合 `ai-resource-hub` 或 Web 管理端使用 `onSnapshot()`，一台设备保存，另一台设备即刻呈现。
-
----
-
-## 文件结构
-
-- [pagetrace.user.js](file:///d:/Archives/20260904%20Web%20memo/pagetrace.user.js)：油猴脚本核心源码。
-- [auth.html](file:///d:/Archives/20260904%20Web%20memo/auth.html)：Google 登录与 Auth Bridge 握手页。
-- [firestore.rules](file:///d:/Archives/20260904%20Web%20memo/firestore.rules)：严格按 UID 隔离的 Firestore 安全规则。
-
----
+- **油猴端**：在网页右下角常驻微交互磨砂玻璃胶囊，支持一键复制网页标题与网址、随时呼出 4 行速记输入卡片，通过轻量 REST API 直接同步至云端 Firestore，无需配置任何 Firebase 密钥。
+- **Web 看板**：基于 Firebase 驱动的实时管理面板，支持实时同步（onSnapshot）、卡片展示、全局搜索（Spotlight 风格）、在线速记与多端协同管理。
 
 ## 快速使用指南
 
 ### 第一步：安装脚本
-将 `pagetrace.user.js` 代码复制并安装到 Tampermonkey / Violentmonkey。
 
-### 第二步：配置 Firebase 认证
-1. 在油猴浮动按钮上按住 `Alt` 并点击，或在油猴扩展菜单中选择 `⚙️ PageTrace 认证与配置`。
-2. 填入你的 Firebase `Project ID` 与 `Web API Key`。
-3. 若部署了 `auth.html` 到你的 Firebase Hosting，直接点击「🚀 打开 Auth 登录页完成认证」，完成 Google 账号一键授权绑定。
+在 Greasy Fork 安装已发布的油猴插件：
+
+🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
+
+支持 Tampermonkey、Violentmonkey 或 ScriptCat 扩展。
+
+### 第二步：登录使用
+
+**无需配置复杂的 Firebase 认证参数或密钥。**
+
+1. 打开任意网页，点击右下角 PageTrace 悬浮球（或使用快捷键呼出速记卡片）。
+2. 点击卡片上的登录提示，或在油猴脚本菜单中点击 **「🔐 PageTrace 账号授权」**。
+3. 在弹出的授权窗口中直接登录您的 **Google 账号**，授权完成后即刻开箱即用，所有速记笔记将自动无缝同步到您的专属个人云端空间。
+
+## 交互快捷键
+
+| 操作 | 触发方式 | 说明 |
+| :--- | :--- | :--- |
+| **一键复制** | 鼠标左键点击悬浮球 | 快速提取并清洗当前网页 Title & URL 到剪贴板 |
+| **展开速记** | 鼠标右键点击悬浮球 | 展开 4 行速记输入框（含页面标题预览与发送按钮） |
+| **直接云端速记** | Ctrl + 鼠标左键点击 | 直接将当前网页 Title & URL 保存至个人云端 |
+| **打开在线看板** | Ctrl + 鼠标右键点击 | 在前台新标签页中打开云端速记看板 (page-trace-app.web.app) |
+| **隐藏悬浮球** | Shift + 鼠标左键点击 | 临时隐藏当前页面的悬浮球 |
+| **发送速记** | Shift + Enter | 在速记卡片中提交保存并自动同步到云端 |
+| **输入换行** | Enter | 在速记输入框内换行 |
+| **关闭速记卡片** | Esc | 退出当前速记弹窗 |
+
+## 文件结构
+
+- `pagetrace.user.js`：油猴脚本核心源码（轻量 REST 直连写入，支持 Auth Bridge 授权握手）。
+- `index.html`：云端速记看板单文件 SPA 源码（支持实时同步、搜索与明暗主题）。
+- `auth.html`：Google OAuth 登录与油猴脚本安全授权握手页。
+- `firestore.rules`：严格按 Google 账户 UID 隔离的 Firestore 云端安全规则。
