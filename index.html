@@ -497,7 +497,7 @@
     }
     #createModal .modal-card {
       width: 480px;
-      padding: 14px 18px 14px;
+      padding: 13px 18px 16px;
       gap: 10px;
       border-radius: 14px;
     }
@@ -557,11 +557,44 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
-    #createNoteInput {
-      height: 92px;
+    .create-input-wrap {
+      position: relative;
+      width: 100%;
+    }
+    #createNoteInput, #editNote {
+      height: 96px;
       line-height: 1.5;
       resize: none;
+      padding-right: 42px;
       display: block;
+    }
+    .input-send-btn {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+    .input-send-btn:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+    .input-send-btn:active {
+      transform: scale(0.95);
+    }
+    .input-send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     .modal-footer {
       display: flex;
@@ -768,11 +801,15 @@
         </div>
         <button class="modal-close-x" id="closeCreateModal">✕</button>
       </div>
-      <div class="form-group">
-        <textarea class="form-input" id="createNoteInput" rows="4" placeholder=""></textarea>
-      </div>
-      <div class="modal-footer" style="justify-content: flex-end; margin-top: 2px;">
-        <button class="modal-btn" id="btnSubmitCreate" title="保存 (Shift+Enter)">保存</button>
+      <div class="form-group" style="margin-bottom: 0;">
+        <div class="create-input-wrap">
+          <textarea class="form-input" id="createNoteInput" rows="4" placeholder=""></textarea>
+          <button class="input-send-btn" id="btnSubmitCreate" title="保存 (Shift+Enter)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -896,13 +933,16 @@
         <label class="form-label">链接 (URL)</label>
         <input type="text" class="form-input" id="editUrl" />
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">速记备注</label>
-        <textarea class="form-input" id="editNote" rows="4" style="resize: vertical;"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-btn" id="btnCancelEdit">取消</button>
-        <button class="modal-btn primary" id="btnSaveEdit">保存更改</button>
+        <div class="create-input-wrap">
+          <textarea class="form-input" id="editNote" rows="4"></textarea>
+          <button class="input-send-btn" id="btnSaveEdit" title="保存更改 (Shift+Enter)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -968,7 +1008,6 @@
     const editUrl = document.getElementById('editUrl');
     const editNote = document.getElementById('editNote');
     const closeEditModal = document.getElementById('closeEditModal');
-    const btnCancelEdit = document.getElementById('btnCancelEdit');
     const btnSaveEdit = document.getElementById('btnSaveEdit');
 
     // 格式化时间
@@ -1266,7 +1305,6 @@
 
       try {
         btnSubmitCreate.disabled = true;
-        btnSubmitCreate.textContent = '保存中...';
         await db.collection('users').doc(currentUser.uid).collection('notes').add({
           title: title || '随手速记',
           url: url || '',
@@ -1281,7 +1319,6 @@
         alert('保存失败: ' + err.message);
       } finally {
         btnSubmitCreate.disabled = false;
-        btnSubmitCreate.textContent = '保存';
       }
     }
 
@@ -1348,11 +1385,6 @@
       currentEditingId = null;
     });
 
-    btnCancelEdit.addEventListener('click', () => {
-      editModal.classList.remove('show');
-      currentEditingId = null;
-    });
-
     editModal.addEventListener('click', (e) => {
       if (e.target === editModal) {
         editModal.classList.remove('show');
@@ -1360,13 +1392,14 @@
       }
     });
 
-    btnSaveEdit.addEventListener('click', async () => {
+    async function handleSaveEdit() {
       if (!currentUser || !currentEditingId) return;
       const title = editTitle.value.trim();
       const url = editUrl.value.trim();
       const note = editNote.value.trim();
 
       try {
+        btnSaveEdit.disabled = true;
         await db.collection('users').doc(currentUser.uid).collection('notes').doc(currentEditingId).update({
           title: title || '无标题页面',
           url: url,
@@ -1376,7 +1409,36 @@
         currentEditingId = null;
       } catch (err) {
         alert('修改失败: ' + err.message);
+      } finally {
+        btnSaveEdit.disabled = false;
       }
+    }
+
+    btnSaveEdit.addEventListener('click', handleSaveEdit);
+
+    // 编辑弹窗输入框快捷键：Shift+Enter 保存，Esc 取消
+    editNote.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleSaveEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        editModal.classList.remove('show');
+        currentEditingId = null;
+      }
+    });
+
+    [editTitle, editUrl].forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSaveEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          editModal.classList.remove('show');
+          currentEditingId = null;
+        }
+      });
     });
 
     // 删除单条笔记

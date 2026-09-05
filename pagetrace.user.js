@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.8.8
+// @version      1.8.9
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -317,12 +317,16 @@
         text-decoration: underline;
       }
 
+      .pt-input-wrap {
+        position: relative;
+        width: 100%;
+      }
       .pt-textarea {
         width: 100%;
         box-sizing: border-box;
         border: 1px solid #cbd5e1;
         border-radius: 8px;
-        padding: 8px 10px;
+        padding: 8px 36px 8px 10px;
         font-size: 13px;
         line-height: 1.5;
         resize: none;
@@ -338,33 +342,31 @@
         border-color: #3b82f6;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
       }
-      .pt-card-footer {
+      .pt-send-btn {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: none;
+        background: #2563eb;
+        color: #ffffff;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
-        margin-top: 2px;
-      }
-      .pt-save-btn {
-        padding: 5px 14px;
-        border-radius: 7px;
-        font-size: 12px;
-        font-weight: 500;
+        justify-content: center;
         cursor: pointer;
-        border: 1px solid #cbd5e1;
-        background: #ffffff;
-        color: #334155;
-        transition: all 140ms ease;
-        outline: none;
+        transition: all 150ms ease;
+        padding: 0;
       }
-      .pt-save-btn:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
-        color: #0f172a;
+      .pt-send-btn:hover {
+        background: #1d4ed8;
+        transform: scale(1.05);
       }
-      .pt-save-btn:active {
-        transform: scale(0.97);
+      .pt-send-btn:active {
+        transform: scale(0.95);
       }
-      .pt-save-btn:disabled {
+      .pt-send-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
@@ -467,15 +469,12 @@
           color: #93c5fd;
           box-shadow: 0 6px 20px rgba(96, 165, 250, 0.25);
         }
-        .pt-save-btn {
-          background: #334155;
-          border-color: #475569;
-          color: #f1f5f9;
-        }
-        .pt-save-btn:hover {
-          background: #475569;
-          border-color: #64748b;
+        .pt-send-btn {
+          background: #3b82f6;
           color: #ffffff;
+        }
+        .pt-send-btn:hover {
+          background: #60a5fa;
         }
       }
     `;
@@ -504,22 +503,26 @@
     closeBtn.title = '收起 (Esc)';
     cardHeader.append(titlePreview, closeBtn);
 
+    const inputWrap = document.createElement('div');
+    inputWrap.className = 'pt-input-wrap';
+
     const textarea = document.createElement('textarea');
     textarea.className = 'pt-textarea';
     textarea.placeholder = '';
     textarea.rows = 4;
 
-    const cardFooter = document.createElement('div');
-    cardFooter.className = 'pt-card-footer';
-
     const saveBtn = document.createElement('button');
-    saveBtn.className = 'pt-save-btn';
+    saveBtn.className = 'pt-send-btn';
     saveBtn.type = 'button';
-    saveBtn.textContent = '保存';
     saveBtn.title = '保存 (Shift+Enter)';
+    saveBtn.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 19V5M5 12l7-7 7 7"/>
+      </svg>
+    `;
 
-    cardFooter.append(saveBtn);
-    card.append(cardHeader, textarea, cardFooter);
+    inputWrap.append(textarea, saveBtn);
+    card.append(cardHeader, inputWrap);
 
     // 2. 底部浮动按钮 + Toast
     const bar = document.createElement('div');
@@ -575,7 +578,7 @@
       }
 
       saveBtn.disabled = true;
-      saveBtn.textContent = '保存中...';
+      saveBtn.style.opacity = '0.5';
 
       try {
         await saveToFirestore({ title, url, note });
@@ -590,7 +593,7 @@
         showToast(`❌ 保存失败: ${err.message || '网络错误'}`);
       } finally {
         saveBtn.disabled = false;
-        saveBtn.textContent = '保存';
+        saveBtn.style.opacity = '1';
       }
     }
 
