@@ -1280,7 +1280,12 @@
 
     async function handleCreateSubmit() {
       const raw = createNoteInput.value.trim();
-      if (!raw || !currentUser) return;
+      if (!raw) return;
+      if (!currentUser) {
+        alert('请登录');
+        loginBtn.click();
+        return;
+      }
 
       const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
       let title = '';
