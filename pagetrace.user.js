@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.3
+// @version      1.9.5
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -465,21 +465,41 @@
         background: rgba(255, 255, 255, 0.96);
         box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
       }
-      .pt-check-icon {
+      .pt-pill-btn.warning {
+        opacity: 1;
+        border-color: #fcd34d;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+      }
+      .pt-pill-btn.error {
+        opacity: 1;
+        border-color: #fca5a5;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+      }
+      .pt-status-icon {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         height: 100%;
-        color: #2563eb;
         opacity: 0;
         transform: scale(0.6);
         transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
         pointer-events: none;
       }
-      .pt-check-icon.show {
+      .pt-status-icon.show {
         opacity: 1;
         transform: scale(1);
+      }
+      .pt-status-icon.success {
+        color: #2563eb;
+      }
+      .pt-status-icon.warning {
+        color: #f59e0b;
+      }
+      .pt-status-icon.error {
+        color: #ef4444;
       }
 
       /* 暗色模式适配 */
@@ -518,8 +538,24 @@
           background: #1e293b;
           box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
         }
-        .pt-check-icon {
+        .pt-pill-btn.warning {
+          border-color: #f59e0b;
+          background: #1e293b;
+          box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+        }
+        .pt-pill-btn.error {
+          border-color: #ef4444;
+          background: #1e293b;
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+        }
+        .pt-status-icon.success {
           color: #3b82f6;
+        }
+        .pt-status-icon.warning {
+          color: #fbbf24;
+        }
+        .pt-status-icon.error {
+          color: #f87171;
         }
         .pt-send-btn {
           background: #3b82f6;
@@ -589,37 +625,36 @@
     mainBtn.type = 'button';
     mainBtn.title = '左键：复制 / 右键：速记 / Ctrl+左键：直接保存 / Ctrl+右键：打开看板 / Shift+左键：隐藏';
 
-    const checkIcon = document.createElement('span');
-    checkIcon.className = 'pt-check-icon';
-    checkIcon.innerHTML = `
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    `;
-    mainBtn.appendChild(checkIcon);
+    const statusIcon = document.createElement('span');
+    statusIcon.className = 'pt-status-icon';
+    mainBtn.appendChild(statusIcon);
 
     bar.append(toast, mainBtn);
     wrap.append(card, bar);
     shadow.append(style, wrap);
     (document.body || document.documentElement).appendChild(host);
 
-    let toastTimer;
-    function showToast(msg, duration = 1800) {
-      clearTimeout(toastTimer);
-      toast.textContent = msg;
-      toast.classList.add('show');
-      toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    const SVG_ICONS = {
+      success: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+      warning: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="14"></line><line x1="12" y1="19" x2="12.01" y2="19"></line></svg>`,
+      error: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+    };
+
+    let statusTimer;
+    function showButtonStatus(type, duration = 1800) {
+      clearTimeout(statusTimer);
+      statusIcon.innerHTML = SVG_ICONS[type] || '';
+      statusIcon.className = `pt-status-icon ${type} show`;
+      mainBtn.className = `pt-pill-btn ${type}`;
+      statusTimer = setTimeout(() => {
+        statusIcon.className = 'pt-status-icon';
+        statusIcon.innerHTML = '';
+        mainBtn.className = 'pt-pill-btn' + (card.classList.contains('active') ? ' recording' : '');
+      }, duration);
     }
 
-    let checkTimer;
-    function showSuccessCheck(duration = 1800) {
-      clearTimeout(checkTimer);
-      checkIcon.classList.add('show');
-      mainBtn.classList.add('success');
-      checkTimer = setTimeout(() => {
-        checkIcon.classList.remove('show');
-        mainBtn.classList.remove('success');
-      }, duration);
+    function openLoginPopup() {
+      window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
     }
 
     function toggleCard(show) {
@@ -644,8 +679,8 @@
       const note = textarea.value.trim();
 
       if (!CONFIG.uid || !CONFIG.apiKey || !CONFIG.projectId) {
-        showToast('⚠️ 请登录');
-        openSettingsModal();
+        showButtonStatus('warning');
+        openLoginPopup();
         return;
       }
 
@@ -657,12 +692,12 @@
         const copyPayload = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
         copyText(copyPayload).catch(() => {});
 
-        showSuccessCheck();
+        showButtonStatus('success');
         textarea.value = '';
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
-        showToast(`❌ 保存失败: ${err.message || '网络错误'}`);
+        showButtonStatus('error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.style.opacity = '1';
@@ -676,10 +711,11 @@
       const text = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
       try {
         await copyText(text);
-        showSuccessCheck();
+        showButtonStatus('success');
         toggleCard(false);
       } catch (e) {
-        showToast('❌ 复制失败');
+        console.error('[PageTrace] 复制失败:', e);
+        showButtonStatus('error');
       }
     }
 
@@ -688,8 +724,8 @@
       const url = window.location.href;
 
       if (!CONFIG.uid || !CONFIG.apiKey || !CONFIG.projectId) {
-        showToast('⚠️ 请登录');
-        openSettingsModal();
+        showButtonStatus('warning');
+        openLoginPopup();
         return;
       }
 
@@ -697,10 +733,10 @@
         await saveToFirestore({ title, url, note: '' });
         const copyPayload = `${title}\n${url}`;
         copyText(copyPayload).catch(() => {});
-        showSuccessCheck();
+        showButtonStatus('success');
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
-        showToast(`❌ 保存失败: ${err.message || '网络错误'}`);
+        showButtonStatus('error');
       }
     }
 
@@ -755,83 +791,7 @@
     });
   }
 
-  // ==========================================
-  // 7. 账号授权与状态弹窗
-  // ==========================================
-  function openSettingsModal() {
-    const currentUid = CONFIG.uid;
 
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-      position: fixed; inset: 0; z-index: 2147483647;
-      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    `;
-
-    const box = document.createElement('div');
-    box.style.cssText = `
-      width: 380px; max-width: 90vw; background: #ffffff; border-radius: 16px;
-      padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); color: #1e293b;
-    `;
-
-    box.innerHTML = `
-      <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-        🔐 PageTrace 账号授权
-      </h3>
-      <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-        只需登录您的 Google 账号，所有速记笔记将自动无缝同步到您的专属个人云端空间。
-      </div>
-
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #475569;">
-        <div>当前状态: <strong style="color: ${currentUid ? '#16a34a' : '#ea580c'};">${currentUid ? '✓ 已授权登录' : '⚠️ 未登录'}</strong></div>
-        ${currentUid ? `<div style="margin-top: 6px; font-size: 11px; color: #94a3b8; word-break: break-all;">用户 ID: ${currentUid}</div>` : ''}
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <button id="pt-go-login" style="width: 100%; padding: 10px 14px; background: #2563eb; color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <span>🚀</span>
-          <span>${currentUid ? '重新授权 / 切换 Google 账号' : '使用 Google 账号登录授权'}</span>
-        </button>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-        ${currentUid ? `
-          <button id="pt-logout" style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 7px; font-size: 12px; cursor: pointer; margin-right: auto;">
-            退出登录
-          </button>
-        ` : ''}
-        <button id="pt-cancel" style="padding: 6px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 7px; font-size: 12px; cursor: pointer;">
-          关闭
-        </button>
-      </div>
-    `;
-
-    modal.appendChild(box);
-    document.body.appendChild(modal);
-
-    modal.querySelector('#pt-cancel').addEventListener('click', () => modal.remove());
-
-    modal.querySelector('#pt-go-login').addEventListener('click', () => {
-      window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
-      modal.remove();
-    });
-
-    const logoutBtn = modal.querySelector('#pt-logout');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        GM_deleteValue('pt_id_token');
-        GM_deleteValue('pt_refresh_token');
-        GM_deleteValue('pt_uid');
-        GM_deleteValue('pt_token_expiry');
-        try {
-          window.postMessage({ source: 'PAGETRACE_SCRIPT_LOGOUT' }, '*');
-        } catch (_) {}
-        alert('已退出登录');
-        modal.remove();
-      });
-    }
-  }
 
   setupAuthBridgeListener();
   
