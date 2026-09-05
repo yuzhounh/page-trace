@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PageTrace - 云端速记看板</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='ptGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2306b6d4'/%3E%3Cstop offset='50%25' stop-color='%230ea5e9'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='48' height='48' rx='12' fill='url(%23ptGrad)'/%3E%3Cg stroke='%23ffffff' stroke-width='3.2' stroke-linecap='round'%3E%3Cline x1='13' y1='17' x2='35' y2='17'/%3E%3Cline x1='13' y1='24' x2='35' y2='24'/%3E%3Cline x1='13' y1='31' x2='25' y2='31'/%3E%3C/g%3E%3C/svg%3E">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --badge-bg: #eff6ff;
+      --badge-text: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* 顶部导航与状态 */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* 用户信息与头像弹窗 */
+    .user-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .avatar-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      padding: 0;
+      cursor: pointer;
+      background: #e2e8f0;
+      overflow: hidden;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .avatar-btn:hover {
+      border-color: var(--primary);
+    }
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .avatar-fallback {
+      font-size: 15px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .auth-btn {
+      width: 88px;
+      height: 36px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      transition: all 150ms ease;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+    }
+    .auth-btn:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    /* 头像下拉弹窗 */
+    .user-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 240px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 14px;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .user-dropdown.show {
+      display: flex;
+    }
+    .dropdown-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 10px;
+    }
+    .dropdown-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .dropdown-info {
+      flex: 1;
+      overflow: hidden;
+    }
+    .dropdown-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dropdown-email {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .dropdown-logout {
+      width: 100%;
+      padding: 8px 6px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .dropdown-logout:hover {
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    /* 顶部右侧功能按钮组（搜索、记笔记） */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      width: 88px;
+      height: 36px;
+      padding: 0;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: #334155;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .header-btn:hover {
+      background: #f1f5f9;
+      color: var(--text);
+      border-color: #cbd5e1;
+    }
+    .header-btn.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+    }
+    .header-btn.primary:hover {
+      background: var(--primary-hover);
+    }
+    .header-btn .kbd-hint {
+      display: inline-block;
+      padding: 1px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #94a3b8;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      line-height: 1.2;
+    }
+    .header-btn.primary .kbd-hint {
+      color: #bfdbfe;
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* 文档弹窗专属样式 */
+    .doc-card {
+      width: 680px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .doc-section {
+      margin-bottom: 20px;
+    }
+    .doc-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .doc-table th, .doc-table td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .doc-table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .doc-table tr:hover td {
+      background: #fbfcfe;
+    }
+    .doc-kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #1e293b;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    }
+
+    /* 搜索状态激活提示条 */
+    .search-status-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 8px 14px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: #1e40af;
+    }
+    .search-status-bar.show {
+      display: flex;
+    }
+    .search-clear-btn {
+      background: transparent;
+      border: none;
+      color: #3b82f6;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* 笔记列表与时间线（左侧年月，右侧月度卡片） */
+    .timeline-layout {
+      width: 100%;
+    }
+    .notes-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .month-block {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .month-date-col {
+      width: 76px;
+      text-align: center;
+      padding-top: 10px;
+      color: var(--text-muted);
+      user-select: none;
+      flex-shrink: 0;
+      position: sticky;
+      top: 20px;
+    }
+    .month-date-year {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .month-date-month {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1.25;
+      margin: 2px 0 4px;
+    }
+    .month-date-count {
+      display: inline-block;
+      font-size: 11px;
+      background: #e2e8f0;
+      color: #475569;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .month-card {
+      flex: 1;
+      min-width: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .month-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .month-notes-container {
+      display: flex;
+      flex-direction: column;
+    }
+    .note-item-row {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background-color 0.12s ease;
+      position: relative;
+    }
+    .note-item-row:last-child {
+      border-bottom: none;
+    }
+    .note-item-row:hover {
+      background-color: #f8fafc;
+    }
+    .note-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .note-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      text-decoration: none;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .note-title:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    .note-quote {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note-side-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .note-time {
+      font-size: 11px;
+      color: #94a3b8;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+      padding-top: 2px;
+    }
+    .note-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    .note-item-row:hover .note-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .btn-icon-text {
+      background: transparent;
+      border: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1.3;
+      transition: all 0.12s ease;
+    }
+    .btn-icon-text:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    .btn-icon-text.delete:hover {
+      color: var(--danger);
+      background: #fef2f2;
+    }
+
+    /* 通用弹窗 Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-card {
+      background: #ffffff;
+      width: 540px;
+      max-width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+    }
+    #createModal .modal-card {
+      width: 480px;
+      padding: 14px 18px 14px;
+      gap: 10px;
+      border-radius: 14px;
+    }
+    #createModal .modal-title {
+      font-size: 15px;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .modal-close-x {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      line-height: 1;
+      border-radius: 6px;
+    }
+    .modal-close-x:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    /* 表单控件 */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    #createNoteInput {
+      height: 92px;
+      line-height: 1.5;
+      resize: none;
+      display: block;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .modal-btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    .modal-btn {
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+    .modal-btn:hover {
+      background: #f8fafc;
+    }
+    .modal-btn.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .modal-btn.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    /* 快捷搜索弹窗专属样式 (Spotlight Command Palette) */
+    .spotlight-card {
+      width: 580px;
+      padding: 0;
+      overflow: hidden;
+      gap: 0;
+    }
+    .spotlight-input-wrap {
+      display: flex;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .spotlight-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      color: #0f172a;
+      font-family: inherit;
+    }
+    .spotlight-input::placeholder {
+      color: #94a3b8;
+    }
+    .spotlight-footer {
+      padding: 10px 18px;
+      background: #f8fafc;
+      font-size: 12px;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部导航与用户头像下拉 -->
+    <header>
+      <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 48 48" style="border-radius: 7px; overflow: hidden; display: block; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+          <defs>
+            <linearGradient id="ptGradHeader" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#06b6d4"/>
+              <stop offset="50%" stop-color="#0ea5e9"/>
+              <stop offset="100%" stop-color="#10b981"/>
+            </linearGradient>
+          </defs>
+          <rect width="48" height="48" fill="url(#ptGradHeader)"/>
+          <g stroke="#ffffff" stroke-width="3.2" stroke-linecap="round">
+            <line x1="13" y1="17" x2="35" y2="17"/>
+            <line x1="13" y1="24" x2="35" y2="24"/>
+            <line x1="13" y1="31" x2="25" y2="31"/>
+          </g>
+        </svg>
+        <span>PageTrace</span>
+      </div>
+      <!-- 顶部功能按钮组（搜索、记笔记、用户） -->
+      <div class="header-actions">
+        <button class="header-btn" id="openSearchBtn" title="搜索笔记">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>搜索</span>
+          <span class="kbd-hint">/</span>
+        </button>
+
+        <button class="header-btn" id="openCreateBtn" title="新建速记">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>速记</span>
+          <span class="kbd-hint">N</span>
+        </button>
+
+        <button class="header-btn" id="openDocBtn" title="使用说明与快捷键">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>文档</span>
+          <span class="kbd-hint">?</span>
+        </button>
+
+        <div class="user-panel">
+          <button class="auth-btn" id="loginBtn">登录 Google</button>
+          <button class="avatar-btn" id="avatarBtn" title="个人信息">
+            <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
+            <span class="avatar-fallback" id="avatarFallback">U</span>
+          </button>
+
+          <!-- 个人信息与退出下拉浮窗 -->
+          <div class="user-dropdown" id="userDropdown">
+            <div class="dropdown-profile">
+              <img src="" alt="avatar" class="dropdown-avatar" id="dropdownAvatar" />
+              <div class="dropdown-info">
+                <div class="dropdown-name" id="dropdownName">未登录</div>
+                <div class="dropdown-email" id="dropdownEmail">-</div>
+              </div>
+            </div>
+            <button class="dropdown-logout" id="dropdownLogout">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              退出登录
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 搜索筛选激活提示条 -->
+    <div class="search-status-bar" id="searchStatusBar">
+      <span>当前正在搜索: <strong id="searchKeywordLabel">""</strong></span>
+      <button class="search-clear-btn" id="clearSearchBtn">清除搜索 (Esc)</button>
+    </div>
+
+    <!-- 主展示列表与按月卡片 -->
+    <div class="timeline-layout">
+      <div class="notes-list" id="notesList">
+        <div class="empty-state">
+          <div class="empty-icon">⏳</div>
+          <p>正在拉取实时云端数据...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 1：现代 Spotlight 搜索弹窗 -->
+  <div class="modal-overlay" id="searchModal">
+    <div class="modal-card spotlight-card">
+      <div class="spotlight-input-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="spotlight-input" id="spotlightInput" placeholder="输入关键词，实时筛选笔记..." />
+        <button class="modal-close-x" id="closeSearchModal">✕</button>
+      </div>
+      <div class="spotlight-footer">
+        <span>输入即过滤看板内容</span>
+        <span>按 <kbd style="padding:1px 4px; background:#fff; border:1px solid #cbd5e1; border-radius:3px;">ESC</kbd> 关闭</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 2：记笔记弹窗 -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>✍️ 新建速记</span>
+        </div>
+        <button class="modal-close-x" id="closeCreateModal">✕</button>
+      </div>
+      <div class="form-group">
+        <textarea class="form-input" id="createNoteInput" rows="4" placeholder=""></textarea>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end; margin-top: 2px;">
+        <button class="modal-btn" id="btnSubmitCreate" title="保存 (Shift+Enter)">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 4：帮助与功能文档弹窗 -->
+  <div class="modal-overlay" id="docModal">
+    <div class="modal-card doc-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📖 PageTrace 功能与快捷键指南</span>
+        </div>
+        <button class="modal-close-x" id="closeDocModal">✕</button>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">✨ 一、油猴脚本浮动按钮（任意网页右下角）</div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">操作方式</th>
+              <th>功能描述</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="doc-kbd">鼠标左键</span></td>
+              <td><strong>快速复制</strong>当前网页标题与网址 (Title + URL) 到剪贴板</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">鼠标右键</span></td>
+              <td><strong>展开速记卡片</strong>，可输入备注并保存同步至 Firebase 云端</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Ctrl + 左键</span></td>
+              <td><strong>直接保存</strong>当前网页标题与网址 (Title + URL) 至云端</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Ctrl + 右键</span></td>
+              <td>在<strong>前台新标签页中打开云端速记看板</strong> (page-trace-app.web.app)</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Shift + 左键</span></td>
+              <td><strong>隐藏浮动按钮</strong>（若在特定网页不想遮挡视线时使用）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">⌨️ 二、速记输入框操作逻辑（插件与看板一致）</div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">按键组合</th>
+              <th>动作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="doc-kbd">Enter</span></td>
+              <td>文本<strong>换行</strong>，方便编写多行备注或分段</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Shift + Enter</span></td>
+              <td><strong>保存</strong>速记到云端 Firestore 并关闭窗口</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Esc</span></td>
+              <td><strong>取消/收起</strong>当前速记弹窗</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section" style="margin-bottom: 0;">
+        <div class="doc-section-title">🖥️ 三、云端速记看板页面快捷键</div>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">按键</th>
+              <th>功能</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="doc-kbd">/</span></td>
+              <td>快速呼出 <strong>Spotlight 聚合搜索框</strong>，输入文字即时过滤全部笔记</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">N</span></td>
+              <td>快速打开<strong>新建速记</strong>弹窗</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">?</span></td>
+              <td>快速打开<strong>使用文档与快捷键</strong>说明</td>
+            </tr>
+            <tr>
+              <td><span class="doc-kbd">Esc</span></td>
+              <td>关闭搜索框、新建弹窗、编辑弹窗或文档，清除搜索筛选</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 3：编辑笔记弹窗 -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>✏️ 编辑速记</span>
+        </div>
+        <button class="modal-close-x" id="closeEditModal">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">标题</label>
+        <input type="text" class="form-input" id="editTitle" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">链接 (URL)</label>
+        <input type="text" class="form-input" id="editUrl" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">速记备注</label>
+        <textarea class="form-input" id="editNote" rows="4" style="resize: vertical;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn" id="btnCancelEdit">取消</button>
+        <button class="modal-btn primary" id="btnSaveEdit">保存更改</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase 配置
+    const firebaseConfig = {
+      apiKey: "AIzaSyA91weJPSAeO58tB0cYS38-q-XpXJTbjLc",
+      authDomain: "page-trace-app.firebaseapp.com",
+      projectId: "page-trace-app",
+      storageBucket: "page-trace-app.firebasestorage.app",
+      messagingSenderId: "118528854647",
+      appId: "1:118528854647:web:49f6029540edbbf57a5472"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let notesData = [];
+    let unsubscribeNotes = null;
+    let currentEditingId = null;
+    let currentSearchKeyword = '';
+
+    // DOM 元素
+    const loginBtn = document.getElementById('loginBtn');
+    const avatarBtn = document.getElementById('avatarBtn');
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarFallback = document.getElementById('avatarFallback');
+    const userDropdown = document.getElementById('userDropdown');
+    const dropdownAvatar = document.getElementById('dropdownAvatar');
+    const dropdownName = document.getElementById('dropdownName');
+    const dropdownEmail = document.getElementById('dropdownEmail');
+    const dropdownLogout = document.getElementById('dropdownLogout');
+
+    const notesList = document.getElementById('notesList');
+
+    // 搜索状态条与弹窗 DOM
+    const searchStatusBar = document.getElementById('searchStatusBar');
+    const searchKeywordLabel = document.getElementById('searchKeywordLabel');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const openSearchBtn = document.getElementById('openSearchBtn');
+    const searchModal = document.getElementById('searchModal');
+    const spotlightInput = document.getElementById('spotlightInput');
+    const closeSearchModal = document.getElementById('closeSearchModal');
+
+    // 记笔记弹窗 DOM
+    const openCreateBtn = document.getElementById('openCreateBtn');
+    const createModal = document.getElementById('createModal');
+    const createNoteInput = document.getElementById('createNoteInput');
+    const closeCreateModal = document.getElementById('closeCreateModal');
+    const btnSubmitCreate = document.getElementById('btnSubmitCreate');
+
+    // 文档弹窗 DOM
+    const openDocBtn = document.getElementById('openDocBtn');
+    const docModal = document.getElementById('docModal');
+    const closeDocModal = document.getElementById('closeDocModal');
+
+    // 编辑弹窗 DOM
+    const editModal = document.getElementById('editModal');
+    const editTitle = document.getElementById('editTitle');
+    const editUrl = document.getElementById('editUrl');
+    const editNote = document.getElementById('editNote');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const btnCancelEdit = document.getElementById('btnCancelEdit');
+    const btnSaveEdit = document.getElementById('btnSaveEdit');
+
+    // 格式化时间
+    function formatTime(isoOrTimestamp) {
+      if (!isoOrTimestamp) return '';
+      const date = isoOrTimestamp.toDate ? isoOrTimestamp.toDate() : new Date(isoOrTimestamp);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+    }
+
+    // 监听 Google 登录状态
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      if (user) {
+        loginBtn.style.display = 'none';
+        avatarBtn.style.display = 'inline-flex';
+        
+        if (user.photoURL) {
+          avatarImg.src = user.photoURL;
+          avatarImg.style.display = 'block';
+          avatarFallback.style.display = 'none';
+          dropdownAvatar.src = user.photoURL;
+          dropdownAvatar.style.display = 'block';
+        } else {
+          avatarImg.style.display = 'none';
+          avatarFallback.style.display = 'block';
+          avatarFallback.textContent = (user.displayName || user.email || 'U')[0].toUpperCase();
+          dropdownAvatar.style.display = 'none';
+        }
+
+        dropdownName.textContent = user.displayName || '未设置昵称';
+        dropdownEmail.textContent = user.email || '';
+
+        bindFirestoreRealtime(user.uid);
+      } else {
+        loginBtn.style.display = 'inline-flex';
+        avatarBtn.style.display = 'none';
+        userDropdown.classList.remove('show');
+        if (unsubscribeNotes) unsubscribeNotes();
+        notesData = [];
+        renderList();
+      }
+    });
+
+    // 登录 / 退出 / 头像浮窗
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    });
+
+    avatarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!userDropdown.contains(e.target) && e.target !== avatarBtn) {
+        userDropdown.classList.remove('show');
+      }
+    });
+
+    dropdownLogout.addEventListener('click', () => {
+      userDropdown.classList.remove('show');
+      auth.signOut();
+    });
+
+    // 实时同步 Firestore 数据库 (onSnapshot)
+    function bindFirestoreRealtime(uid) {
+      if (unsubscribeNotes) unsubscribeNotes();
+
+      const ref = db.collection('users').doc(uid).collection('notes');
+      unsubscribeNotes = ref.onSnapshot((snapshot) => {
+        notesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // 按创建时间倒序排序
+        notesData.sort((a, b) => {
+          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+          return tB - tA;
+        });
+
+        renderList();
+      }, (err) => {
+        console.error('拉取笔记失败:', err);
+        notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
+      });
+    }
+
+    // 渲染主列表（按月份汇聚为一个卡片）
+    function renderList() {
+      if (!currentUser) {
+        notesList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔐</div>
+            <p>请先登录 Google 账号以查看云端同步笔记</p>
+          </div>
+        `;
+        return;
+      }
+
+      const kw = currentSearchKeyword.trim().toLowerCase();
+      let filtered = notesData;
+
+      if (kw) {
+        filtered = filtered.filter(item => 
+          (item.title && item.title.toLowerCase().includes(kw)) ||
+          (item.url && item.url.toLowerCase().includes(kw)) ||
+          (item.note && item.note.toLowerCase().includes(kw))
+        );
+        searchStatusBar.classList.add('show');
+        searchKeywordLabel.textContent = `"${currentSearchKeyword}"`;
+      } else {
+        searchStatusBar.classList.remove('show');
+      }
+
+      if (filtered.length === 0) {
+        notesList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>${kw ? '未找到匹配的笔记' : '暂无相关笔记'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 按年月分组 (左侧显示年月，右侧显示当月卡片)
+      const groups = new Map();
+      filtered.forEach(item => {
+        let yearStr = '';
+        let monthStr = '历史记录';
+        let groupKey = '历史记录';
+
+        if (item.createdAt) {
+          const d = item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
+          if (!isNaN(d.getTime())) {
+            yearStr = `${d.getFullYear()} 年`;
+            monthStr = `${d.getMonth() + 1} 月`;
+            groupKey = `${yearStr} ${monthStr}`;
+          }
+        }
+
+        if (!groups.has(groupKey)) {
+          groups.set(groupKey, { yearStr, monthStr, items: [] });
+        }
+        groups.get(groupKey).items.push(item);
+      });
+
+      let html = '';
+      groups.forEach((group) => {
+        html += `
+          <div class="month-block">
+            <div class="month-date-col">
+              ${group.yearStr ? `<div class="month-date-year">${escapeHtml(group.yearStr)}</div>` : ''}
+              <div class="month-date-month">${escapeHtml(group.monthStr)}</div>
+              <div class="month-date-count">共 ${group.items.length} 条</div>
+            </div>
+            <div class="month-card">
+              <div class="month-notes-container">
+                ${group.items.map(item => `
+                  <div class="note-item-row" data-id="${item.id}">
+                    <div class="note-main">
+                      <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="note-title">
+                        ${escapeHtml(item.title || '无标题页面')}
+                      </a>
+                      ${item.note ? `<div class="note-quote">${escapeHtml(item.note)}</div>` : ''}
+                    </div>
+                    <div class="note-side-col">
+                      <span class="note-time">${formatTime(item.createdAt)}</span>
+                      <div class="note-actions">
+                        <button class="btn-icon-text" onclick="openEditModal('${item.id}')">编辑</button>
+                        <button class="btn-icon-text delete" onclick="deleteSingleNote('${item.id}')">删除</button>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      notesList.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // 搜索弹窗逻辑 (Spotlight)
+    function showSearchModal() {
+      searchModal.classList.add('show');
+      spotlightInput.value = currentSearchKeyword;
+      setTimeout(() => {
+        spotlightInput.focus();
+        spotlightInput.select();
+      }, 50);
+    }
+
+    function hideSearchModal() {
+      searchModal.classList.remove('show');
+    }
+
+    openSearchBtn.addEventListener('click', showSearchModal);
+    closeSearchModal.addEventListener('click', hideSearchModal);
+    searchModal.addEventListener('click', (e) => {
+      if (e.target === searchModal) hideSearchModal();
+    });
+
+    spotlightInput.addEventListener('input', () => {
+      currentSearchKeyword = spotlightInput.value;
+      renderList();
+    });
+
+    spotlightInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideSearchModal();
+      } else if (e.key === 'Enter') {
+        hideSearchModal();
+      }
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      currentSearchKeyword = '';
+      spotlightInput.value = '';
+      renderList();
+    });
+
+    // 记笔记弹窗逻辑
+    function showCreateModal() {
+      createModal.classList.add('show');
+      setTimeout(() => createNoteInput.focus(), 50);
+    }
+
+    function hideCreateModal() {
+      createModal.classList.remove('show');
+    }
+
+    // 文档弹窗逻辑
+    function showDocModal() {
+      docModal.classList.add('show');
+    }
+
+    function hideDocModal() {
+      docModal.classList.remove('show');
+    }
+
+    openCreateBtn.addEventListener('click', showCreateModal);
+    closeCreateModal.addEventListener('click', hideCreateModal);
+    createModal.addEventListener('click', (e) => {
+      if (e.target === createModal) hideCreateModal();
+    });
+
+    openDocBtn.addEventListener('click', showDocModal);
+    closeDocModal.addEventListener('click', hideDocModal);
+    docModal.addEventListener('click', (e) => {
+      if (e.target === docModal) hideDocModal();
+    });
+
+    async function handleCreateSubmit() {
+      const raw = createNoteInput.value.trim();
+      if (!raw || !currentUser) return;
+
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      let title = '';
+      let url = '';
+      let note = '';
+
+      if (lines.length >= 1) {
+        if (lines[0].startsWith('http://') || lines[0].startsWith('https://')) {
+          url = lines[0];
+          title = lines[1] || url;
+          note = lines.slice(2).join('\n');
+        } else {
+          title = lines[0];
+          if (lines[1] && (lines[1].startsWith('http://') || lines[1].startsWith('https://'))) {
+            url = lines[1];
+            note = lines.slice(2).join('\n');
+          } else {
+            note = lines.slice(1).join('\n');
+          }
+        }
+      }
+
+      try {
+        btnSubmitCreate.disabled = true;
+        btnSubmitCreate.textContent = '保存中...';
+        await db.collection('users').doc(currentUser.uid).collection('notes').add({
+          title: title || '随手速记',
+          url: url || '',
+          note: note || '',
+          status: 'inbox',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          source: 'web_dashboard'
+        });
+        createNoteInput.value = '';
+        hideCreateModal();
+      } catch (err) {
+        alert('保存失败: ' + err.message);
+      } finally {
+        btnSubmitCreate.disabled = false;
+        btnSubmitCreate.textContent = '保存';
+      }
+    }
+
+    btnSubmitCreate.addEventListener('click', handleCreateSubmit);
+
+    // 新建速记输入框交互：
+    // Enter 换行
+    // Shift + Enter 保存发送
+    // Esc 取消
+    createNoteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleCreateSubmit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideCreateModal();
+      }
+    });
+
+    // 全局快捷键 (/ 搜索，N 新建速记，? 帮助文档，ESC 退出)
+    window.addEventListener('keydown', (e) => {
+      const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+      
+      if (e.key === '/' && !isInputActive) {
+        e.preventDefault();
+        showSearchModal();
+      } else if ((e.key === 'n' || e.key === 'N') && !isInputActive) {
+        e.preventDefault();
+        showCreateModal();
+      } else if (e.key === '?' && !isInputActive) {
+        e.preventDefault();
+        showDocModal();
+      } else if (e.key === 'Escape') {
+        if (searchModal.classList.contains('show')) {
+          hideSearchModal();
+        } else if (createModal.classList.contains('show')) {
+          hideCreateModal();
+        } else if (docModal.classList.contains('show')) {
+          hideDocModal();
+        } else if (editModal.classList.contains('show')) {
+          editModal.classList.remove('show');
+          currentEditingId = null;
+        } else if (currentSearchKeyword) {
+          currentSearchKeyword = '';
+          spotlightInput.value = '';
+          renderList();
+        }
+      }
+    });
+
+    // 编辑弹窗交互
+    window.openEditModal = function(id) {
+      const item = notesData.find(n => n.id === id);
+      if (!item) return;
+      currentEditingId = id;
+      editTitle.value = item.title || '';
+      editUrl.value = item.url || '';
+      editNote.value = item.note || '';
+      editModal.classList.add('show');
+    };
+
+    closeEditModal.addEventListener('click', () => {
+      editModal.classList.remove('show');
+      currentEditingId = null;
+    });
+
+    btnCancelEdit.addEventListener('click', () => {
+      editModal.classList.remove('show');
+      currentEditingId = null;
+    });
+
+    editModal.addEventListener('click', (e) => {
+      if (e.target === editModal) {
+        editModal.classList.remove('show');
+        currentEditingId = null;
+      }
+    });
+
+    btnSaveEdit.addEventListener('click', async () => {
+      if (!currentUser || !currentEditingId) return;
+      const title = editTitle.value.trim();
+      const url = editUrl.value.trim();
+      const note = editNote.value.trim();
+
+      try {
+        await db.collection('users').doc(currentUser.uid).collection('notes').doc(currentEditingId).update({
+          title: title || '无标题页面',
+          url: url,
+          note: note
+        });
+        editModal.classList.remove('show');
+        currentEditingId = null;
+      } catch (err) {
+        alert('修改失败: ' + err.message);
+      }
+    });
+
+    // 删除单条笔记
+    window.deleteSingleNote = async function(id) {
+      if (!currentUser) return;
+      if (!confirm('确定删除该条笔记吗？此操作无法撤销。')) return;
+      await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
+    };
+  </script>
+</body>
+</html>

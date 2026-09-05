@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PageTrace - Google 认证授权</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #0f172a;
+    }
+    .card {
+      background: #ffffff;
+      width: 400px;
+      max-width: 90vw;
+      padding: 32px 28px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 20px 48px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    p {
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .login-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 18px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #1e293b;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      transition: all 160ms ease;
+    }
+    .login-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .status.success {
+      display: block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .status.error {
+      display: block;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .status.info {
+      display: block;
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+  </style>
+  <!-- Firebase SDK (v10 modular/compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size: 32px; margin-bottom: 12px;">🔐</div>
+    <h2>PageTrace 账号授权</h2>
+    <p>使用任意 Google 账号授权登录，速记数据将安全同步到您的专属个人云端空间。</p>
+
+    <div style="margin-top: 10px;">
+      <button class="login-btn" id="loginBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        使用 Google 账号一键登录
+      </button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // 固定统一的项目后端配置，用户无需理解或手动配置
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyA91weJPSAeO58tB0cYS38-q-XpXJTbjLc",
+      authDomain: "page-trace-app.firebaseapp.com",
+      projectId: "page-trace-app"
+    };
+
+    function showStatus(text, type = 'info') {
+      statusEl.className = 'status ' + type;
+      statusEl.textContent = text;
+    }
+
+    loginBtn.addEventListener('click', async () => {
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        showStatus('正在呼出 Google 账号选择...', 'info');
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await firebase.auth().signInWithPopup(provider);
+        const user = result.user;
+
+        const idToken = await user.getIdToken();
+        const refreshToken = user.refreshToken;
+
+        showStatus(`✓ 登录成功: ${user.displayName || user.email}，已向油猴插件同步凭据...`, 'success');
+
+        // 发送给油猴脚本监听 (同域 / postMessage)
+        const payload = {
+          source: 'PAGETRACE_AUTH_SUCCESS',
+          payload: {
+            idToken,
+            refreshToken,
+            uid: user.uid,
+            expiresIn: 3600,
+            apiKey: FIREBASE_CONFIG.apiKey,
+            projectId: FIREBASE_CONFIG.projectId
+          }
+        };
+
+        window.postMessage(payload, '*');
+        if (window.opener) {
+          window.opener.postMessage(payload, '*');
+        }
+
+        setTimeout(() => {
+          showStatus('🎉 授权已完成！您可以关闭此页面返回任意网页使用油猴脚本。', 'success');
+        }, 1000);
+
+      } catch (err) {
+        console.error(err);
+        showStatus('登录失败: ' + (err.message || '未知错误'), 'error');
+      }
+    });
+  </script>
+</body>
+</html>
