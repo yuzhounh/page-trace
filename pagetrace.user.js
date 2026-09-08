@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.5
+// @version      1.9.9
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -52,6 +52,14 @@
       .replace(/\((\d+\+?)\s*封私信\s*\/\s*(\d+\+?)\s*条消息\)/g, '')
       .replace(/\((\d+\+?)\s*封私信\)/g, '')
       .trim();
+  }
+
+  // 规范化笔记段落（两段之间始终保持一个空行）
+  function formatNoteWithBlankLines(text) {
+    if (!text) return '';
+    const lines = text.trim().split(/\r?\n/);
+    const nonEmptyLines = lines.map(l => l.trimEnd()).filter(l => l.trim() !== '');
+    return nonEmptyLines.join('\n\n');
   }
 
   function fallbackCopy(text) {
@@ -280,6 +288,8 @@
       .pt-card {
         pointer-events: auto;
         width: 320px;
+        max-height: calc(100vh - 80px);
+        box-sizing: border-box;
         background: rgba(255, 255, 255, 0.95);
         border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 14px;
@@ -352,6 +362,8 @@
         font-size: 13px;
         line-height: 1.5;
         resize: none;
+        min-height: 90px;
+        max-height: 240px;
         height: 90px;
         outline: none;
         background: #ffffff;
@@ -359,6 +371,20 @@
         font-family: inherit;
         transition: border-color 150ms ease, box-shadow 150ms ease;
         display: block;
+        overflow-y: hidden;
+      }
+      .pt-textarea::-webkit-scrollbar {
+        width: 5px;
+      }
+      .pt-textarea::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .pt-textarea::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+      .pt-textarea::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
       }
       .pt-textarea:focus {
         border-color: #3b82f6;
@@ -395,31 +421,68 @@
 
       /* 底部主浮动胶囊条 */
       .pt-bar {
+        position: relative;
         pointer-events: auto;
         display: flex;
         align-items: center;
         gap: 8px;
       }
 
-      .pt-toast {
+      /* 悬停快捷操作提示框 (Tooltip - 默认浅色模式) */
+      .pt-tooltip {
+        position: absolute;
+        right: 56px;
+        bottom: 0;
         pointer-events: none;
-        max-width: min(280px, calc(100vw - 120px));
-        padding: 8px 14px;
-        border-radius: 10px;
-        background: rgba(15, 23, 42, 0.88);
-        color: #ffffff;
-        font-size: 12px;
-        font-weight: 500;
-        line-height: 1.35;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
-        backdrop-filter: blur(10px);
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.96);
+        color: #1e293b;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.05);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border: 1px solid rgba(0, 0, 0, 0.08);
         opacity: 0;
         transform: translateX(8px) scale(0.96);
-        transition: opacity 160ms ease, transform 160ms ease;
+        transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        white-space: nowrap;
       }
-      .pt-toast.show {
+      .pt-tooltip.show {
         opacity: 1;
         transform: translateX(0) scale(1);
+      }
+      .pt-tip-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .pt-tip-key {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 88px;
+        flex-shrink: 0;
+        padding: 2.5px 6px;
+        font-size: 11px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
+        font-weight: 600;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #2563eb;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        box-sizing: border-box;
+      }
+      .pt-tip-desc {
+        color: #334155;
+        font-size: 12.5px;
+        font-weight: 500;
       }
 
       .pt-pill-btn {
@@ -509,6 +572,13 @@
           border-color: rgba(255, 255, 255, 0.1);
           color: #f8fafc;
         }
+        .pt-close-btn {
+          color: #94a3b8;
+        }
+        .pt-close-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #f8fafc;
+        }
         .pt-input-title {
           background: #0f172a;
           color: #94a3b8;
@@ -519,33 +589,56 @@
           color: #f8fafc;
           border-color: #334155;
         }
+        .pt-textarea::-webkit-scrollbar-thumb {
+          background: #334155;
+        }
+        .pt-textarea::-webkit-scrollbar-thumb:hover {
+          background: #475569;
+        }
         .pt-textarea:focus {
           border-color: #60a5fa;
         }
         .pt-pill-btn {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: rgba(255, 255, 255, 0.04);
-          color: #cbd5e1;
+          background: #1e293b;
+          border-color: #334155;
+          color: #94a3b8;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+          opacity: 0.9;
         }
         .pt-pill-btn:hover {
-          background: #1e293b;
-          border-color: #60a5fa;
+          opacity: 1;
+          background: #0f172a;
+          border-color: rgba(96, 165, 250, 0.6);
           color: #93c5fd;
-          box-shadow: 0 6px 20px rgba(96, 165, 250, 0.25);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+        .pt-pill-btn:active {
+          background: #0f172a;
+          transform: scale(0.95);
+        }
+        .pt-pill-btn.recording {
+          opacity: 1;
+          background: #0f172a;
+          border-color: #3b82f6;
+          color: #60a5fa;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
         }
         .pt-pill-btn.success {
+          opacity: 1;
           border-color: #3b82f6;
-          background: #1e293b;
+          background: #0f172a;
           box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
         }
         .pt-pill-btn.warning {
+          opacity: 1;
           border-color: #f59e0b;
-          background: #1e293b;
+          background: #0f172a;
           box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
         }
         .pt-pill-btn.error {
+          opacity: 1;
           border-color: #ef4444;
-          background: #1e293b;
+          background: #0f172a;
           box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
         }
         .pt-status-icon.success {
@@ -564,6 +657,128 @@
         .pt-send-btn:hover {
           background: #60a5fa;
         }
+        .pt-tooltip {
+          background: rgba(30, 41, 59, 0.95);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #f8fafc;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+        }
+        .pt-tip-key {
+          background: rgba(255, 255, 255, 0.08);
+          color: #93c5fd;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: none;
+        }
+        .pt-tip-desc {
+          color: #e2e8f0;
+        }
+      }
+
+      /* 宿主页面显式暗色模式适配 */
+      .pt-wrap.dark .pt-card {
+        background: rgba(30, 41, 59, 0.94);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #f8fafc;
+      }
+      .pt-wrap.dark .pt-close-btn {
+        color: #94a3b8;
+      }
+      .pt-wrap.dark .pt-close-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f8fafc;
+      }
+      .pt-wrap.dark .pt-input-title {
+        background: #0f172a;
+        color: #94a3b8;
+        border-color: #334155;
+      }
+      .pt-wrap.dark .pt-textarea {
+        background: #0f172a;
+        color: #f8fafc;
+        border-color: #334155;
+      }
+      .pt-wrap.dark .pt-textarea::-webkit-scrollbar-thumb {
+        background: #334155;
+      }
+      .pt-wrap.dark .pt-textarea::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+      .pt-wrap.dark .pt-textarea:focus {
+        border-color: #60a5fa;
+      }
+      .pt-wrap.dark .pt-pill-btn {
+        background: #1e293b;
+        border-color: #334155;
+        color: #94a3b8;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        opacity: 0.9;
+      }
+      .pt-wrap.dark .pt-pill-btn:hover {
+        opacity: 1;
+        background: #0f172a;
+        border-color: rgba(96, 165, 250, 0.6);
+        color: #93c5fd;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+      }
+      .pt-wrap.dark .pt-pill-btn:active {
+        background: #0f172a;
+        transform: scale(0.95);
+      }
+      .pt-wrap.dark .pt-pill-btn.recording {
+        opacity: 1;
+        background: #0f172a;
+        border-color: #3b82f6;
+        color: #60a5fa;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+      }
+      .pt-wrap.dark .pt-pill-btn.success {
+        opacity: 1;
+        border-color: #3b82f6;
+        background: #0f172a;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+      }
+      .pt-wrap.dark .pt-pill-btn.warning {
+        opacity: 1;
+        border-color: #f59e0b;
+        background: #0f172a;
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+      }
+      .pt-wrap.dark .pt-pill-btn.error {
+        opacity: 1;
+        border-color: #ef4444;
+        background: #0f172a;
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+      }
+      .pt-wrap.dark .pt-status-icon.success {
+        color: #3b82f6;
+      }
+      .pt-wrap.dark .pt-status-icon.warning {
+        color: #fbbf24;
+      }
+      .pt-wrap.dark .pt-status-icon.error {
+        color: #f87171;
+      }
+      .pt-wrap.dark .pt-send-btn {
+        background: #3b82f6;
+        color: #ffffff;
+      }
+      .pt-wrap.dark .pt-send-btn:hover {
+        background: #60a5fa;
+      }
+      .pt-wrap.dark .pt-tooltip {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #f8fafc;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+      }
+      .pt-wrap.dark .pt-tip-key {
+        background: rgba(255, 255, 255, 0.08);
+        color: #93c5fd;
+        border-color: rgba(255, 255, 255, 0.15);
+        box-shadow: none;
+      }
+      .pt-wrap.dark .pt-tip-desc {
+        color: #e2e8f0;
       }
     `;
 
@@ -596,7 +811,7 @@
 
     const textarea = document.createElement('textarea');
     textarea.className = 'pt-textarea';
-    textarea.placeholder = '';
+    textarea.placeholder = '输入随手笔记 / 摘要 / 标签...';
     textarea.rows = 4;
 
     const saveBtn = document.createElement('button');
@@ -612,24 +827,31 @@
     inputWrap.append(textarea, saveBtn);
     card.append(cardHeader, inputWrap);
 
-    // 2. 底部浮动按钮 + Toast
+    // 2. 底部浮动按钮 + 提示框
     const bar = document.createElement('div');
     bar.className = 'pt-bar';
 
-    const toast = document.createElement('div');
-    toast.className = 'pt-toast';
-    toast.setAttribute('role', 'status');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'pt-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.innerHTML = `
+      <div class="pt-tip-row"><span class="pt-tip-key">鼠标左键</span><span class="pt-tip-desc">快速复制 Title + URL 到剪贴板</span></div>
+      <div class="pt-tip-row"><span class="pt-tip-key">鼠标右键</span><span class="pt-tip-desc">直接保存 Title + URL 至云端</span></div>
+      <div class="pt-tip-row"><span class="pt-tip-key">Ctrl + 左键</span><span class="pt-tip-desc">在前台新标签页打开云端看板</span></div>
+      <div class="pt-tip-row"><span class="pt-tip-key">Ctrl + 右键</span><span class="pt-tip-desc">展开速记卡片并备注</span></div>
+      <div class="pt-tip-row"><span class="pt-tip-key">Shift + H</span><span class="pt-tip-desc">隐藏浮动按钮</span></div>
+    `;
 
     const mainBtn = document.createElement('button');
     mainBtn.className = 'pt-pill-btn';
     mainBtn.type = 'button';
-    mainBtn.title = '左键：复制 / 右键：速记 / Ctrl+左键：直接保存 / Ctrl+右键：打开看板 / Shift+左键：隐藏';
+    mainBtn.setAttribute('aria-label', 'PageTrace 速记浮动按钮');
 
     const statusIcon = document.createElement('span');
     statusIcon.className = 'pt-status-icon';
     mainBtn.appendChild(statusIcon);
 
-    bar.append(toast, mainBtn);
+    bar.append(tooltip, mainBtn);
     wrap.append(card, bar);
     shadow.append(style, wrap);
     (document.body || document.documentElement).appendChild(host);
@@ -657,16 +879,56 @@
       window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
     }
 
+    function autoResizeTextarea(el, minH = 90, maxH = 240) {
+      if (!el) return;
+      const currentScrollTop = el.scrollTop;
+      const isAtBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) <= 5;
+      el.style.height = 'auto';
+      const borderOffset = (el.offsetHeight - el.clientHeight) || 2;
+      const targetH = el.scrollHeight + borderOffset;
+      const finalH = Math.min(Math.max(targetH, minH), maxH);
+      el.style.height = finalH + 'px';
+      el.style.overflowY = targetH > maxH ? 'auto' : 'hidden';
+      if (targetH > maxH) {
+        if (isAtBottom) {
+          el.scrollTop = el.scrollHeight;
+        } else {
+          el.scrollTop = currentScrollTop;
+        }
+      }
+    }
+
+    let tooltipTimer = null;
+    function startTooltipTimer() {
+      clearTimeout(tooltipTimer);
+      if (card.classList.contains('active')) return;
+      tooltipTimer = setTimeout(() => {
+        if (!card.classList.contains('active')) {
+          tooltip.classList.add('show');
+        }
+      }, 1800);
+    }
+
+    function hideTooltip() {
+      clearTimeout(tooltipTimer);
+      tooltip.classList.remove('show');
+    }
+
     function toggleCard(show) {
       const isCurrentlyOpen = card.classList.contains('active');
       const targetState = show !== undefined ? show : !isCurrentlyOpen;
+      hideTooltip();
       if (targetState) {
         titlePreview.textContent = processTitle(document.title);
         titlePreview.href = window.location.href;
         titlePreview.title = document.title;
         card.classList.add('active');
         mainBtn.classList.add('recording');
-        setTimeout(() => textarea.focus(), 60);
+        autoResizeTextarea(textarea, 90, 240);
+        setTimeout(() => {
+          textarea.focus();
+          autoResizeTextarea(textarea, 90, 240);
+        }, 60);
       } else {
         card.classList.remove('active');
         mainBtn.classList.remove('recording');
@@ -676,7 +938,8 @@
     async function submitNote() {
       const title = processTitle(document.title);
       const url = window.location.href;
-      const note = textarea.value.trim();
+      const rawNote = textarea.value.trim();
+      const note = formatNoteWithBlankLines(rawNote);
 
       if (!CONFIG.uid || !CONFIG.apiKey || !CONFIG.projectId) {
         showButtonStatus('warning');
@@ -694,6 +957,7 @@
 
         showButtonStatus('success');
         textarea.value = '';
+        autoResizeTextarea(textarea, 90, 240);
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
@@ -707,11 +971,16 @@
     async function handleCopyOnly() {
       const title = processTitle(document.title);
       const url = window.location.href;
-      const note = textarea.value.trim();
+      const rawNote = textarea.value.trim();
+      const note = formatNoteWithBlankLines(rawNote);
       const text = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
       try {
         await copyText(text);
         showButtonStatus('success');
+        if (textarea.value) {
+          textarea.value = '';
+          autoResizeTextarea(textarea, 90, 240);
+        }
         toggleCard(false);
       } catch (e) {
         console.error('[PageTrace] 复制失败:', e);
@@ -740,32 +1009,18 @@
       }
     }
 
-    // 主按钮点击与快捷键事件：
-    // 左键：复制
-    // Ctrl + 左键：直接保存
-    // Shift + 左键：隐藏按钮
+    // 鼠标悬停提示框事件（悬停 1.8 秒后显示）
+    mainBtn.addEventListener('mouseenter', startTooltipTimer);
+    mainBtn.addEventListener('mouseleave', hideTooltip);
+
+    // 主按钮点击事件：
+    // 鼠标左键：快速复制当前网页标题与网址 (Title + URL) 到剪贴板
+    // Ctrl + 左键：在前台新标签页中打开云端速记看板
     mainBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      hideTooltip();
 
-      if (e.shiftKey) {
-        wrap.style.display = 'none';
-        return;
-      }
-
-      if (e.ctrlKey || e.metaKey) {
-        handleDirectSave();
-        return;
-      }
-
-      handleCopyOnly();
-    });
-
-    // 右键：速记
-    // Ctrl + 右键：在新标签页中打开看板
-    mainBtn.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
       if (e.ctrlKey || e.metaKey) {
         if (typeof GM_openInTab === 'function') {
           GM_openInTab('https://page-trace-app.web.app', { active: true, insert: true, setParent: true });
@@ -774,12 +1029,55 @@
         }
         return;
       }
-      toggleCard();
+
+      handleCopyOnly();
     });
+
+    // 主按钮右键事件：
+    // 鼠标右键：直接保存当前网页标题与网址 (Title + URL) 至云端
+    // Ctrl + 右键：展开速记卡片，可输入备注并保存同步至云端
+    mainBtn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideTooltip();
+
+      if (e.ctrlKey || e.metaKey) {
+        toggleCard();
+        return;
+      }
+
+      handleDirectSave();
+    });
+
+    // 全局快捷键 Shift + H：隐藏/恢复浮动按钮
+    const onGlobalKeyDown = (e) => {
+      if (e.shiftKey && (e.key === 'H' || e.key === 'h' || e.code === 'KeyH') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const target = (e.composedPath && e.composedPath()[0]) || e.target;
+        const targetTag = target?.tagName?.toLowerCase();
+        const isEditing = target?.isContentEditable || targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select';
+        if (isEditing) return;
+
+        if (!host.isConnected) {
+          window.removeEventListener('keydown', onGlobalKeyDown);
+          return;
+        }
+
+        e.preventDefault();
+        if (wrap.style.display === 'none') {
+          wrap.style.display = '';
+        } else {
+          wrap.style.display = 'none';
+          toggleCard(false);
+          hideTooltip();
+        }
+      }
+    };
+    window.addEventListener('keydown', onGlobalKeyDown);
 
     closeBtn.addEventListener('click', () => toggleCard(false));
     saveBtn.addEventListener('click', submitNote);
 
+    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 90, 240));
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -789,6 +1087,63 @@
         toggleCard(false);
       }
     });
+
+    // 主题深浅色自适应与同步
+    function updateTheme() {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const htmlEl = document.documentElement;
+      const bodyEl = document.body;
+      const htmlTheme = htmlEl ? htmlEl.getAttribute('data-theme') : null;
+      const bodyTheme = bodyEl ? bodyEl.getAttribute('data-theme') : null;
+      const hasDarkClass = (htmlEl && htmlEl.classList.contains('dark')) || (bodyEl && bodyEl.classList.contains('dark'));
+      const isExplicitDark = htmlTheme === 'dark' || bodyTheme === 'dark' || hasDarkClass;
+      const isExplicitLight = htmlTheme === 'light' || bodyTheme === 'light';
+
+      if (isExplicitDark || (!isExplicitLight && prefersDark)) {
+        wrap.classList.add('dark');
+      } else {
+        wrap.classList.remove('dark');
+      }
+    }
+
+    updateTheme();
+
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+    }
+
+    if (window.MutationObserver) {
+      const themeObserver = new MutationObserver(() => {
+        if (!host.isConnected) {
+          themeObserver.disconnect();
+          return;
+        }
+        updateTheme();
+      });
+      if (document.documentElement) {
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+      }
+      if (document.body) {
+        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+      }
+    }
+
+    const onThemeMessage = (event) => {
+      if (!host.isConnected) {
+        window.removeEventListener('message', onThemeMessage);
+        return;
+      }
+      if (event.data && event.data.source === 'PAGETRACE_THEME_CHANGE') {
+        if (event.data.theme === 'dark') {
+          wrap.classList.add('dark');
+        } else if (event.data.theme === 'light') {
+          wrap.classList.remove('dark');
+        } else {
+          updateTheme();
+        }
+      }
+    };
+    window.addEventListener('message', onThemeMessage);
   }
 
 
