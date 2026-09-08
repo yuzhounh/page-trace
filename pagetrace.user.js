@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.9
+// @version      1.9.10
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -254,13 +254,33 @@
   // ==========================================
   // 6. UI 交互组件 (Shadow DOM 防宿主污染)
   // ==========================================
+  function createSvgIcon({ width, height, strokeWidth, shapes }) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const attributes = {
+      width,
+      height,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': strokeWidth,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    };
+
+    Object.entries(attributes).forEach(([name, value]) => svg.setAttribute(name, String(value)));
+    shapes.forEach(({ tag, attributes: shapeAttributes }) => {
+      const shape = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(shapeAttributes).forEach(([name, value]) => shape.setAttribute(name, String(value)));
+      svg.appendChild(shape);
+    });
+    return svg;
+  }
+
   function mount() {
-    if (!document.body && !document.documentElement) return;
-    if (document.getElementById(CONFIG.HOST_ID)) return;
+    if (!document.body || document.getElementById(CONFIG.HOST_ID)) return;
 
     const host = document.createElement('div');
     host.id = CONFIG.HOST_ID;
-    host.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; overflow: visible; z-index: 2147483647; pointer-events: none;';
     const shadow = host.attachShadow({ mode: 'closed' });
 
     const style = document.createElement('style');
@@ -802,7 +822,7 @@
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'pt-close-btn';
-    closeBtn.innerHTML = '&times;';
+    closeBtn.textContent = '×';
     closeBtn.title = '收起 (Esc)';
     cardHeader.append(titlePreview, closeBtn);
 
@@ -818,11 +838,12 @@
     saveBtn.className = 'pt-send-btn';
     saveBtn.type = 'button';
     saveBtn.title = '保存 (Shift+Enter / Ctrl+Enter)';
-    saveBtn.innerHTML = `
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 19V5M5 12l7-7 7 7"/>
-      </svg>
-    `;
+    saveBtn.appendChild(createSvgIcon({
+      width: 15,
+      height: 15,
+      strokeWidth: 2.5,
+      shapes: [{ tag: 'path', attributes: { d: 'M12 19V5M5 12l7-7 7 7' } }]
+    }));
 
     inputWrap.append(textarea, saveBtn);
     card.append(cardHeader, inputWrap);
@@ -834,13 +855,24 @@
     const tooltip = document.createElement('div');
     tooltip.className = 'pt-tooltip';
     tooltip.setAttribute('role', 'tooltip');
-    tooltip.innerHTML = `
-      <div class="pt-tip-row"><span class="pt-tip-key">鼠标左键</span><span class="pt-tip-desc">快速复制 Title + URL 到剪贴板</span></div>
-      <div class="pt-tip-row"><span class="pt-tip-key">鼠标右键</span><span class="pt-tip-desc">直接保存 Title + URL 至云端</span></div>
-      <div class="pt-tip-row"><span class="pt-tip-key">Ctrl + 左键</span><span class="pt-tip-desc">在前台新标签页打开云端看板</span></div>
-      <div class="pt-tip-row"><span class="pt-tip-key">Ctrl + 右键</span><span class="pt-tip-desc">展开速记卡片并备注</span></div>
-      <div class="pt-tip-row"><span class="pt-tip-key">Shift + H</span><span class="pt-tip-desc">隐藏浮动按钮</span></div>
-    `;
+    [
+      ['鼠标左键', '快速复制 Title + URL 到剪贴板'],
+      ['鼠标右键', '直接保存 Title + URL 至云端'],
+      ['Ctrl + 左键', '在前台新标签页打开云端看板'],
+      ['Ctrl + 右键', '展开速记卡片并备注'],
+      ['Shift + H', '隐藏浮动按钮']
+    ].forEach(([keyText, descriptionText]) => {
+      const row = document.createElement('div');
+      row.className = 'pt-tip-row';
+      const key = document.createElement('span');
+      key.className = 'pt-tip-key';
+      key.textContent = keyText;
+      const description = document.createElement('span');
+      description.className = 'pt-tip-desc';
+      description.textContent = descriptionText;
+      row.append(key, description);
+      tooltip.appendChild(row);
+    });
 
     const mainBtn = document.createElement('button');
     mainBtn.className = 'pt-pill-btn';
@@ -854,23 +886,30 @@
     bar.append(tooltip, mainBtn);
     wrap.append(card, bar);
     shadow.append(style, wrap);
-    (document.body || document.documentElement).appendChild(host);
+    document.body.appendChild(host);
 
     const SVG_ICONS = {
-      success: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
-      warning: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="14"></line><line x1="12" y1="19" x2="12.01" y2="19"></line></svg>`,
-      error: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+      success: { width: 22, height: 22, strokeWidth: 2.8, shapes: [{ tag: 'polyline', attributes: { points: '20 6 9 17 4 12' } }] },
+      warning: { width: 20, height: 20, strokeWidth: 3, shapes: [
+        { tag: 'line', attributes: { x1: 12, y1: 4, x2: 12, y2: 14 } },
+        { tag: 'line', attributes: { x1: 12, y1: 19, x2: 12.01, y2: 19 } }
+      ] },
+      error: { width: 20, height: 20, strokeWidth: 3, shapes: [
+        { tag: 'line', attributes: { x1: 18, y1: 6, x2: 6, y2: 18 } },
+        { tag: 'line', attributes: { x1: 6, y1: 6, x2: 18, y2: 18 } }
+      ] }
     };
 
     let statusTimer;
     function showButtonStatus(type, duration = 1800) {
       clearTimeout(statusTimer);
-      statusIcon.innerHTML = SVG_ICONS[type] || '';
+      statusIcon.replaceChildren();
+      if (SVG_ICONS[type]) statusIcon.appendChild(createSvgIcon(SVG_ICONS[type]));
       statusIcon.className = `pt-status-icon ${type} show`;
       mainBtn.className = `pt-pill-btn ${type}`;
       statusTimer = setTimeout(() => {
         statusIcon.className = 'pt-status-icon';
-        statusIcon.innerHTML = '';
+        statusIcon.replaceChildren();
         mainBtn.className = 'pt-pill-btn' + (card.classList.contains('active') ? ' recording' : '');
       }, duration);
     }
