@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.10
+// @version      1.9.11
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -370,15 +370,23 @@
       }
 
       .pt-input-wrap {
-        position: relative;
         width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+      }
+      .pt-input-wrap:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
       }
       .pt-textarea {
         width: 100%;
         box-sizing: border-box;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        padding: 8px 36px 8px 10px;
+        border: none;
+        border-radius: 0;
+        padding: 8px 10px;
         font-size: 13px;
         line-height: 1.5;
         resize: none;
@@ -389,7 +397,7 @@
         background: #ffffff;
         color: #1e293b;
         font-family: inherit;
-        transition: border-color 150ms ease, box-shadow 150ms ease;
+        transition: none;
         display: block;
         overflow-y: hidden;
       }
@@ -407,13 +415,10 @@
         background: #94a3b8;
       }
       .pt-textarea:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        border-color: transparent;
+        box-shadow: none;
       }
       .pt-send-btn {
-        position: absolute;
-        right: 8px;
-        bottom: 8px;
         width: 26px;
         height: 26px;
         border-radius: 50%;
@@ -424,8 +429,17 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        flex: 0 0 auto;
         transition: all 150ms ease;
         padding: 0;
+      }
+      .pt-input-actions {
+        min-height: 42px;
+        padding: 6px 8px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        background: #ffffff;
       }
       .pt-send-btn:hover {
         background: #1d4ed8;
@@ -607,7 +621,16 @@
         .pt-textarea {
           background: #0f172a;
           color: #f8fafc;
+        }
+        .pt-input-wrap {
+          background: #0f172a;
           border-color: #334155;
+        }
+        .pt-input-wrap:focus-within {
+          border-color: #60a5fa;
+        }
+        .pt-input-actions {
+          background: #0f172a;
         }
         .pt-textarea::-webkit-scrollbar-thumb {
           background: #334155;
@@ -715,7 +738,16 @@
       .pt-wrap.dark .pt-textarea {
         background: #0f172a;
         color: #f8fafc;
+      }
+      .pt-wrap.dark .pt-input-wrap {
+        background: #0f172a;
         border-color: #334155;
+      }
+      .pt-wrap.dark .pt-input-wrap:focus-within {
+        border-color: #60a5fa;
+      }
+      .pt-wrap.dark .pt-input-actions {
+        background: #0f172a;
       }
       .pt-wrap.dark .pt-textarea::-webkit-scrollbar-thumb {
         background: #334155;
@@ -845,7 +877,11 @@
       shapes: [{ tag: 'path', attributes: { d: 'M12 19V5M5 12l7-7 7 7' } }]
     }));
 
-    inputWrap.append(textarea, saveBtn);
+    const inputActions = document.createElement('div');
+    inputActions.className = 'pt-input-actions';
+    inputActions.appendChild(saveBtn);
+
+    inputWrap.append(textarea, inputActions);
     card.append(cardHeader, inputWrap);
 
     // 2. 底部浮动按钮 + 提示框
