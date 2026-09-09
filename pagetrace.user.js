@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.9.11
+// @version      1.9.12
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -390,9 +390,9 @@
         font-size: 13px;
         line-height: 1.5;
         resize: none;
-        min-height: 90px;
+        min-height: 75px;
         max-height: 240px;
-        height: 90px;
+        height: 75px;
         outline: none;
         background: #ffffff;
         color: #1e293b;
@@ -434,10 +434,10 @@
         padding: 0;
       }
       .pt-input-actions {
-        min-height: 42px;
-        padding: 6px 8px 8px;
+        min-height: 38px;
+        padding: 4px 8px 8px;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: flex-end;
         background: #ffffff;
       }
@@ -864,7 +864,7 @@
     const textarea = document.createElement('textarea');
     textarea.className = 'pt-textarea';
     textarea.placeholder = '输入随手笔记 / 摘要 / 标签...';
-    textarea.rows = 4;
+    textarea.rows = 3;
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'pt-send-btn';
@@ -954,7 +954,7 @@
       window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
     }
 
-    function autoResizeTextarea(el, minH = 90, maxH = 240) {
+    function autoResizeTextarea(el, minH = 75, maxH = 240) {
       if (!el) return;
       const currentScrollTop = el.scrollTop;
       const isAtBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) <= 5;
@@ -999,10 +999,10 @@
         titlePreview.title = document.title;
         card.classList.add('active');
         mainBtn.classList.add('recording');
-        autoResizeTextarea(textarea, 90, 240);
+        autoResizeTextarea(textarea, 75, 240);
         setTimeout(() => {
           textarea.focus();
-          autoResizeTextarea(textarea, 90, 240);
+          autoResizeTextarea(textarea, 75, 240);
         }, 60);
       } else {
         card.classList.remove('active');
@@ -1032,7 +1032,7 @@
 
         showButtonStatus('success');
         textarea.value = '';
-        autoResizeTextarea(textarea, 90, 240);
+        autoResizeTextarea(textarea, 75, 240);
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
@@ -1054,7 +1054,7 @@
         showButtonStatus('success');
         if (textarea.value) {
           textarea.value = '';
-          autoResizeTextarea(textarea, 90, 240);
+          autoResizeTextarea(textarea, 75, 240);
         }
         toggleCard(false);
       } catch (e) {
@@ -1152,7 +1152,7 @@
     closeBtn.addEventListener('click', () => toggleCard(false));
     saveBtn.addEventListener('click', submitNote);
 
-    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 90, 240));
+    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 75, 240));
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
