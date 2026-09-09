@@ -587,23 +587,29 @@
       top: 20px;
     }
     .month-date-year {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.3;
       color: var(--text-muted);
     }
     .month-date-month {
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--text);
-      line-height: 1.2;
+      line-height: 1.25;
       margin: 2px 0 4px;
     }
     .month-date-count {
       display: inline-block;
-      font-size: 11.5px;
+      font-size: 11px;
       color: var(--text-muted);
-      font-weight: 400;
-      line-height: 1.3;
+      background: rgba(100, 116, 139, 0.12);
+      padding: 1.5px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+    [data-theme="dark"] .month-date-count {
+      background: rgba(148, 163, 184, 0.16);
     }
 
     .month-card {
