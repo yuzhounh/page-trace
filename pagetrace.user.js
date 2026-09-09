@@ -896,7 +896,7 @@
       ['鼠标右键', '直接保存 Title + URL 至云端'],
       ['Ctrl + 左键', '在前台新标签页打开云端看板'],
       ['Ctrl + 右键', '展开速记卡片并备注'],
-      ['Shift + H', '隐藏浮动按钮']
+      ['Ctrl + Shift + H', '隐藏浮动按钮']
     ].forEach(([keyText, descriptionText]) => {
       const row = document.createElement('div');
       row.className = 'pt-tip-row';
@@ -1124,12 +1124,12 @@
       handleDirectSave();
     });
 
-    // 全局快捷键 Shift + H：隐藏/恢复浮动按钮
+    // 全局快捷键 Ctrl + Shift + H：隐藏/恢复浮动按钮
     const onGlobalKeyDown = (e) => {
-      if (e.shiftKey && (e.key === 'H' || e.key === 'h' || e.code === 'KeyH') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'H' || e.key === 'h' || e.code === 'KeyH') && !e.altKey) {
         const target = (e.composedPath && e.composedPath()[0]) || e.target;
         const targetTag = target?.tagName?.toLowerCase();
-        const isEditing = target?.isContentEditable || targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select';
+        const isEditing = target?.isContentEditable || target?.closest?.('[contenteditable="true"]') || targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select';
         if (isEditing) return;
 
         if (!host.isConnected) {
