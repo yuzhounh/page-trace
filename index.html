@@ -655,26 +655,99 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 0;
     }
     .note-title {
-      font-size: 13px;
-      font-weight: 400;
+      display: block;
+      max-width: 61.8%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--text);
       text-decoration: none;
-      word-break: break-all;
-      line-height: 1.45;
+      word-break: break-word;
+      line-height: 1.4;
     }
-    .note-title:hover {
+    a.note-title:hover {
       color: var(--primary);
       text-decoration: underline;
     }
+    .note-title-brand {
+      font-weight: 400;
+      color: var(--text-muted);
+    }
     .note-quote {
-      font-size: 12px;
+      margin-top: 6px;
+      padding-left: 10px;
+      border-left: 2px solid var(--border);
+      font-size: 13px;
+      font-weight: 400;
       color: var(--text-muted);
       line-height: 1.5;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+    .note-body.is-collapsed {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+    }
+    .note-expand-btn {
+      align-self: flex-start;
+      margin-top: 5px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--primary);
+      font: inherit;
+      font-size: 12px;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+    .note-expand-btn:hover {
+      text-decoration: underline;
+    }
+    .note-plain-content {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note-title + .note-plain-content {
+      margin-top: 7px;
+    }
+    .note-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      /* 元信息位于按钮下方，可使用主内容与选项按钮之间预留的 40px。 */
+      width: calc(100% + 40px);
+      margin-top: 7px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--text-muted);
+      opacity: 0.78;
+    }
+    .note-meta-domain {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .note-meta time {
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    @media (max-width: 640px) {
+      .note-title {
+        max-width: 100%;
+      }
     }
     .note-side-col {
       display: flex;
@@ -1196,7 +1269,16 @@
         </div>
         <button class="modal-close-x" id="closeCreateModal">✕</button>
       </div>
+      <div class="form-group">
+        <label class="form-label">标题（可选）</label>
+        <input type="text" class="form-input" id="createTitle" placeholder="纯笔记可留空" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">链接（可选）</label>
+        <input type="text" class="form-input" id="createUrl" placeholder="https://" />
+      </div>
       <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
           <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签..."></textarea>
           <div class="input-action-row">
@@ -1331,11 +1413,11 @@
         <button class="modal-close-x" id="closeEditModal">✕</button>
       </div>
       <div class="form-group">
-        <label class="form-label">标题</label>
+        <label class="form-label">标题（可选）</label>
         <input type="text" class="form-input" id="editTitle" />
       </div>
       <div class="form-group">
-        <label class="form-label">链接 (URL)</label>
+        <label class="form-label">链接（可选）</label>
         <input type="text" class="form-input" id="editUrl" />
       </div>
       <div class="form-group" style="margin-bottom: 0;">
@@ -1374,6 +1456,7 @@
     let unsubscribeNotes = null;
     let currentEditingId = null;
     let currentSearchKeyword = '';
+    const expandedNoteIds = new Set();
 
     // DOM 元素
     const loginBtn = document.getElementById('loginBtn');
@@ -1416,6 +1499,8 @@
     // 记笔记弹窗 DOM
     const openCreateBtn = document.getElementById('openCreateBtn');
     const createModal = document.getElementById('createModal');
+    const createTitle = document.getElementById('createTitle');
+    const createUrl = document.getElementById('createUrl');
     const createNoteInput = document.getElementById('createNoteInput');
     const closeCreateModal = document.getElementById('closeCreateModal');
     const btnSubmitCreate = document.getElementById('btnSubmitCreate');
@@ -1638,6 +1723,42 @@
       if (item.createdAt.toDate) return item.createdAt.toDate();
       const d = new Date(item.createdAt);
       return isNaN(d.getTime()) ? null : d;
+    }
+
+    function getSafeHttpUrl(value) {
+      if (!value) return '';
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function getDisplayDomain(value) {
+      if (!value) return '';
+      try {
+        return new URL(value).hostname.replace(/^www\./i, '');
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function splitTitleBrand(value) {
+      const title = (value || '').trim();
+      const separatorIndex = title.lastIndexOf(' - ');
+      if (separatorIndex <= 0 || separatorIndex >= title.length - 3) {
+        return { main: title, brand: '' };
+      }
+      return {
+        main: title.slice(0, separatorIndex),
+        brand: title.slice(separatorIndex + 3)
+      };
+    }
+
+    function getOptionalTitle(value) {
+      const title = (value || '').trim();
+      return title === '无标题页面' ? '' : title;
     }
 
     function getMonthKey(date) {
@@ -1866,6 +1987,14 @@
                   const charCount = (item.title || '').length + (item.note || '').length;
                   const createdD = getItemDate(item);
                   const createdTimeStr = createdD ? formatShortTime(createdD) : '';
+                  const safeUrl = getSafeHttpUrl(item.url);
+                  const domain = getDisplayDomain(safeUrl);
+                  const storedTitle = getOptionalTitle(item.title);
+                  const displayTitle = storedTitle || (safeUrl ? domain : '');
+                  const titleParts = splitTitleBrand(displayTitle);
+                  const normalizedNote = formatNoteWithBlankLines(item.note || '');
+                  const hasNoteBody = Boolean(normalizedNote);
+                  const isExpanded = expandedNoteIds.has(item.id);
 
                   let isModified = false;
                   let updatedTimeStr = '';
@@ -1882,10 +2011,29 @@
                   return `
                     <div class="note-item-row" data-id="${item.id}">
                       <div class="note-main">
-                        <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="note-title">
-                          ${escapeHtml(item.title || '无标题页面')}
-                        </a>
-                        ${item.note ? `<div class="note-quote">${escapeHtml(formatNoteWithBlankLines(item.note))}</div>` : ''}
+                        ${displayTitle ? (safeUrl ? `
+                          <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="note-title" title="${escapeHtml(displayTitle)}">
+                            ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
+                          </a>
+                        ` : `
+                          <div class="note-title" title="${escapeHtml(displayTitle)}">
+                            ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
+                          </div>
+                        `) : ''}
+                        ${normalizedNote ? `
+                          <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(normalizedNote)}</div>
+                        ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
+                        ${hasNoteBody ? `
+                          <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}" ${isExpanded ? '' : 'hidden'}>
+                            ${isExpanded ? '收起' : '展开'}
+                          </button>
+                        ` : ''}
+                        ${(domain || createdTimeStr) ? `
+                          <div class="note-meta">
+                            ${domain ? `<span class="note-meta-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}
+                            ${createdTimeStr ? `<time datetime="${createdD.toISOString()}">${escapeHtml(createdTimeStr)}</time>` : ''}
+                          </div>
+                        ` : ''}
                       </div>
                       <div class="note-side-col">
                         <button class="note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
@@ -1950,8 +2098,44 @@
       }
 
       notesList.innerHTML = html;
+      requestAnimationFrame(updateNoteExpandControls);
       setupScrollObserver();
     }
+
+    function updateNoteExpandControls() {
+      notesList.querySelectorAll('.note-expand-btn').forEach(button => {
+        const row = button.closest('.note-item-row');
+        const body = row?.querySelector('.note-body');
+        if (!body) return;
+        const isExpanded = body.classList.contains('is-expanded');
+        button.hidden = !isExpanded && body.scrollHeight <= body.clientHeight + 1;
+      });
+    }
+
+    window.toggleNoteExpanded = function(e, id) {
+      e.stopPropagation();
+      const row = e.currentTarget.closest('.note-item-row');
+      const body = row?.querySelector('.note-body');
+      if (!body) return;
+
+      const shouldExpand = body.classList.contains('is-collapsed');
+      body.classList.toggle('is-collapsed', !shouldExpand);
+      body.classList.toggle('is-expanded', shouldExpand);
+      e.currentTarget.textContent = shouldExpand ? '收起' : '展开';
+      e.currentTarget.setAttribute('aria-expanded', String(shouldExpand));
+
+      if (shouldExpand) {
+        expandedNoteIds.add(id);
+      } else {
+        expandedNoteIds.delete(id);
+      }
+    };
+
+    let noteExpandResizeFrame = null;
+    window.addEventListener('resize', () => {
+      if (noteExpandResizeFrame) cancelAnimationFrame(noteExpandResizeFrame);
+      noteExpandResizeFrame = requestAnimationFrame(updateNoteExpandControls);
+    });
 
     // 月份导航事件监听
     btnPrevMonth.addEventListener('click', () => {
@@ -2039,11 +2223,27 @@
       searchModal.classList.remove('show');
     }
 
+    function bindSafeBackdropClose(modal, onClose) {
+      let pointerStartedOnBackdrop = false;
+
+      modal.addEventListener('pointerdown', (e) => {
+        pointerStartedOnBackdrop = e.target === modal;
+      });
+
+      modal.addEventListener('pointerup', (e) => {
+        const shouldClose = pointerStartedOnBackdrop && e.target === modal;
+        pointerStartedOnBackdrop = false;
+        if (shouldClose) onClose();
+      });
+
+      modal.addEventListener('pointercancel', () => {
+        pointerStartedOnBackdrop = false;
+      });
+    }
+
     openSearchBtn.addEventListener('click', showSearchModal);
     closeSearchModal.addEventListener('click', hideSearchModal);
-    searchModal.addEventListener('click', (e) => {
-      if (e.target === searchModal) hideSearchModal();
-    });
+    bindSafeBackdropClose(searchModal, hideSearchModal);
 
     spotlightInput.addEventListener('input', () => {
       currentSearchKeyword = spotlightInput.value;
@@ -2111,58 +2311,37 @@
 
     openCreateBtn.addEventListener('click', showCreateModal);
     closeCreateModal.addEventListener('click', hideCreateModal);
-    createModal.addEventListener('click', (e) => {
-      if (e.target === createModal) hideCreateModal();
-    });
+    bindSafeBackdropClose(createModal, hideCreateModal);
 
     openDocBtn.addEventListener('click', showDocModal);
     closeDocModal.addEventListener('click', hideDocModal);
-    docModal.addEventListener('click', (e) => {
-      if (e.target === docModal) hideDocModal();
-    });
+    bindSafeBackdropClose(docModal, hideDocModal);
 
     async function handleCreateSubmit() {
-      const raw = createNoteInput.value.trim();
-      if (!raw) return;
+      const title = createTitle.value.trim();
+      const url = createUrl.value.trim();
+      const rawNote = createNoteInput.value.trim();
+      if (!title && !url && !rawNote) return;
       if (!currentUser) {
         alert('请登录');
         loginBtn.click();
         return;
       }
 
-      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-      let title = '';
-      let url = '';
-      let note = '';
-
-      if (lines.length >= 1) {
-        if (lines[0].startsWith('http://') || lines[0].startsWith('https://')) {
-          url = lines[0];
-          title = lines[1] || url;
-          note = lines.slice(2).join('\n');
-        } else {
-          title = lines[0];
-          if (lines[1] && (lines[1].startsWith('http://') || lines[1].startsWith('https://'))) {
-            url = lines[1];
-            note = lines.slice(2).join('\n');
-          } else {
-            note = lines.slice(1).join('\n');
-          }
-        }
-      }
-
-      const noteToSave = formatNoteWithBlankLines(note);
+      const noteToSave = formatNoteWithBlankLines(rawNote);
 
       try {
         btnSubmitCreate.disabled = true;
         await db.collection('users').doc(currentUser.uid).collection('notes').add({
-          title: title || '随手速记',
-          url: url || '',
+          title: title,
+          url: url,
           note: noteToSave || '',
           status: 'inbox',
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           source: 'web_dashboard'
         });
+        createTitle.value = '';
+        createUrl.value = '';
         createNoteInput.value = '';
         autoResizeTextarea(createNoteInput, 96, 280);
         hideCreateModal();
@@ -2188,6 +2367,18 @@
         e.preventDefault();
         hideCreateModal();
       }
+    });
+
+    [createTitle, createUrl].forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleCreateSubmit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          hideCreateModal();
+        }
+      });
     });
 
     // 全局快捷键 (/ 搜索，N 新建速记，? 帮助文档，ESC 退出)
@@ -2235,7 +2426,7 @@
       const item = notesData.find(n => n.id === id);
       if (!item) return;
       currentEditingId = id;
-      editTitle.value = item.title || '';
+      editTitle.value = getOptionalTitle(item.title);
       editUrl.value = item.url || '';
       editNote.value = formatNoteWithBlankLines(item.note || '');
       editModal.classList.add('show');
@@ -2251,11 +2442,9 @@
       currentEditingId = null;
     });
 
-    editModal.addEventListener('click', (e) => {
-      if (e.target === editModal) {
-        editModal.classList.remove('show');
-        currentEditingId = null;
-      }
+    bindSafeBackdropClose(editModal, () => {
+      editModal.classList.remove('show');
+      currentEditingId = null;
     });
 
     async function handleSaveEdit() {
@@ -2264,10 +2453,15 @@
       const url = editUrl.value.trim();
       const note = formatNoteWithBlankLines(editNote.value);
 
+      if (!title && !url && !note) {
+        alert('标题、链接和速记备注不能同时为空');
+        return;
+      }
+
       try {
         btnSaveEdit.disabled = true;
         await db.collection('users').doc(currentUser.uid).collection('notes').doc(currentEditingId).update({
-          title: title || '无标题页面',
+          title: title,
           url: url,
           note: note,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
