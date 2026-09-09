@@ -1165,7 +1165,244 @@
       padding: 60px 20px;
       color: var(--text-muted);
     }
-    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    /* 回收站弹窗专属样式 */
+    .trash-card {
+      width: 640px;
+      max-width: 95vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+    .trash-card .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .trash-count-badge {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--pill-bg);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 12px;
+      margin-left: 4px;
+    }
+    .trash-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .trash-clear-btn {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--danger);
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .trash-clear-btn:hover:not(:disabled) {
+      background: var(--danger);
+      color: #ffffff;
+      border-color: var(--danger);
+    }
+    .trash-clear-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+    .trash-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .trash-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 14px;
+      background: var(--pill-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .trash-item:hover {
+      border-color: var(--card-hover-border);
+    }
+    .trash-item-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .trash-item-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+      line-height: 1.4;
+    }
+    .trash-item-url {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    .trash-item-note {
+      font-size: 12.5px;
+      color: var(--text);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-top: 2px;
+      opacity: 0.88;
+    }
+    .trash-item-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .trash-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .trash-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+    .trash-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .trash-btn.restore:hover {
+      background: var(--badge-bg);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .trash-btn.delete {
+      color: var(--danger);
+    }
+    .trash-btn.delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+      color: var(--danger-hover);
+    }
+    .trash-empty {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--text-muted);
+    }
+    .trash-empty-icon {
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+    .trash-empty-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .trash-empty-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    /* 底部浮动撤销 Toast 样式 */
+    .toast-bar {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--card-bg);
+      color: var(--text);
+      box-shadow: var(--dropdown-shadow);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      font-size: 13.5px;
+    }
+    .toast-bar.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .toast-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast-undo-btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .toast-undo-btn:hover {
+      background: var(--primary-hover);
+    }
+    .toast-undo-btn:active {
+      transform: scale(0.96);
+    }
+    .toast-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+    .toast-close-btn:hover {
+      color: var(--text);
+      background: var(--item-hover-bg);
+    }
   </style>
 </head>
 <body>
@@ -1208,6 +1445,15 @@
           </svg>
           <span>速记</span>
           <span class="kbd-hint">N</span>
+        </button>
+
+        <button class="header-btn" id="openTrashBtn" title="回收站 (T)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>回收站</span>
+          <span class="kbd-hint">T</span>
         </button>
 
         <button class="header-btn" id="openDocBtn" title="使用说明与快捷键">
@@ -1457,6 +1703,10 @@
               <td>快速打开<strong>新建速记</strong>弹窗</td>
             </tr>
             <tr>
+              <td><span class="doc-kbd">T</span></td>
+              <td>快速打开<strong>回收站</strong>，查看、还原或清空已删除笔记</td>
+            </tr>
+            <tr>
               <td><span class="doc-kbd">D</span></td>
               <td>切换<strong>深色 / 浅色模式</strong></td>
             </tr>
@@ -1504,6 +1754,35 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 4：回收站弹窗 -->
+  <div class="modal-overlay" id="trashModal">
+    <div class="modal-card trash-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🗑️ 回收站</span>
+          <span class="trash-count-badge" id="trashCountBadge">0 条</span>
+        </div>
+        <div class="trash-header-actions">
+          <button class="trash-clear-btn" id="btnClearTrash" title="永久清空回收站中所有笔记">清空回收站</button>
+          <button class="modal-close-x" id="closeTrashModal">✕</button>
+        </div>
+      </div>
+      <div class="trash-body" id="trashBody"></div>
+    </div>
+  </div>
+
+  <!-- 底部浮动撤销 Toast -->
+  <div class="toast-bar" id="undoToast">
+    <div class="toast-left">
+      <span class="toast-icon">🗑️</span>
+      <span class="toast-text" id="undoToastText">已移至回收站</span>
+    </div>
+    <div class="toast-right">
+      <button class="toast-undo-btn" id="undoToastBtn">撤销</button>
+      <button class="toast-close-btn" id="undoToastClose" title="关闭">✕</button>
     </div>
   </div>
 
@@ -1580,6 +1859,18 @@
     const openDocBtn = document.getElementById('openDocBtn');
     const docModal = document.getElementById('docModal');
     const closeDocModal = document.getElementById('closeDocModal');
+
+    // 回收站与撤销 Toast DOM
+    const openTrashBtn = document.getElementById('openTrashBtn');
+    const trashModal = document.getElementById('trashModal');
+    const closeTrashModal = document.getElementById('closeTrashModal');
+    const trashCountBadge = document.getElementById('trashCountBadge');
+    const trashBody = document.getElementById('trashBody');
+    const btnClearTrash = document.getElementById('btnClearTrash');
+    const undoToast = document.getElementById('undoToast');
+    const undoToastText = document.getElementById('undoToastText');
+    const undoToastBtn = document.getElementById('undoToastBtn');
+    const undoToastClose = document.getElementById('undoToastClose');
 
     // 主题切换 DOM
     const themeToggleBtn = document.getElementById('themeToggleBtn');
@@ -1783,6 +2074,9 @@
         });
 
         renderList();
+        if (trashModal && trashModal.classList.contains('show')) {
+          renderTrashModal();
+        }
       }, (err) => {
         console.error('拉取笔记失败:', err);
         notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
@@ -1846,9 +2140,10 @@
     }
 
     function getSearchFilteredNotes() {
+      const activeNotes = notesData.filter(item => !item.isDeleted);
       const kw = currentSearchKeyword.trim().toLowerCase();
-      if (!kw) return notesData;
-      return notesData.filter(item => 
+      if (!kw) return activeNotes;
+      return activeNotes.filter(item => 
         (item.title && item.title.toLowerCase().includes(kw)) ||
         (item.url && item.url.toLowerCase().includes(kw)) ||
         (item.note && item.note.toLowerCase().includes(kw))
@@ -2388,6 +2683,130 @@
     closeDocModal.addEventListener('click', hideDocModal);
     bindSafeBackdropClose(docModal, hideDocModal);
 
+    // 回收站弹窗逻辑与渲染
+    function showTrashModal() {
+      renderTrashModal();
+      trashModal.classList.add('show');
+    }
+
+    function hideTrashModal() {
+      trashModal.classList.remove('show');
+    }
+
+    function renderTrashModal() {
+      const trashNotes = notesData.filter(item => item.isDeleted === true);
+      trashNotes.sort((a, b) => {
+        const getT = (item) => {
+          if (item.deletedAt?.toDate) return item.deletedAt.toDate().getTime();
+          if (item.deletedAt) return new Date(item.deletedAt).getTime();
+          if (item.updatedAt?.toDate) return item.updatedAt.toDate().getTime();
+          if (item.createdAt?.toDate) return item.createdAt.toDate().getTime();
+          return 0;
+        };
+        return getT(b) - getT(a);
+      });
+
+      trashCountBadge.textContent = `${trashNotes.length} 条`;
+      btnClearTrash.disabled = (trashNotes.length === 0);
+
+      if (trashNotes.length === 0) {
+        trashBody.innerHTML = `
+          <div class="trash-empty">
+            <div class="trash-empty-icon">📭</div>
+            <div class="trash-empty-title">回收站为空</div>
+            <div class="trash-empty-desc">删除的笔记会暂存在这里，可以随时还原或彻底清空</div>
+          </div>
+        `;
+        return;
+      }
+
+      trashBody.innerHTML = trashNotes.map(item => {
+        const title = escapeHtml(item.title || '无标题页面');
+        const url = escapeHtml(item.url || '');
+        const note = escapeHtml(item.note || '');
+        
+        let delTimeStr = '';
+        if (item.deletedAt) {
+          const d = item.deletedAt.toDate ? item.deletedAt.toDate() : new Date(item.deletedAt);
+          delTimeStr = formatShortTime(d);
+        } else if (item.createdAt) {
+          const d = item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
+          delTimeStr = formatShortTime(d);
+        }
+
+        return `
+          <div class="trash-item" data-id="${item.id}">
+            <div class="trash-item-main">
+              <div class="trash-item-title">${title}</div>
+              ${url ? `<div class="trash-item-url" title="${url}">${url}</div>` : ''}
+              ${note ? `<div class="trash-item-note">${note}</div>` : ''}
+              <div class="trash-item-meta">
+                ${delTimeStr ? `<span>删除于 ${delTimeStr}</span>` : ''}
+              </div>
+            </div>
+            <div class="trash-item-actions">
+              <button class="trash-btn restore" onclick="handleRestoreClick('${item.id}')" title="还原至看板">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                <span>还原</span>
+              </button>
+              <button class="trash-btn delete" onclick="handlePermanentDeleteClick('${item.id}')" title="彻底删除">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>彻底删除</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    openTrashBtn.addEventListener('click', showTrashModal);
+    closeTrashModal.addEventListener('click', hideTrashModal);
+    bindSafeBackdropClose(trashModal, hideTrashModal);
+    btnClearTrash.addEventListener('click', clearAllTrash);
+
+    // 底部浮动撤销 Toast
+    let undoToastTimer = null;
+    let currentUndoCallback = null;
+
+    function showUndoToast(msg, onUndo, duration = 5000) {
+      if (undoToastTimer) {
+        clearTimeout(undoToastTimer);
+        undoToastTimer = null;
+      }
+      undoToastText.textContent = msg;
+      currentUndoCallback = onUndo;
+      undoToast.classList.add('show');
+
+      undoToastTimer = setTimeout(() => {
+        hideUndoToast();
+      }, duration);
+    }
+
+    function hideUndoToast() {
+      if (undoToastTimer) {
+        clearTimeout(undoToastTimer);
+        undoToastTimer = null;
+      }
+      undoToast.classList.remove('show');
+      currentUndoCallback = null;
+    }
+
+    undoToastBtn.addEventListener('click', async () => {
+      if (typeof currentUndoCallback === 'function') {
+        const cb = currentUndoCallback;
+        hideUndoToast();
+        await cb();
+      }
+    });
+
+    undoToastClose.addEventListener('click', hideUndoToast);
+
     async function handleCreateSubmit() {
       const title = createTitle.value.trim();
       const url = createUrl.value.trim();
@@ -2462,6 +2881,9 @@
       } else if ((e.key === 'n' || e.key === 'N') && !isInputActive) {
         e.preventDefault();
         showCreateModal();
+      } else if ((e.key === 't' || e.key === 'T') && !isInputActive) {
+        e.preventDefault();
+        showTrashModal();
       } else if ((e.key === 'd' || e.key === 'D') && !isInputActive) {
         e.preventDefault();
         toggleTheme();
@@ -2478,11 +2900,15 @@
           hideSearchModal();
         } else if (createModal.classList.contains('show')) {
           hideCreateModal();
+        } else if (trashModal.classList.contains('show')) {
+          hideTrashModal();
         } else if (docModal.classList.contains('show')) {
           hideDocModal();
         } else if (editModal.classList.contains('show')) {
           editModal.classList.remove('show');
           currentEditingId = null;
+        } else if (undoToast.classList.contains('show')) {
+          hideUndoToast();
         } else if (currentSearchKeyword) {
           currentSearchKeyword = '';
           spotlightInput.value = '';
@@ -2574,11 +3000,93 @@
       });
     });
 
-    // 删除单条笔记
-    window.deleteSingleNote = async function(id) {
+    // 移至回收站（软删除）
+    async function moveToTrash(id) {
       if (!currentUser) return;
-      if (!confirm('确定删除该条笔记吗？此操作无法撤销。')) return;
-      await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
+      const targetItem = notesData.find(n => n.id === id);
+      if (!targetItem) return;
+
+      try {
+        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).update({
+          isDeleted: true,
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 弹出底部撤销 Toast
+        showUndoToast('已移至回收站', async () => {
+          await restoreFromTrash(id);
+        });
+      } catch (err) {
+        console.error('移至回收站失败:', err);
+        alert('删除失败: ' + err.message);
+      }
+    }
+    window.moveToTrash = moveToTrash;
+    window.deleteSingleNote = moveToTrash;
+
+    // 从回收站还原
+    async function restoreFromTrash(id) {
+      if (!currentUser) return;
+      try {
+        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).update({
+          isDeleted: false,
+          deletedAt: firebase.firestore.FieldValue.delete()
+        });
+        hideUndoToast();
+      } catch (err) {
+        console.error('还原失败:', err);
+        alert('还原失败: ' + err.message);
+      }
+    }
+    window.restoreFromTrash = restoreFromTrash;
+
+    // 彻底删除单条笔记
+    async function permanentDeleteNote(id) {
+      if (!currentUser) return;
+      if (!confirm('确定彻底删除该条笔记吗？此操作将永久抹除，无法找回。')) return;
+      try {
+        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
+      } catch (err) {
+        console.error('彻底删除失败:', err);
+        alert('彻底删除失败: ' + err.message);
+      }
+    }
+    window.permanentDeleteNote = permanentDeleteNote;
+
+    // 清空回收站
+    async function clearAllTrash() {
+      if (!currentUser) return;
+      const trashNotes = notesData.filter(n => n.isDeleted === true);
+      if (trashNotes.length === 0) return;
+      if (!confirm(`确定彻底清空回收站中的 ${trashNotes.length} 条笔记吗？此操作无法撤销。`)) return;
+
+      try {
+        btnClearTrash.disabled = true;
+        const batchSize = 400;
+        for (let i = 0; i < trashNotes.length; i += batchSize) {
+          const chunk = trashNotes.slice(i, i + batchSize);
+          const batch = db.batch();
+          chunk.forEach(item => {
+            const ref = db.collection('users').doc(currentUser.uid).collection('notes').doc(item.id);
+            batch.delete(ref);
+          });
+          await batch.commit();
+        }
+      } catch (err) {
+        console.error('清空回收站失败:', err);
+        alert('清空失败: ' + err.message);
+      } finally {
+        btnClearTrash.disabled = false;
+      }
+    }
+    window.clearAllTrash = clearAllTrash;
+
+    window.handleRestoreClick = function(id) {
+      restoreFromTrash(id);
+    };
+
+    window.handlePermanentDeleteClick = function(id) {
+      permanentDeleteNote(id);
     };
 
     // 笔记项右侧「···」菜单交互
@@ -2640,7 +3148,7 @@
     window.handleMenuDelete = function(e, id) {
       e.stopPropagation();
       closeAllNoteMenus();
-      deleteSingleNote(id);
+      moveToTrash(id);
     };
 
     document.addEventListener('click', (e) => {
