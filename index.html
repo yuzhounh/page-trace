@@ -1107,6 +1107,58 @@
       align-items: center;
     }
 
+    /* 帮助文档与快捷键弹窗专属样式 */
+    .doc-card {
+      width: 680px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .doc-section {
+      margin-bottom: 20px;
+    }
+    .doc-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .doc-table th, .doc-table td {
+      padding: 9px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--divider);
+      line-height: 1.5;
+    }
+    .doc-table th {
+      background: var(--pill-bg);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .doc-table tr:hover td {
+      background: var(--item-hover-bg);
+    }
+    .doc-kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--kbd-text);
+      background: var(--kbd-bg);
+      border: 1px solid var(--kbd-border);
+      border-radius: 5px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      white-space: nowrap;
+    }
+
     /* 空状态 */
     .empty-state {
       text-align: center;
@@ -1327,7 +1379,7 @@
         <table class="doc-table">
           <thead>
             <tr>
-              <th style="width: 130px;">操作方式</th>
+              <th style="width: 190px;">操作方式</th>
               <th>功能描述</th>
             </tr>
           </thead>
@@ -1365,7 +1417,7 @@
         <table class="doc-table">
           <thead>
             <tr>
-              <th style="width: 130px;">按键组合</th>
+              <th style="width: 190px;">按键组合</th>
               <th>动作</th>
             </tr>
           </thead>
@@ -1391,7 +1443,7 @@
         <table class="doc-table">
           <thead>
             <tr>
-              <th style="width: 130px;">按键</th>
+              <th style="width: 190px;">按键</th>
               <th>功能</th>
             </tr>
           </thead>
