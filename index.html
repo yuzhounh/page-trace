@@ -481,16 +481,17 @@
     .search-bar-clear-btn {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 5px 10px;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
       background: var(--btn-bg);
       border: 1px solid var(--btn-border);
       border-radius: 7px;
       color: var(--text-muted);
-      font-size: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
-      white-space: nowrap;
+      flex-shrink: 0;
     }
     .search-bar-clear-btn:hover {
       background: var(--btn-hover-bg);
@@ -1681,11 +1682,9 @@
       .search-bar-input {
         font-size: 13.5px;
       }
-      .search-bar-clear-btn span {
-        display: none;
-      }
       .search-bar-clear-btn {
-        padding: 4px 7px;
+        width: 26px;
+        height: 26px;
       }
       .trash-card {
         width: 100%;
@@ -1923,12 +1922,11 @@
         <input type="text" class="search-bar-input" id="inlineSearchInput" placeholder="输入关键词，实时搜索笔记内容、标签或链接..." autocomplete="off" />
         <div class="search-bar-meta">
           <span class="search-count-badge" id="searchCountBadge">0 条</span>
-          <button class="search-bar-clear-btn" id="clearSearchBtn" title="退出搜索 (Esc)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <button class="search-bar-clear-btn" id="clearSearchBtn" title="退出搜索 (Esc)" aria-label="退出搜索">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-            <span>退出搜索 (Esc)</span>
           </button>
         </div>
       </div>
