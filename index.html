@@ -909,7 +909,7 @@
     .modal-card {
       background: var(--modal-bg);
       border: 1px solid var(--border);
-      width: 534px;
+      width: 539px;
       max-width: 100%;
       max-height: 90vh;
       overflow-y: auto;
@@ -922,7 +922,7 @@
       position: relative;
     }
     #createModal .modal-card {
-      width: 483px;
+      width: 488px;
       padding: 13px 18px 16px;
       gap: 10px;
       border-radius: 14px;
@@ -971,7 +971,7 @@
     }
     .form-input {
       width: 100%;
-      padding: 10px 3px 10px 8px;
+      padding: 10px 8px;
       font-size: 13px;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -999,11 +999,11 @@
     }
     #createNoteInput, #editNote {
       min-height: 96px;
-      max-height: 280px;
+      max-height: 320px;
       height: 96px;
       line-height: 1.5;
       resize: none;
-      padding: 10px 3px 10px 8px;
+      padding: 10px 8px;
       border: none;
       border-radius: 0;
       display: block;
@@ -1012,6 +1012,8 @@
       word-break: break-word;
       overflow-wrap: anywhere;
       text-rendering: optimizeLegibility;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
       transition: none;
     }
     #createNoteInput:focus, #editNote:focus {
@@ -1019,11 +1021,11 @@
       box-shadow: none;
     }
     #editNote {
-      max-height: 260px;
+      max-height: 320px;
     }
     #createNoteInput::-webkit-scrollbar,
     #editNote::-webkit-scrollbar {
-      width: 6px;
+      width: 3px;
     }
     #createNoteInput::-webkit-scrollbar-track,
     #editNote::-webkit-scrollbar-track {
@@ -1032,7 +1034,7 @@
     #createNoteInput::-webkit-scrollbar-thumb,
     #editNote::-webkit-scrollbar-thumb {
       background: #cbd5e1;
-      border-radius: 3px;
+      border-radius: 2px;
     }
     #createNoteInput::-webkit-scrollbar-thumb:hover,
     #editNote::-webkit-scrollbar-thumb:hover {
@@ -3044,7 +3046,7 @@
     });
 
     // 输入框内容自适应高度（带上下限）
-    function autoResizeTextarea(textarea, minH = 96, maxH = 280) {
+    function autoResizeTextarea(textarea, minH = 96, maxH = 320) {
       if (!textarea) return;
       const currentScrollTop = textarea.scrollTop;
       const isAtBottom = (textarea.scrollHeight - textarea.scrollTop - textarea.clientHeight) <= 5;
@@ -3066,10 +3068,10 @@
     // 记笔记弹窗逻辑
     function showCreateModal() {
       createModal.classList.add('show');
-      autoResizeTextarea(createNoteInput, 96, 280);
+      autoResizeTextarea(createNoteInput, 96, 320);
       setTimeout(() => {
         createNoteInput.focus();
-        autoResizeTextarea(createNoteInput, 96, 280);
+        autoResizeTextarea(createNoteInput, 96, 320);
       }, 50);
     }
 
@@ -3403,7 +3405,7 @@
         createTitle.value = '';
         createUrl.value = '';
         createNoteInput.value = '';
-        autoResizeTextarea(createNoteInput, 96, 280);
+        autoResizeTextarea(createNoteInput, 96, 320);
         hideCreateModal();
       } catch (err) {
         alert('保存失败: ' + err.message);
@@ -3447,7 +3449,7 @@
       if (noteVal && isUrlLike(noteVal) && !createUrl.value.trim()) {
         createUrl.value = noteVal;
         createNoteInput.value = '';
-        autoResizeTextarea(createNoteInput, 96, 280);
+        autoResizeTextarea(createNoteInput, 96, 320);
         if (!createTitle.value.trim()) {
           createTitle.placeholder = '正在获取网页标题...';
           const fetched = await fetchWebpageTitle(noteVal);
@@ -3463,7 +3465,7 @@
     // Enter 换行
     // Shift + Enter / Ctrl + Enter 保存发送
     // Esc 取消
-    createNoteInput.addEventListener('input', () => autoResizeTextarea(createNoteInput, 96, 280));
+    createNoteInput.addEventListener('input', () => autoResizeTextarea(createNoteInput, 96, 320));
     createNoteInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -3542,10 +3544,10 @@
       editUrl.value = item.url || '';
       editNote.value = formatNoteWithBlankLines(item.note || '');
       editModal.classList.add('show');
-      autoResizeTextarea(editNote, 96, 260);
+      autoResizeTextarea(editNote, 96, 320);
       setTimeout(() => {
         editNote.focus();
-        autoResizeTextarea(editNote, 96, 260);
+        autoResizeTextarea(editNote, 96, 320);
       }, 50);
     };
 
@@ -3601,7 +3603,7 @@
     btnSaveEdit.addEventListener('click', handleSaveEdit);
 
     // 编辑弹窗输入框快捷键：Shift+Enter / Ctrl+Enter 保存，Esc 取消
-    editNote.addEventListener('input', () => autoResizeTextarea(editNote, 96, 260));
+    editNote.addEventListener('input', () => autoResizeTextarea(editNote, 96, 320));
     editNote.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();

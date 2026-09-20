@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.10.5
+// @version      1.10.6
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -308,7 +308,7 @@
       /* 展开式浮动速记卡片 */
       .pt-card {
         pointer-events: auto;
-        width: 319px;
+        width: 324px;
         max-height: calc(100vh - 80px);
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.95);
@@ -387,12 +387,12 @@
         box-sizing: border-box;
         border: none;
         border-radius: 0;
-        padding: 8px 3px 8px 8px;
+        padding: 8px 8px;
         font-size: 13px;
         line-height: 1.5;
         resize: none;
         min-height: 75px;
-        max-height: 240px;
+        max-height: 320px;
         height: 75px;
         outline: none;
         background: #ffffff;
@@ -401,19 +401,21 @@
         word-break: break-word;
         overflow-wrap: anywhere;
         text-rendering: optimizeLegibility;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
         transition: none;
         display: block;
         overflow-y: hidden;
       }
       .pt-textarea::-webkit-scrollbar {
-        width: 5px;
+        width: 3px;
       }
       .pt-textarea::-webkit-scrollbar-track {
         background: transparent;
       }
       .pt-textarea::-webkit-scrollbar-thumb {
         background: #cbd5e1;
-        border-radius: 3px;
+        border-radius: 2px;
       }
       .pt-textarea::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
@@ -959,7 +961,7 @@
       window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
     }
 
-    function autoResizeTextarea(el, minH = 75, maxH = 240) {
+    function autoResizeTextarea(el, minH = 75, maxH = 320) {
       if (!el) return;
       const currentScrollTop = el.scrollTop;
       const isAtBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) <= 5;
@@ -1004,10 +1006,10 @@
         titlePreview.title = document.title;
         card.classList.add('active');
         mainBtn.classList.add('recording');
-        autoResizeTextarea(textarea, 75, 240);
+        autoResizeTextarea(textarea, 75, 320);
         setTimeout(() => {
           textarea.focus();
-          autoResizeTextarea(textarea, 75, 240);
+          autoResizeTextarea(textarea, 75, 320);
         }, 60);
       } else {
         card.classList.remove('active');
@@ -1037,7 +1039,7 @@
 
         showButtonStatus('success');
         textarea.value = '';
-        autoResizeTextarea(textarea, 75, 240);
+        autoResizeTextarea(textarea, 75, 320);
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
@@ -1059,7 +1061,7 @@
         showButtonStatus('success');
         if (textarea.value) {
           textarea.value = '';
-          autoResizeTextarea(textarea, 75, 240);
+          autoResizeTextarea(textarea, 75, 320);
         }
         toggleCard(false);
       } catch (e) {
@@ -1157,7 +1159,7 @@
     closeBtn.addEventListener('click', () => toggleCard(false));
     saveBtn.addEventListener('click', submitNote);
 
-    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 75, 240));
+    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 75, 320));
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
