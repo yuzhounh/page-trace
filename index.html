@@ -809,10 +809,7 @@
       word-break: break-word;
     }
     .note-body.is-collapsed {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 4;
+      /* 折叠时通过 JS 仅显示去除空行后的前 4 行，行与行之间不包含空行 */
     }
     .note-expand-btn {
       align-self: flex-start;
@@ -2770,6 +2767,17 @@
       // 默认显示前 displayLimit (50) 条，滚动时递增
       const visibleNotes = targetNotes.slice(0, displayLimit);
 
+      // 统计当月总条数（以当前筛选范围下的各月份总条数为准，而非仅已加载条数）
+      const monthTotalCounts = new Map();
+      targetNotes.forEach(item => {
+        let groupKey = '历史记录';
+        const d = getItemDate(item);
+        if (d) {
+          groupKey = `${d.getFullYear()} 年 ${d.getMonth() + 1} 月`;
+        }
+        monthTotalCounts.set(groupKey, (monthTotalCounts.get(groupKey) || 0) + 1);
+      });
+
       // 按年月分组并生成 HTML
       const groups = new Map();
       visibleNotes.forEach(item => {
@@ -2785,7 +2793,12 @@
         }
 
         if (!groups.has(groupKey)) {
-          groups.set(groupKey, { yearStr, monthStr, items: [] });
+          groups.set(groupKey, {
+            yearStr,
+            monthStr,
+            totalCount: monthTotalCounts.get(groupKey) || 0,
+            items: []
+          });
         }
         groups.get(groupKey).items.push(item);
       });
@@ -2797,7 +2810,7 @@
             <div class="month-date-col">
               ${group.yearStr ? `<div class="month-date-year">${escapeHtml(group.yearStr)}</div>` : ''}
               <div class="month-date-month">${escapeHtml(group.monthStr)}</div>
-              <div class="month-date-count">共 ${group.items.length} 条</div>
+              <div class="month-date-count">共 ${group.totalCount} 条</div>
             </div>
             <div class="month-card">
               <div class="month-notes-container">
@@ -2810,9 +2823,19 @@
                   const storedTitle = getOptionalTitle(item.title);
                   const displayTitle = storedTitle || (safeUrl ? domain : '');
                   const titleParts = splitTitleBrand(displayTitle);
-                  const normalizedNote = formatNoteWithBlankLines(item.note || '');
-                  const hasNoteBody = Boolean(normalizedNote);
+                  const noteLines = getNoteLines(item.note || '');
+                  const hasNoteBody = noteLines.length > 0;
+                  const isLongNote = noteLines.length > 4;
                   const isExpanded = expandedNoteIds.has(item.id);
+
+                  let displayNoteText = '';
+                  if (!isLongNote) {
+                    displayNoteText = noteLines.join('\n\n');
+                  } else if (isExpanded) {
+                    displayNoteText = noteLines.join('\n\n');
+                  } else {
+                    displayNoteText = noteLines.slice(0, 4).join('\n');
+                  }
 
                   let isModified = false;
                   let updatedTimeStr = '';
@@ -2838,11 +2861,11 @@
                             ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
                           </div>
                         `) : ''}
-                        ${normalizedNote ? `
-                          <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(normalizedNote)}</div>
-                        ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
                         ${hasNoteBody ? `
-                          <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}" ${isExpanded ? '' : 'hidden'}>
+                          <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(displayNoteText)}</div>
+                        ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
+                        ${isLongNote ? `
+                          <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
                             ${isExpanded ? '收起' : '展开'}
                           </button>
                         ` : ''}
@@ -2916,44 +2939,39 @@
       }
 
       notesList.innerHTML = html;
-      requestAnimationFrame(updateNoteExpandControls);
       setupScrollObserver();
-    }
-
-    function updateNoteExpandControls() {
-      notesList.querySelectorAll('.note-expand-btn').forEach(button => {
-        const row = button.closest('.note-item-row');
-        const body = row?.querySelector('.note-body');
-        if (!body) return;
-        const isExpanded = body.classList.contains('is-expanded');
-        button.hidden = !isExpanded && body.scrollHeight <= body.clientHeight + 1;
-      });
     }
 
     window.toggleNoteExpanded = function(e, id) {
       e.stopPropagation();
       const row = e.currentTarget.closest('.note-item-row');
       const body = row?.querySelector('.note-body');
+      const btn = e.currentTarget;
       if (!body) return;
 
-      const shouldExpand = body.classList.contains('is-collapsed');
-      body.classList.toggle('is-collapsed', !shouldExpand);
-      body.classList.toggle('is-expanded', shouldExpand);
-      e.currentTarget.textContent = shouldExpand ? '收起' : '展开';
-      e.currentTarget.setAttribute('aria-expanded', String(shouldExpand));
+      const item = notesData.find(n => n.id === id);
+      if (!item) return;
 
+      const noteLines = getNoteLines(item.note || '');
+      if (noteLines.length <= 4) return;
+
+      const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
         expandedNoteIds.add(id);
+        body.classList.remove('is-collapsed');
+        body.classList.add('is-expanded');
+        body.textContent = noteLines.join('\n\n');
+        btn.textContent = '收起';
+        btn.setAttribute('aria-expanded', 'true');
       } else {
         expandedNoteIds.delete(id);
+        body.classList.remove('is-expanded');
+        body.classList.add('is-collapsed');
+        body.textContent = noteLines.slice(0, 4).join('\n');
+        btn.textContent = '展开';
+        btn.setAttribute('aria-expanded', 'false');
       }
     };
-
-    let noteExpandResizeFrame = null;
-    window.addEventListener('resize', () => {
-      if (noteExpandResizeFrame) cancelAnimationFrame(noteExpandResizeFrame);
-      noteExpandResizeFrame = requestAnimationFrame(updateNoteExpandControls);
-    });
 
     // 月份导航事件监听
     btnPrevMonth.addEventListener('click', () => {
@@ -3019,12 +3037,16 @@
         .replace(/"/g, '&quot;');
     }
 
+    // 提取笔记中所有非空行
+    function getNoteLines(text) {
+      if (!text) return [];
+      return text.trim().split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim() !== '');
+    }
+
     // 规范化笔记段落（两段之间始终保持一个空行）
     function formatNoteWithBlankLines(text) {
-      if (!text) return '';
-      const lines = text.trim().split(/\r?\n/);
-      const nonEmptyLines = lines.map(l => l.trimEnd()).filter(l => l.trim() !== '');
-      return nonEmptyLines.join('\n\n');
+      const lines = getNoteLines(text);
+      return lines.join('\n\n');
     }
 
     // 顶部内联搜索栏逻辑 (即输即显，实时过滤)
