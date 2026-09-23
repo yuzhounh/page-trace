@@ -2825,12 +2825,12 @@
                   const titleParts = splitTitleBrand(displayTitle);
                   const noteLines = getNoteLines(item.note || '');
                   const hasNoteBody = noteLines.length > 0;
-                  const isLongNote = noteLines.length > 4;
+                  const canExpand = noteLines.length > 1;
                   const isExpanded = expandedNoteIds.has(item.id);
 
                   let displayNoteText = '';
-                  if (!isLongNote) {
-                    displayNoteText = noteLines.join('\n\n');
+                  if (!canExpand) {
+                    displayNoteText = noteLines[0] || '';
                   } else if (isExpanded) {
                     displayNoteText = noteLines.join('\n\n');
                   } else {
@@ -2864,7 +2864,7 @@
                         ${hasNoteBody ? `
                           <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(displayNoteText)}</div>
                         ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
-                        ${isLongNote ? `
+                        ${canExpand ? `
                           <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
                             ${isExpanded ? '收起' : '展开'}
                           </button>
@@ -2953,7 +2953,7 @@
       if (!item) return;
 
       const noteLines = getNoteLines(item.note || '');
-      if (noteLines.length <= 4) return;
+      if (noteLines.length <= 1) return;
 
       const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
