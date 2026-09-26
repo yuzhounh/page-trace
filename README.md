@@ -7,6 +7,10 @@
 <p align="center">网页速记与云端剪藏，多端实时同步。</p>
 
 <p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-f59e0b.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
   <a href="https://page-trace-app.web.app/">在线访问</a>
 </p>
 
@@ -17,7 +21,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - **油猴端**：在网页右下角常驻微交互磨砂玻璃胶囊，支持一键复制网页标题与网址、随时呼出 4 行速记输入卡片，通过轻量 REST API 直接同步至云端 Firestore，无需配置任何 Firebase 密钥。
 - **Web 看板**：基于 Firebase 驱动的实时管理面板，支持实时同步（onSnapshot）、卡片展示、全局搜索（Spotlight 风格）、在线速记与多端协同管理。
 
-## 快速使用指南
+## 快速上手 (Quick Start)
 
 ### 第一步：安装脚本
 
@@ -55,3 +59,12 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - `index.html`：云端速记看板单文件 SPA 源码（支持实时同步、搜索与明暗主题）。
 - `auth.html`：Google OAuth 登录与油猴脚本安全授权握手页。
 - `firestore.rules`：严格按 Google 账户 UID 隔离的 Firestore 云端安全规则。
+
+## 相关项目
+
+- [light-note](https://github.com/yuzhounh/light-note)：以 Windows 本地笔记管理为主，支持导入、检索与可选同步。
+- [Tampermonkey-scripts](https://github.com/yuzhounh/Tampermonkey-scripts)：作者维护的其他用户脚本合集。
+
+## 开源协议 (License)
+
+本项目采用 [MIT 许可证](LICENSE)。
