@@ -306,12 +306,22 @@
       border-radius: 9px;
       font-size: 13px;
       font-weight: 500;
+      line-height: 1;
       cursor: pointer;
       border: 1px solid var(--btn-border);
       background: var(--btn-bg);
       color: var(--text);
       white-space: nowrap;
       transition: all 0.15s ease;
+    }
+    .header-btn svg {
+      display: block;
+      flex-shrink: 0;
+    }
+    .header-btn > span:not(.kbd-hint) {
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
     }
     .header-btn:hover {
       background: var(--btn-hover-bg);
@@ -333,8 +343,12 @@
       background: var(--primary-hover);
     }
     .header-btn .kbd-hint {
-      display: inline-block;
-      padding: 1px 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 16px;
+      min-width: 16px;
+      padding: 0 4px;
       font-size: 10px;
       font-weight: 600;
       font-family: inherit;
@@ -342,7 +356,9 @@
       background: var(--kbd-bg);
       border: 1px solid var(--border);
       border-radius: 4px;
-      line-height: 1.2;
+      line-height: 1;
+      box-sizing: border-box;
+      transform: translateY(0.5px);
     }
     .header-btn.primary .kbd-hint {
       color: #bfdbfe;
@@ -537,7 +553,7 @@
     }
     .month-nav-arrow-btn:hover:not(:disabled) {
       background: var(--btn-hover-bg);
-      color: var(--primary);
+      color: var(--text);
       border-color: var(--border);
     }
     .month-nav-arrow-btn:disabled {
@@ -575,33 +591,13 @@
       display: inline-block;
       padding: 1px 7px;
       border-radius: 999px;
-      background: var(--badge-bg);
+      background: rgba(100, 116, 139, 0.12);
       font-size: 11px;
       font-weight: 500;
-      color: var(--badge-text);
-    }
-    .month-all-tab {
-      display: inline-flex;
-      align-items: center;
-      padding: 5px 12px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      background: transparent;
-      font-size: 13px;
-      font-weight: 500;
       color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.15s ease;
     }
-    .month-all-tab:hover {
-      color: var(--text);
-      background: var(--item-hover-bg);
-    }
-    .month-all-tab.active {
-      background: var(--badge-bg);
-      color: var(--primary);
-      font-weight: 600;
-      border-color: var(--border);
+    [data-theme="dark"] .month-count-badge {
+      background: rgba(148, 163, 184, 0.16);
     }
     .month-dropdown-menu {
       display: none;
@@ -636,12 +632,15 @@
     }
     .month-dropdown-item:hover {
       background: var(--item-hover-bg);
-      color: var(--primary);
+      color: var(--text);
     }
     .month-dropdown-item.active {
-      background: var(--badge-bg);
-      color: var(--primary);
+      background: rgba(100, 116, 139, 0.12);
+      color: var(--text);
       font-weight: 600;
+    }
+    [data-theme="dark"] .month-dropdown-item.active {
+      background: rgba(148, 163, 184, 0.16);
     }
 
     /* 无限滚动加载指示与触底提示 */
@@ -1572,10 +1571,6 @@
         font-size: 12px;
         gap: 5px;
       }
-      .month-all-tab {
-        padding: 5px 8px;
-        font-size: 12px;
-      }
       .month-dropdown-menu {
         min-width: 160px;
       }
@@ -1948,13 +1943,12 @@
       <div class="month-nav-center">
         <div class="month-selector-wrap">
           <button class="month-current-pill" id="monthCurrentPill" title="点击选择月份">
-            <span id="monthCurrentLabel">全部月份记录</span>
+            <span id="monthCurrentLabel">全部</span>
             <span class="month-count-badge" id="monthCountBadge">0 条</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="month-dropdown-menu" id="monthDropdownMenu"></div>
         </div>
-        <button class="month-all-tab" id="btnViewAllMonths">全部记录</button>
       </div>
 
       <button class="month-nav-arrow-btn" id="btnNextMonth" title="翻到下一个月">
@@ -2236,7 +2230,6 @@
     const monthCurrentLabel = document.getElementById('monthCurrentLabel');
     const monthCountBadge = document.getElementById('monthCountBadge');
     const monthDropdownMenu = document.getElementById('monthDropdownMenu');
-    const btnViewAllMonths = document.getElementById('btnViewAllMonths');
 
     // 分页与月份状态 (默认显示 50 条，滚动加载 50 条)
     let selectedMonth = 'all';
@@ -2645,13 +2638,11 @@
       }
 
       if (selectedMonth === 'all') {
-        monthCurrentLabel.textContent = '全部月份';
+        monthCurrentLabel.textContent = '全部';
         monthCountBadge.textContent = `${filteredNotes.length} 条`;
-        btnViewAllMonths.classList.add('active');
         btnNextMonth.disabled = true;
         btnPrevMonth.disabled = false;
       } else {
-        btnViewAllMonths.classList.remove('active');
         const idx = months.findIndex(m => m.key === selectedMonth);
         if (idx !== -1) {
           monthCurrentLabel.textContent = months[idx].label;
@@ -2664,7 +2655,7 @@
       // 渲染月份切换下拉菜单
       let menuHtml = `
         <div class="month-dropdown-item ${selectedMonth === 'all' ? 'active' : ''}" data-month="all">
-          <span>全部记录</span>
+          <span>全部</span>
           <span class="month-count-badge">${filteredNotes.length} 条</span>
         </div>
       `;
@@ -2994,10 +2985,6 @@
       if (idx > 0) {
         selectMonth(months[idx - 1].key);
       }
-    });
-
-    btnViewAllMonths.addEventListener('click', () => {
-      selectMonth('all');
     });
 
     monthCurrentPill.addEventListener('click', (e) => {
