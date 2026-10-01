@@ -526,12 +526,14 @@
       justify-content: space-between;
       gap: 12px;
       margin-bottom: 24px;
+      margin-left: 100px;
       padding: 6px 8px;
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: var(--card-shadow);
       user-select: none;
+      transition: all 0.2s ease;
     }
     .month-nav-bar.show {
       display: flex;
@@ -1550,6 +1552,7 @@
 
       /* 2. 月份导航工具条极简化 */
       .month-nav-bar {
+        margin-left: 0;
         padding: 5px 6px;
         margin-bottom: 16px;
         gap: 6px;
@@ -1933,11 +1936,11 @@
 
     <!-- 月份导航条（当存在多个月份记录时展示） -->
     <div class="month-nav-bar" id="monthNavBar">
-      <button class="month-nav-arrow-btn" id="btnPrevMonth" title="翻到上一个月">
+      <button class="month-nav-arrow-btn" id="btnPrevMonth" title="翻到上个月">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
-        <span>上一个月</span>
+        <span>上个月</span>
       </button>
 
       <div class="month-nav-center">
@@ -1951,8 +1954,8 @@
         </div>
       </div>
 
-      <button class="month-nav-arrow-btn" id="btnNextMonth" title="翻到下一个月">
-        <span>下一个月</span>
+      <button class="month-nav-arrow-btn" id="btnNextMonth" title="翻到下个月">
+        <span>下个月</span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 18l6-6-6-6"/>
         </svg>
