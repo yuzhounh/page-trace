@@ -27,7 +27,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-在 Greasy Fork 安装已发布的油猴插件：
+当前脚本版本为 **1.10.9**。从 [GitHub Release 安装配套脚本](https://github.com/yuzhounh/page-trace/releases/download/v1.10.9/pagetrace.user.js)，或使用 Greasy Fork 的同版入口：
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 
