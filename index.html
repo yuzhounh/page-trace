@@ -2308,6 +2308,7 @@
     let selectedYear = String(initialNow.getFullYear());
     let selectedMonth = String(initialNow.getMonth() + 1).padStart(2, '0');
     let hasInitializedFilters = false;
+    let savedFilterBeforeSearch = null;
     let displayLimit = 50;
     let isLoadingMore = false;
     let scrollObserver = null;
@@ -3316,6 +3317,13 @@
       inlineSearchInput.value = '';
       currentSearchKeyword = '';
       searchCountBadge.style.display = 'none';
+
+      if (savedFilterBeforeSearch) {
+        selectedYear = savedFilterBeforeSearch.year;
+        selectedMonth = savedFilterBeforeSearch.month;
+        savedFilterBeforeSearch = null;
+      }
+
       displayLimit = 50;
       inlineSearchInput.blur();
       renderList();
@@ -3351,7 +3359,26 @@
     clearSearchBtn.addEventListener('click', hideSearchBar);
 
     inlineSearchInput.addEventListener('input', () => {
+      const prevKw = currentSearchKeyword.trim();
       currentSearchKeyword = inlineSearchInput.value;
+      const newKw = currentSearchKeyword.trim();
+
+      if (newKw && !prevKw) {
+        // 从无关键词变为有关键词：记录当前选中的年月，并自动切换为“全部年份/全部月份”展示全局结果
+        if (!savedFilterBeforeSearch) {
+          savedFilterBeforeSearch = { year: selectedYear, month: selectedMonth };
+        }
+        selectedYear = 'all';
+        selectedMonth = 'all';
+      } else if (!newKw && prevKw) {
+        // 清空了关键词：恢复进入搜索前原本选中的年月
+        if (savedFilterBeforeSearch) {
+          selectedYear = savedFilterBeforeSearch.year;
+          selectedMonth = savedFilterBeforeSearch.month;
+          savedFilterBeforeSearch = null;
+        }
+      }
+
       displayLimit = 50;
       renderList();
     });
