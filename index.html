@@ -2445,14 +2445,20 @@
       return y === currentYear ? `${m}-${d} ${hh}:${mm}` : `${y}-${m}-${d} ${hh}:${mm}`;
     }
 
-    // 同步认证凭据给油猴插件
+    let authBridgeNonce = '';
+    let authStateReady = false;
+
+    // 仅在本页油猴脚本完成握手后同步凭据。
     async function syncAuthToUserscript(user) {
-      if (!user) return;
+      if (!user || !authBridgeNonce) return;
+      const nonce = authBridgeNonce;
       try {
         const idToken = await user.getIdToken();
         const refreshToken = user.refreshToken || '';
+        if (authBridgeNonce !== nonce || auth.currentUser !== user) return;
         const payload = {
           source: 'PAGETRACE_AUTH_SUCCESS',
+          nonce,
           payload: {
             idToken,
             refreshToken,
@@ -2462,7 +2468,7 @@
             projectId: firebaseConfig.projectId
           }
         };
-        window.postMessage(payload, '*');
+        window.postMessage(payload, window.location.origin);
       } catch (err) {
         console.warn('[PageTrace] 同步凭据给插件失败:', err);
       }
@@ -2470,6 +2476,7 @@
 
     // 监听 Google 登录状态及 Token 自动刷新
     auth.onIdTokenChanged(async (user) => {
+      authStateReady = true;
       currentUser = user;
       if (user) {
         loginBtn.style.display = 'none';
@@ -2504,19 +2511,26 @@
         renderList();
 
         // 同步退出登录态到油猴插件
-        window.postMessage({ source: 'PAGETRACE_AUTH_LOGOUT' }, '*');
+        if (authBridgeNonce) {
+          window.postMessage({ source: 'PAGETRACE_AUTH_LOGOUT', nonce: authBridgeNonce }, window.location.origin);
+        }
       }
     });
 
     // 监听来自插件的消息通道（如握手 Ping、插件端退出等）
     window.addEventListener('message', (e) => {
+      if (e.origin !== window.location.origin || e.source !== window) return;
       const data = e.data;
-      if (!data) return;
-      if (data.source === 'PAGETRACE_PING') {
-        if (currentUser) {
+      if (!data || typeof data !== 'object') return;
+      if (data.source === 'PAGETRACE_PING' && /^[a-f0-9]{32}$/.test(data.nonce || '')) {
+        authBridgeNonce = data.nonce;
+        if (authStateReady && currentUser) {
           syncAuthToUserscript(currentUser);
+        } else if (authStateReady) {
+          window.postMessage({ source: 'PAGETRACE_AUTH_LOGOUT', nonce: authBridgeNonce }, window.location.origin);
         }
-      } else if (data.source === 'PAGETRACE_SCRIPT_LOGOUT') {
+      } else if (data.source === 'PAGETRACE_SCRIPT_LOGOUT' &&
+                 authBridgeNonce && data.nonce === authBridgeNonce) {
         if (auth.currentUser) {
           auth.signOut();
         }

@@ -129,15 +129,45 @@
       firebase.initializeApp(FIREBASE_CONFIG);
     }
 
+    let bridgeNonce = '';
+    let pendingConfirmationNonce = '';
+    let closeTimer = null;
+    let isManualLoggingIn = false;
+
+    // 只与当前页面内的油猴脚本握手，永不向 opener 发送凭据。
+    window.addEventListener('message', (event) => {
+      if (event.origin !== window.location.origin || event.source !== window) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.source === 'PAGETRACE_PING' && /^[a-f0-9]{32}$/.test(data.nonce || '')) {
+        bridgeNonce = data.nonce;
+        const user = firebase.auth().currentUser;
+        if (user && !isManualLoggingIn) {
+          syncAuthAndClose(user, '✓ 检测到已登录账号').catch((err) => {
+            showStatus('同步失败: ' + (err.message || '未知错误'), 'error');
+          });
+        }
+      } else if (data.source === 'PAGETRACE_AUTH_CONFIRMED' &&
+                 data.nonce === bridgeNonce && data.nonce === pendingConfirmationNonce) {
+        pendingConfirmationNonce = '';
+        showStatus('🎉 授权已完成，正在自动关闭窗口...', 'success');
+        closeTimer = setTimeout(() => window.close(), 800);
+      }
+    });
+
     async function syncAuthAndClose(user, messagePrefix) {
+      showStatus(`${messagePrefix}: ${user.displayName || user.email}，等待油猴插件确认登录；请确保已安装最新脚本。`, 'info');
+      if (!bridgeNonce) return;
+      const nonce = bridgeNonce;
       const idToken = await user.getIdToken();
       const refreshToken = user.refreshToken || '';
+      if (bridgeNonce !== nonce || firebase.auth().currentUser !== user) return;
 
-      showStatus(`${messagePrefix}: ${user.displayName || user.email}，已向油猴插件同步凭据...`, 'success');
-
-      // 发送给油猴脚本监听 (同域 / postMessage)
+      // 凭据只发给本页脚本，跨页面使用油猴隔离存储共享登录状态。
       const payload = {
         source: 'PAGETRACE_AUTH_SUCCESS',
+        nonce,
         payload: {
           idToken,
           refreshToken,
@@ -148,25 +178,17 @@
         }
       };
 
-      window.postMessage(payload, '*');
-      if (window.opener) {
-        try {
-          window.opener.postMessage(payload, '*');
-        } catch (_) {}
-      }
-
-      setTimeout(() => {
-        showStatus('🎉 授权已完成，正在自动关闭窗口...', 'success');
-        setTimeout(() => {
-          window.close();
-        }, 800);
-      }, 500);
+      pendingConfirmationNonce = nonce;
+      window.postMessage(payload, window.location.origin);
     }
-
-    let isManualLoggingIn = false;
 
     // 若当前同域浏览器已经处于登录状态，直接自动同步并关闭，无需用户重复点击
     firebase.auth().onAuthStateChanged(async (user) => {
+      if (!user) {
+        pendingConfirmationNonce = '';
+        clearTimeout(closeTimer);
+        return;
+      }
       if (user && !isManualLoggingIn) {
         try {
           await syncAuthAndClose(user, '✓ 检测到已登录账号');
@@ -186,6 +208,7 @@
         const user = result.user;
 
         await syncAuthAndClose(user, '✓ 登录成功');
+        isManualLoggingIn = false;
       } catch (err) {
         isManualLoggingIn = false;
         console.error(err);

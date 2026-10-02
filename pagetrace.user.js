@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.10.7
+// @version      1.10.8
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -28,16 +28,30 @@
   // ==========================================
   // 1. 配置项（统一指向中心后端，用户零配置）
   // ==========================================
+  // 只在这些站点的看板/授权页接收认证；普通网页仍可使用速记功能。
+  const TRUSTED_APP_BASE_URLS = [
+    'https://page-trace.pages.dev/',
+    'https://yuzhounh.github.io/page-trace/',
+    'https://page-trace-app.web.app/',
+    'https://page-trace-app.firebaseapp.com/',
+    'http://localhost:3000/'
+  ];
+
+  function getTrustedAppBaseUrl() {
+    return TRUSTED_APP_BASE_URLS.find((baseUrl) => {
+      const base = new URL(baseUrl);
+      return window.location.origin === base.origin &&
+        [base.pathname, `${base.pathname}index.html`, `${base.pathname}auth.html`]
+          .includes(window.location.pathname);
+    });
+  }
+
   const CONFIG = {
     HOST_ID: 'pagetrace-floating-widget',
     apiKey: 'AIzaSyA91weJPSAeO58tB0cYS38-q-XpXJTbjLc',
     projectId: 'page-trace-app',
-    get authAppUrl() {
-      if (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') {
-        return `${window.location.origin}/auth.html`;
-      }
-      return 'https://page-trace-app.web.app/auth.html';
-    },
+    get appBaseUrl() { return getTrustedAppBaseUrl() || TRUSTED_APP_BASE_URLS[0]; },
+    get authAppUrl() { return new URL('auth.html', CONFIG.appBaseUrl).href; },
     get idToken() { return GM_getValue('pt_id_token', ''); },
     get refreshToken() { return GM_getValue('pt_refresh_token', ''); },
     get uid() { return GM_getValue('pt_uid', ''); },
@@ -212,44 +226,52 @@
   // 5. Auth 桥接：接收来自 Web Auth 页面与看板的双向认证同步
   // ==========================================
   function setupAuthBridgeListener() {
+    if (!getTrustedAppBaseUrl()) return;
+
+    const nonceBytes = new Uint8Array(16);
+    crypto.getRandomValues(nonceBytes);
+    const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const origin = window.location.origin;
+    let pingTimer = null;
+
     window.addEventListener('message', (event) => {
+      if (event.origin !== origin || event.source !== window) return;
       const data = event.data;
-      if (!data) return;
+      if (!data || typeof data !== 'object' || data.nonce !== nonce) return;
 
       if (data.source === 'PAGETRACE_AUTH_SUCCESS') {
         const { idToken, refreshToken, uid, expiresIn, apiKey, projectId } = data.payload || {};
-        if (idToken && uid) {
-          GM_setValue('pt_id_token', idToken);
-          GM_setValue('pt_uid', uid);
-          if (refreshToken) GM_setValue('pt_refresh_token', refreshToken);
-          if (apiKey) GM_setValue('pt_api_key', apiKey);
-          if (projectId) GM_setValue('pt_project_id', projectId);
-          GM_setValue('pt_token_expiry', Date.now() + (Number(expiresIn) || 3600) * 1000);
+        const lifetime = Number(expiresIn);
+        if (typeof idToken !== 'string' || !idToken ||
+            typeof refreshToken !== 'string' || !refreshToken ||
+            typeof uid !== 'string' || !uid ||
+            apiKey !== CONFIG.apiKey || projectId !== CONFIG.projectId ||
+            !Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3600) return;
 
-          if (window.opener) {
-            try {
-              window.opener.postMessage({ source: 'PAGETRACE_AUTH_CONFIRMED' }, '*');
-            } catch (_) {}
-          }
-          // 仅在独立授权弹窗页面 (auth.html) 执行自动关闭，切勿关闭看板页面 (index.html)
-          if (window.location.pathname.includes('auth.html')) {
-            setTimeout(() => {
-              try { window.close(); } catch (_) {}
-            }, 800);
-          }
-        }
+        GM_setValue('pt_id_token', idToken);
+        GM_setValue('pt_refresh_token', refreshToken);
+        GM_setValue('pt_token_expiry', Date.now() + lifetime * 1000);
+        GM_setValue('pt_uid', uid);
+        clearInterval(pingTimer);
+        // 只确认给当前可信页面，凭据不经过 opener 或普通网页。
+        window.postMessage({ source: 'PAGETRACE_AUTH_CONFIRMED', nonce }, origin);
       } else if (data.source === 'PAGETRACE_AUTH_LOGOUT') {
         GM_deleteValue('pt_id_token');
         GM_deleteValue('pt_refresh_token');
         GM_deleteValue('pt_uid');
         GM_deleteValue('pt_token_expiry');
+        clearInterval(pingTimer);
       }
     });
 
-    // 主动向宿主页面握手（若用户已在看板页面登录，立刻静默获取同步凭据）
-    try {
-      window.postMessage({ source: 'PAGETRACE_PING' }, '*');
-    } catch (_) {}
+    // 有界重试覆盖页面和油猴脚本加载顺序；登录后的同步仍使用此会话。
+    let attempts = 0;
+    function ping() {
+      window.postMessage({ source: 'PAGETRACE_PING', nonce }, origin);
+      if (++attempts >= 30) clearInterval(pingTimer);
+    }
+    pingTimer = setInterval(ping, 500);
+    ping();
   }
 
   // ==========================================
@@ -958,7 +980,7 @@
     }
 
     function openLoginPopup() {
-      window.open(CONFIG.authAppUrl, 'PageTraceAuth', 'width=480,height=620');
+      window.open(CONFIG.authAppUrl, '_blank', 'width=480,height=620,noopener,noreferrer');
     }
 
     function autoResizeTextarea(el, minH = 75, maxH = 320) {
@@ -1105,9 +1127,9 @@
 
       if (e.ctrlKey || e.metaKey) {
         if (typeof GM_openInTab === 'function') {
-          GM_openInTab('https://page-trace-app.web.app', { active: true, insert: true, setParent: true });
+          GM_openInTab(CONFIG.appBaseUrl, { active: true, insert: true, setParent: true });
         } else {
-          window.open('https://page-trace-app.web.app', '_blank', 'noopener,noreferrer');
+          window.open(CONFIG.appBaseUrl, '_blank', 'noopener,noreferrer');
         }
         return;
       }
