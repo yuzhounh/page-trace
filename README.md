@@ -42,7 +42,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 ### 登录桥接与更新
 
 - 油猴脚本 `1.10.8` 起，普通网页只从油猴脚本存储读取登录状态。授权页不向打开它的网页发送 ID token 或 refresh token，只有本页脚本校验来源、窗口身份、会话随机值和固定 Firebase 项目后才接收凭据。
-- 默认授权/看板入口为 `https://page-trace.pages.dev/`。可信桥接仅限该站点、`https://yuzhounh.github.io/page-trace/`、原 Firebase 站点，以及 `http://localhost:3000/` 的首页、`index.html` 和 `auth.html`。新增部署域名时，需显式更新脚本中的 `TRUSTED_APP_BASE_URLS`，并配置 Firebase Authentication 的授权域名。
+- 默认授权/看板入口为 `https://page-trace.pages.dev/`。可信桥接仅限该站点、`https://yuzhounh.github.io/page-trace/`、原 Firebase 站点，以及 `http://localhost:3000/` 的首页、`index.html`、`auth.html` 和 Cloudflare 规范化后的 `auth` 路径。新增部署域名时，需显式更新脚本中的 `TRUSTED_APP_BASE_URLS`，并配置 Firebase Authentication 的授权域名。
 - **网页与脚本必须配套更新**：发布新的 `auth.html`、`index.html` 后更新油猴脚本。旧脚本无法完成新的会话握手，旧网页也无法向新脚本同步登录；授权窗口收到脚本已保存凭据的确认后才显示成功并关闭。
 - 保留 Google 登录、普通网页云端速记、令牌自动续期、看板登录/退出同步；自动化回归使用模拟账户和网络，不会读写真实笔记。
 

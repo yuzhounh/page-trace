@@ -112,7 +112,7 @@ test('all production JavaScript parses; credentials never go to opener', () => {
   new vm.Script(userscript);
   for (const code of [...inlineScripts(authHtml), ...inlineScripts(indexHtml)]) new vm.Script(code);
   assert.doesNotMatch(authHtml + userscript, /window\.opener\.postMessage/);
-  assert.match(userscript, /@version\s+1\.10\.8/);
+  assert.match(userscript, /@version\s+1\.10\.9/);
   assert.match(userscript, /@match\s+\*:\/\/\*\/\*/);
   assert.match(userscript, /window\.open\(CONFIG\.authAppUrl, '_blank', '[^']*noopener/);
 });
@@ -318,4 +318,16 @@ test('Cloudflare, GitHub subpath, legacy Firebase, and fixed localhost developme
     assert.equal(p.store.get('pt_uid'), 'alice', base);
     assert.equal(p.context.api.CONFIG.authAppUrl, `${base}auth.html`);
   }
+});
+
+test('Cloudflare canonical extensionless auth route completes login', async () => {
+  const p = page('https://page-trace.pages.dev/auth');
+  p.loadAuth();
+  p.loadUserscript();
+  await p.flush();
+  await p.login(makeUser());
+  assert.equal(p.store.get('pt_uid'), 'alice');
+  assert.equal(p.context.api.CONFIG.authAppUrl, 'https://page-trace.pages.dev/auth.html');
+  await p.tick();
+  assert.equal(p.closed, true);
 });
