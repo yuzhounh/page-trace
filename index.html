@@ -124,6 +124,12 @@
       font-size: 16px;
       font-weight: 700;
       color: var(--text);
+      text-decoration: none;
+    }
+    .brand:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 4px;
+      border-radius: 4px;
     }
 
     /* 用户信息与头像弹窗 */
@@ -1826,7 +1832,7 @@
   <div class="container">
     <!-- 顶部导航与用户头像下拉 -->
     <header>
-      <div class="brand">
+      <a class="brand" href="./" title="返回首页" aria-label="PageTrace 首页">
         <svg width="24" height="24" viewBox="0 0 48 48" style="border-radius: 7px; overflow: hidden; display: block; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
           <defs>
             <linearGradient id="ptGradHeader" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1843,7 +1849,7 @@
           </g>
         </svg>
         <span>PageTrace</span>
-      </div>
+      </a>
       <!-- 顶部功能按钮组（搜索、记笔记、用户） -->
       <div class="header-actions">
         <button class="header-btn" id="openSearchBtn" title="搜索笔记">
