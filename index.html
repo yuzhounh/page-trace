@@ -1807,6 +1807,19 @@
         height: 32px;
       }
     }
+    @media (max-width: 640px) {
+      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
+      .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
+      .input-send-btn { min-width: 44px; min-height: 44px; }
+      .nav-pill-btn, .nav-today-btn, .trash-btn, .toast-undo-btn,
+      .dropdown-actions-group button { min-height: 44px; }
+      .month-nav-bar, .month-nav-left, .nav-month-wrap { flex-wrap: wrap; }
+      input, textarea, select, .search-bar-input { font-size: 16px; }
+      #createModal .form-input, #editModal .form-input { font-size: 16px; }
+      .modal-card, .trash-card, .doc-card { max-height: calc(100dvh - 28px); overscroll-behavior: contain; }
+      .doc-card { overflow-x: auto; }
+      .toast-bar { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+    }
   </style>
 </head>
 <body>
