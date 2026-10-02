@@ -1,1 +1,29 @@
-{"hosting":{"public":".","ignore":["firebase.json","**/.*","**/node_modules/**","README.md","firestore.rules","pagetrace.user.js"]}}
+{
+  "hosting": {
+    "site": "page-trace-app",
+    "public": "firebase-retired",
+    "ignore": ["**/.*", "**/node_modules/**"],
+    "redirects": [
+      {
+        "source": "/auth.html",
+        "destination": "https://page-trace.pages.dev/auth",
+        "type": 302
+      },
+      {
+        "source": "/auth",
+        "destination": "https://page-trace.pages.dev/auth",
+        "type": 302
+      },
+      {
+        "source": "/",
+        "destination": "https://page-trace.pages.dev/",
+        "type": 302
+      },
+      {
+        "source": "/index.html",
+        "destination": "https://page-trace.pages.dev/",
+        "type": 302
+      }
+    ]
+  }
+}

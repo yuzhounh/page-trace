@@ -48,6 +48,12 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 运行桥接回归测试（Node.js 18+）：`node --test tests/auth-bridge.test.cjs`。
 
+### 旧 Firebase 入口
+
+- `page-trace-app.web.app` 和 `page-trace-app.firebaseapp.com` 属于同一个 Hosting 站点。旧 `/auth.html`、`/auth` 跳转到 Cloudflare 的 `/auth`，旧 `/`、`/index.html` 跳转到主站；其余已移除的业务路径返回 404。
+- Firebase 只部署 `firebase-retired/` 中不含认证脚本的迁移提示页及跳转配置；`/__/auth/*` 等 Firebase 保留路径继续提供 Google 登录辅助服务。Authentication、Firestore 和现有笔记继续使用原项目。
+- 维护命令：`firebase deploy --only hosting --project page-trace-app`。不要将 Hosting 的 `public` 改回根目录，以免再次发布旧业务入口。
+
 ## 交互快捷键
 
 | 操作 | 触发方式 | 说明 |

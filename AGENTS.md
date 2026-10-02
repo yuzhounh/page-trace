@@ -7,7 +7,7 @@
   `您可以在 http://localhost:3000/pagetrace.user.js 重新更新油猴脚本进行验证。`
   若本次交互未修改油猴脚本，严禁输出该链接。
 - 回复排版遵循无横线分隔符、紧凑清晰的原则。
-- **部署策略（暂停 Netlify，仅部署 Cloudflare Pages）**：
-  - 由于 Netlify 账户免费配额用尽（Account credit usage exceeded），在 1 个月内（至 2026 年 11 月）暂停向 Netlify 部署。
-  - 本项目后续触发部署时，**仅部署 Cloudflare Pages**（通过 `npx wrangler pages deploy . --project-name=page-trace --branch=main --commit-dirty=true`，并通过 `git push origin main` 触发原生 GitHub Pages）。严禁向 Netlify、Vercel 或 Firebase 发起部署。
-
+- **部署策略**：
+  - Netlify 团队 `yuzhounh` 的下次额度重置为 **2026-10-21 15:00 Asia/Shanghai（UTC+08:00）**，月度额度 300 credits。在此时间前跳过所有 Netlify 部署调用；普通“推送并部署”请求不解除暂停。重置后仍需有部署授权。
+  - 主站发布到 Cloudflare Pages（`npx wrangler pages deploy . --project-name=page-trace --branch=main --commit-dirty=true`），`git push origin main` 触发 GitHub Pages。
+  - 用户已授权退役旧 Firebase 业务页。Firebase Hosting 只发布 `firebase-retired/` 和 `firebase.json` 中的跳转配置，使用 `firebase deploy --only hosting --project page-trace-app`；不得重新发布根目录的业务网页。保留 `/__/auth/*` 认证辅助路径，不在此维护中部署 Firestore 规则、删除用户或修改笔记数据。
