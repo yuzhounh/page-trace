@@ -945,7 +945,12 @@
       word-break: break-word;
     }
     .note-body.is-collapsed {
-      /* 折叠时通过 JS 仅显示去除空行后的前 4 行，行与行之间不包含空行 */
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .note-expand-btn {
       align-self: flex-start;
@@ -1821,14 +1826,6 @@
       .note-item-row:has(.note-header.no-title) .note-plain-content:first-of-type,
       .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
         padding-right: 36px;
-      }
-      /* 手机端注释仅显示缩略 4 行 */
-      .note-body.is-collapsed {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 4;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
       .note-meta {
         width: 100%;
@@ -3192,14 +3189,9 @@
                   const canExpand = noteLines.length > 1 || (item.note && item.note.length > 80);
                   const isExpanded = expandedNoteIds.has(item.id);
 
-                  let displayNoteText = '';
-                  if (!canExpand) {
-                    displayNoteText = noteLines[0] || '';
-                  } else if (isExpanded) {
-                    displayNoteText = noteLines.join('\n\n');
-                  } else {
-                    displayNoteText = noteLines.slice(0, 4).join('\n');
-                  }
+                  const displayNoteText = isExpanded
+                    ? noteLines.join('\n\n')
+                    : noteLines.join('\n');
 
                   let isModified = false;
                   let updatedTimeStr = '';
@@ -3344,7 +3336,7 @@
         expandedNoteIds.delete(id);
         body.classList.remove('is-expanded');
         body.classList.add('is-collapsed');
-        body.textContent = noteLines.slice(0, 4).join('\n');
+        body.textContent = noteLines.join('\n');
         btn.textContent = '展开';
         btn.setAttribute('aria-expanded', 'false');
       }
