@@ -262,7 +262,7 @@
       color: var(--danger);
     }
     .dropdown-actions-group {
-      display: none;
+      display: flex;
       flex-direction: column;
       gap: 2px;
       border-top: 1px solid var(--divider);
@@ -1596,14 +1596,17 @@
         gap: 6px;
       }
       .header-actions {
-        gap: 8px;
+        gap: 6px;
       }
-      #openSearchBtn,
-      #openCreateBtn,
-      #openTrashBtn,
-      #openDocBtn,
-      #themeToggleBtn {
-        display: none !important;
+      .header-btn {
+        width: auto;
+        padding: 0 9px;
+        height: 32px;
+        font-size: 12px;
+        gap: 4px;
+      }
+      .header-btn .kbd-hint {
+        display: none;
       }
       .dropdown-actions-group {
         display: flex;
@@ -1884,51 +1887,14 @@
           <span class="kbd-hint">N</span>
         </button>
 
-        <button class="header-btn" id="openTrashBtn" title="回收站 (T)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-          <span>回收站</span>
-          <span class="kbd-hint">T</span>
-        </button>
-
-        <button class="header-btn" id="openDocBtn" title="使用说明与快捷键">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>文档</span>
-          <span class="kbd-hint">?</span>
-        </button>
-
-        <button class="header-btn" id="themeToggleBtn" title="切换深色/浅色模式 (D)">
-          <svg id="themeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg id="themeIconMoon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-          <span id="themeToggleLabel">深色</span>
-          <span class="kbd-hint">D</span>
-        </button>
-
         <div class="user-panel">
           <button class="auth-btn" id="loginBtn">登录 Google</button>
-          <button class="avatar-btn" id="avatarBtn" title="个人信息">
+          <button class="avatar-btn" id="avatarBtn" title="个人信息与设置">
             <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
             <span class="avatar-fallback" id="avatarFallback">U</span>
           </button>
 
-          <!-- 个人信息与退出下拉浮窗 -->
+          <!-- 个人信息与快捷功能下拉浮窗 -->
           <div class="user-dropdown" id="userDropdown">
             <div class="dropdown-profile">
               <img src="" alt="avatar" class="dropdown-avatar" id="dropdownAvatar" />
@@ -1937,33 +1903,27 @@
                 <div class="dropdown-email" id="dropdownEmail">-</div>
               </div>
             </div>
-            <!-- 移动端收纳的功能菜单项（桌面端默认隐藏） -->
+            <!-- 功能菜单项：回收站、文档、深色/浅色切换 -->
             <div class="dropdown-actions-group" id="dropdownActionsGroup">
-              <button class="dropdown-item-btn" id="menuSearchBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span>搜索笔记</span>
-              </button>
-
-              <button class="dropdown-item-btn" id="menuCreateBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>新建速记</span>
-              </button>
-
-              <button class="dropdown-item-btn" id="menuTrashBtn">
+              <button class="dropdown-item-btn" id="menuTrashBtn" title="打开回收站 (T)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
                 <span>回收站</span>
+                <span class="kbd-hint" style="margin-left: auto;">T</span>
               </button>
 
-              <button class="dropdown-item-btn" id="menuThemeBtn">
+              <button class="dropdown-item-btn" id="menuDocBtn" title="使用说明与快捷键 (?)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>使用文档</span>
+                <span class="kbd-hint" style="margin-left: auto;">?</span>
+              </button>
+
+              <button class="dropdown-item-btn" id="menuThemeBtn" title="切换深色/浅色模式 (D)">
                 <svg id="menuThemeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="5"></circle>
                   <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -1979,6 +1939,7 @@
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
                 <span id="menuThemeLabel">深色模式</span>
+                <span class="kbd-hint" style="margin-left: auto;">D</span>
               </button>
             </div>
 
@@ -2400,6 +2361,7 @@
     const menuSearchBtn = document.getElementById('menuSearchBtn');
     const menuCreateBtn = document.getElementById('menuCreateBtn');
     const menuTrashBtn = document.getElementById('menuTrashBtn');
+    const menuDocBtn = document.getElementById('menuDocBtn');
     const menuThemeBtn = document.getElementById('menuThemeBtn');
     const menuThemeIconSun = document.getElementById('menuThemeIconSun');
     const menuThemeIconMoon = document.getElementById('menuThemeIconMoon');
@@ -2620,6 +2582,13 @@
       menuTrashBtn.addEventListener('click', () => {
         userDropdown.classList.remove('show');
         showTrashModal();
+      });
+    }
+
+    if (menuDocBtn) {
+      menuDocBtn.addEventListener('click', () => {
+        userDropdown.classList.remove('show');
+        showDocModal();
       });
     }
 
@@ -3535,7 +3504,7 @@
     closeCreateModal.addEventListener('click', hideCreateModal);
     bindSafeBackdropClose(createModal, hideCreateModal);
 
-    openDocBtn.addEventListener('click', showDocModal);
+    if (openDocBtn) openDocBtn.addEventListener('click', showDocModal);
     closeDocModal.addEventListener('click', hideDocModal);
     bindSafeBackdropClose(docModal, hideDocModal);
 
@@ -3621,7 +3590,7 @@
       }).join('');
     }
 
-    openTrashBtn.addEventListener('click', showTrashModal);
+    if (openTrashBtn) openTrashBtn.addEventListener('click', showTrashModal);
     closeTrashModal.addEventListener('click', hideTrashModal);
     bindSafeBackdropClose(trashModal, hideTrashModal);
     btnClearTrash.addEventListener('click', clearAllTrash);
