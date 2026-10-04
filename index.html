@@ -346,8 +346,9 @@
       line-height: 1;
       display: inline-flex;
       align-items: center;
-      /* 校正中文笔画的视觉中心；em 随字号与页面缩放同比变化。 */
-      transform: translateY(-0.08em);
+      /* 使用排版定位校正笔画中心，避免 transform 在页面缩放后的栅格化偏移。 */
+      position: relative;
+      top: -0.04em;
     }
     .header-btn:hover {
       background: var(--btn-hover-bg);
@@ -391,7 +392,8 @@
     .kbd-hint > span {
       display: block;
       /* 只调整字符，快捷键外框仍由父按钮垂直居中。 */
-      transform: translateY(0.04em);
+      position: relative;
+      top: 0.04em;
     }
     .header-btn.primary .kbd-hint {
       color: #bfdbfe;
