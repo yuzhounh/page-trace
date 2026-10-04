@@ -2082,9 +2082,34 @@
       #createModal .form-input, #editModal .form-input { font-size: 16px; }
       .modal-card, .trash-card, .doc-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
     }
+
+    /* 顶部同步微指示条 (GitHub / Linear 风格) */
+    #topSyncBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 2px;
+      background: linear-gradient(90deg, #06b6d4, #0ea5e9, #3b82f6);
+      z-index: 99999;
+      pointer-events: none;
+      opacity: 0;
+      transition: width 0.3s ease, opacity 0.3s ease;
+    }
+    #topSyncBar.syncing {
+      opacity: 1;
+      width: 65%;
+      transition: width 1.2s cubic-bezier(0.1, 0.5, 0.1, 1);
+    }
+    #topSyncBar.finished {
+      opacity: 1;
+      width: 100%;
+      transition: width 0.2s ease;
+    }
   </style>
 </head>
 <body>
+  <div id="topSyncBar"></div>
   <div class="container">
     <!-- 顶部导航与用户头像下拉 -->
     <header>
@@ -2766,11 +2791,147 @@
       }
     }
 
+    // 顶部微进度条指示器
+    const topSyncBar = document.getElementById('topSyncBar');
+    let syncBarTimer = null;
+
+    function startTopSync() {
+      if (!topSyncBar) return;
+      clearTimeout(syncBarTimer);
+      topSyncBar.className = 'syncing';
+    }
+
+    function finishTopSync() {
+      if (!topSyncBar) return;
+      clearTimeout(syncBarTimer);
+      topSyncBar.className = 'finished';
+      syncBarTimer = setTimeout(() => {
+        topSyncBar.style.opacity = '0';
+        syncBarTimer = setTimeout(() => {
+          topSyncBar.className = '';
+          topSyncBar.style.width = '0%';
+          topSyncBar.style.opacity = '';
+        }, 350);
+      }, 200);
+    }
+
+    // 本地缓存（LocalStorage 0ms 秒开）支持
+    function serializeNoteForCache(note) {
+      const raw = { ...note };
+      if (raw.createdAt) {
+        if (raw.createdAt.toDate) {
+          raw.createdAt = raw.createdAt.toDate().toISOString();
+        } else if (raw.createdAt instanceof Date) {
+          raw.createdAt = raw.createdAt.toISOString();
+        }
+      }
+      if (raw.updatedAt) {
+        if (raw.updatedAt.toDate) {
+          raw.updatedAt = raw.updatedAt.toDate().toISOString();
+        } else if (raw.updatedAt instanceof Date) {
+          raw.updatedAt = raw.updatedAt.toISOString();
+        }
+      }
+      if (raw.deletedAt) {
+        if (raw.deletedAt.toDate) {
+          raw.deletedAt = raw.deletedAt.toDate().toISOString();
+        } else if (raw.deletedAt instanceof Date) {
+          raw.deletedAt = raw.deletedAt.toISOString();
+        }
+      }
+      return raw;
+    }
+
+    function saveNotesToCache(uid, list) {
+      if (!uid || !Array.isArray(list)) return;
+      try {
+        const serialized = list.map(serializeNoteForCache);
+        localStorage.setItem('pagetrace_notes_cache_' + uid, JSON.stringify(serialized));
+      } catch (e) {
+        console.warn('[PageTrace] 写入本地笔记缓存失败:', e);
+      }
+    }
+
+    function loadNotesFromCache(uid) {
+      if (!uid) return null;
+      try {
+        const cachedStr = localStorage.getItem('pagetrace_notes_cache_' + uid);
+        if (!cachedStr) return null;
+        const parsed = JSON.parse(cachedStr);
+        return Array.isArray(parsed) ? parsed : null;
+      } catch (e) {
+        console.warn('[PageTrace] 读取本地笔记缓存失败:', e);
+        return null;
+      }
+    }
+
+    function saveUserToCache(user) {
+      if (!user || !user.uid) return;
+      try {
+        const payload = {
+          uid: user.uid,
+          displayName: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || ''
+        };
+        localStorage.setItem('pagetrace_last_user', JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function loadUserFromCache() {
+      try {
+        const str = localStorage.getItem('pagetrace_last_user');
+        if (!str) return null;
+        const parsed = JSON.parse(str);
+        return parsed && parsed.uid ? parsed : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // 预读缓存实现首屏即刻就绪
+    (function initFromCache() {
+      const cachedUser = loadUserFromCache();
+      if (!cachedUser) return;
+
+      currentUser = cachedUser;
+      loginBtn.style.display = 'none';
+      avatarBtn.style.display = 'inline-flex';
+
+      if (cachedUser.photoURL) {
+        avatarImg.src = cachedUser.photoURL;
+        avatarImg.style.display = 'block';
+        avatarFallback.style.display = 'none';
+        dropdownAvatar.src = cachedUser.photoURL;
+        dropdownAvatar.style.display = 'block';
+      } else {
+        avatarImg.style.display = 'none';
+        avatarFallback.style.display = 'block';
+        avatarFallback.textContent = (cachedUser.displayName || cachedUser.email || 'U')[0].toUpperCase();
+        dropdownAvatar.style.display = 'none';
+      }
+
+      dropdownName.textContent = cachedUser.displayName || '未设置昵称';
+      dropdownEmail.textContent = cachedUser.email || '';
+
+      const cachedNotes = loadNotesFromCache(cachedUser.uid);
+      if (cachedNotes && cachedNotes.length > 0) {
+        notesData = cachedNotes;
+        notesData.sort((a, b) => {
+          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+          return tB - tA;
+        });
+        renderList();
+      }
+    })();
+
     // 监听 Google 登录状态及 Token 自动刷新
     auth.onIdTokenChanged(async (user) => {
       authStateReady = true;
       currentUser = user;
       if (user) {
+        saveUserToCache(user);
         loginBtn.style.display = 'none';
         avatarBtn.style.display = 'inline-flex';
         
@@ -2795,6 +2956,7 @@
         // 同步登录态到油猴插件
         syncAuthToUserscript(user);
       } else {
+        localStorage.removeItem('pagetrace_last_user');
         loginBtn.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
         userDropdown.classList.remove('show');
@@ -2848,6 +3010,10 @@
 
     dropdownLogout.addEventListener('click', () => {
       userDropdown.classList.remove('show');
+      if (currentUser && currentUser.uid) {
+        localStorage.removeItem('pagetrace_notes_cache_' + currentUser.uid);
+      }
+      localStorage.removeItem('pagetrace_last_user');
       auth.signOut();
     });
 
@@ -2956,6 +3122,7 @@
       if (notesData.length === 0) {
         notesList.innerHTML = getSkeletonHtml();
       }
+      startTopSync();
 
       const ref = db.collection('users').doc(uid).collection('notes');
       unsubscribeNotes = ref.onSnapshot((snapshot) => {
@@ -2971,13 +3138,20 @@
           return tB - tA;
         });
 
+        // 写入本地持久化缓存以供下次秒开
+        saveNotesToCache(uid, notesData);
+        finishTopSync();
+
         renderList();
         if (trashModal && trashModal.classList.contains('show')) {
           renderTrashModal();
         }
       }, (err) => {
         console.error('拉取笔记失败:', err);
-        notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
+        finishTopSync();
+        if (notesData.length === 0) {
+          notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
+        }
       });
     }
 
