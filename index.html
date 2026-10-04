@@ -606,11 +606,13 @@
       display: flex;
       align-items: center;
     }
-    .nav-today-btn {
+    .nav-today-btn,
+    .nav-action-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 5px 15px;
+      gap: 5px;
+      padding: 5px 13px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--pill-bg);
@@ -621,7 +623,8 @@
       transition: all 0.15s ease;
       line-height: 1.4;
     }
-    .nav-today-btn:hover {
+    .nav-today-btn:hover,
+    .nav-action-btn:hover {
       background: var(--item-hover-bg);
       border-color: var(--primary);
       color: var(--primary);
@@ -1645,7 +1648,8 @@
         width: 24px;
         height: 24px;
       }
-      .nav-today-btn {
+      .nav-today-btn,
+      .nav-action-btn {
         padding: 4px 10px;
         font-size: 12px;
       }
@@ -2045,11 +2049,20 @@
             </svg>
           </button>
         </div>
+
+        <!-- 本月按钮移动到左侧区域：先是年，再是月，然后是本月 -->
+        <button class="nav-today-btn" id="btnToday" title="回到本月">本月</button>
       </div>
 
-      <!-- 右侧：本月（回到本月） -->
+      <!-- 右侧区域：批量复制当前筛选的笔记 -->
       <div class="month-nav-right">
-        <button class="nav-today-btn" id="btnToday" title="回到本月">本月</button>
+        <button class="nav-action-btn" id="btnCopyAllNotes" title="复制当前筛选的所有笔记">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>复制</span>
+        </button>
       </div>
     </div>
 
@@ -2331,6 +2344,7 @@
     const btnPrevMonth = document.getElementById('btnPrevMonth');
     const btnNextMonth = document.getElementById('btnNextMonth');
     const btnToday = document.getElementById('btnToday');
+    const btnCopyAllNotes = document.getElementById('btnCopyAllNotes');
 
     // 分页与筛选状态：年份与月份 (默认跟随当前自然年月)
     const initialNow = new Date();
@@ -3001,6 +3015,10 @@
         searchCountBadge.textContent = `共 ${totalCount} 条`;
       } else {
         searchCountBadge.style.display = 'none';
+      }
+
+      if (btnCopyAllNotes) {
+        btnCopyAllNotes.setAttribute('title', totalCount > 0 ? `复制当前筛选的 ${totalCount} 条笔记` : '当前暂无笔记可复制');
       }
 
       if (totalCount === 0) {
@@ -4160,38 +4178,49 @@
       openEditModal(id);
     };
 
-    window.handleMenuCopy = async function(e, id) {
-      e.stopPropagation();
-      closeAllNoteMenus();
-      const item = notesData.find(n => n.id === id);
-      if (!item) return;
-
+    function formatNoteTextForCopy(item) {
+      if (!item) return '';
       const parts = [];
-      if (item.title) parts.push(item.title);
+      const title = getOptionalTitle(item.title);
+      if (title) parts.push(title);
       if (item.url) parts.push(item.url);
       if (item.note) parts.push(item.note);
-      const textToCopy = parts.join('\n');
+      return parts.join('\n');
+    }
 
-      let copied = false;
+    async function copyTextToClipboard(text) {
+      if (!text) return false;
       try {
         if (navigator.clipboard?.writeText && window.isSecureContext) {
-          await navigator.clipboard.writeText(textToCopy);
-          copied = true;
+          await navigator.clipboard.writeText(text);
+          return true;
         } else {
           const textarea = document.createElement('textarea');
-          textarea.value = textToCopy;
+          textarea.value = text;
           textarea.style.position = 'fixed';
           textarea.style.opacity = '0';
           textarea.style.pointerEvents = 'none';
           document.body.appendChild(textarea);
           textarea.focus();
           textarea.select();
-          copied = document.execCommand('copy');
+          const successful = document.execCommand('copy');
           textarea.remove();
+          return successful;
         }
       } catch (err) {
         console.error('复制失败:', err);
+        return false;
       }
+    }
+
+    window.handleMenuCopy = async function(e, id) {
+      e.stopPropagation();
+      closeAllNoteMenus();
+      const item = notesData.find(n => n.id === id);
+      if (!item) return;
+
+      const textToCopy = formatNoteTextForCopy(item);
+      const copied = await copyTextToClipboard(textToCopy);
 
       if (copied && e && e.currentTarget) {
         const btn = e.currentTarget;
@@ -4213,6 +4242,51 @@
         }
       }
     };
+
+    // 复制当前筛选出的所有笔记（两条笔记之间加一个空行分隔）
+    async function handleCopyFilteredNotes(e) {
+      if (e) e.stopPropagation();
+      const targetNotes = getTargetNotes();
+      if (!targetNotes || targetNotes.length === 0) {
+        alert('当前没有可复制的笔记');
+        return;
+      }
+
+      const formattedNotes = targetNotes.map(formatNoteTextForCopy).filter(Boolean);
+      if (formattedNotes.length === 0) {
+        alert('当前笔记内容为空');
+        return;
+      }
+
+      const textToCopy = formattedNotes.join('\n\n');
+      const copied = await copyTextToClipboard(textToCopy);
+
+      if (copied && btnCopyAllNotes && !btnCopyAllNotes.dataset.copying) {
+        btnCopyAllNotes.dataset.copying = 'true';
+        const origHtml = btnCopyAllNotes.innerHTML;
+        const origTitle = btnCopyAllNotes.getAttribute('title');
+        btnCopyAllNotes.innerHTML = `
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>已复制</span>
+        `;
+        btnCopyAllNotes.setAttribute('title', `已成功复制当前 ${formattedNotes.length} 条笔记`);
+        setTimeout(() => {
+          btnCopyAllNotes.innerHTML = origHtml;
+          if (origTitle) {
+            btnCopyAllNotes.setAttribute('title', origTitle);
+          } else {
+            btnCopyAllNotes.removeAttribute('title');
+          }
+          delete btnCopyAllNotes.dataset.copying;
+        }, 1500);
+      }
+    }
+
+    if (btnCopyAllNotes) {
+      btnCopyAllNotes.addEventListener('click', handleCopyFilteredNotes);
+    }
 
     window.handleMenuDelete = function(e, id) {
       e.stopPropagation();
