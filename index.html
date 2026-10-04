@@ -629,6 +629,22 @@
       border-color: var(--primary);
       color: var(--primary);
     }
+    .nav-action-btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .month-nav-bar:hover .nav-action-btn,
+    .month-nav-bar:focus-within .nav-action-btn,
+    .nav-action-btn:focus {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    @media (hover: none) {
+      .nav-action-btn {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
     .nav-today-btn.active {
       color: var(--primary);
       background: var(--badge-bg);
