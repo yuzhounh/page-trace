@@ -976,6 +976,7 @@
       line-height: 1;
       flex-shrink: 0;
     }
+    .note-action-btn[data-copying="true"],
     .note-item-row:hover .note-action-btn,
     .note-item-row:focus-within .note-action-btn,
     .note-item-row:has(.note-menu-dropdown.show) .note-action-btn,
@@ -984,6 +985,9 @@
     .note-item-row:has(.note-menu-dropdown.show) .note-more-btn {
       opacity: 1;
       pointer-events: auto;
+    }
+    .note-action-btn[data-copying="true"] {
+      color: #10b981;
     }
     .note-action-btn:hover,
     .note-more-btn:hover {
@@ -4199,7 +4203,8 @@
     }
 
     window.handleMenuCopy = async function(e, id) {
-      e.stopPropagation();
+      const btn = e?.currentTarget || (e?.target ? e.target.closest('button') : null);
+      if (e) e.stopPropagation();
       closeAllNoteMenus();
       const item = notesData.find(n => n.id === id);
       if (!item) return;
@@ -4207,13 +4212,12 @@
       const textToCopy = formatNoteTextForCopy(item);
       const copied = await copyTextToClipboard(textToCopy);
 
-      if (copied && e && e.currentTarget) {
-        const btn = e.currentTarget;
+      if (copied && btn) {
         if (!btn.dataset.copying) {
           btn.dataset.copying = 'true';
           const origHtml = btn.innerHTML;
           const origTitle = btn.getAttribute('title');
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
           btn.setAttribute('title', '已复制');
           setTimeout(() => {
             btn.innerHTML = origHtml;
