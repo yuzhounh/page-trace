@@ -633,11 +633,16 @@
       opacity: 0;
       pointer-events: none;
     }
+    .nav-action-btn[data-copying="true"],
     .month-nav-bar:hover .nav-action-btn,
     .month-nav-bar:focus-within .nav-action-btn,
     .nav-action-btn:focus {
       opacity: 1;
       pointer-events: auto;
+    }
+    .nav-action-btn[data-copying="true"] {
+      color: #10b981;
+      border-color: #10b981;
     }
     @media (hover: none) {
       .nav-action-btn {
@@ -2037,13 +2042,7 @@
 
       <!-- 右侧区域：批量复制当前筛选的笔记 -->
       <div class="month-nav-right">
-        <button class="nav-action-btn" id="btnCopyAllNotes" title="复制当前筛选的所有笔记">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span>复制</span>
-        </button>
+        <button class="nav-action-btn" id="btnCopyAllNotes" title="复制当前筛选的所有笔记">复制</button>
       </div>
     </div>
 
@@ -4254,12 +4253,7 @@
         btnCopyAllNotes.dataset.copying = 'true';
         const origHtml = btnCopyAllNotes.innerHTML;
         const origTitle = btnCopyAllNotes.getAttribute('title');
-        btnCopyAllNotes.innerHTML = `
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          <span>已复制</span>
-        `;
+        btnCopyAllNotes.textContent = '已复制';
         btnCopyAllNotes.setAttribute('title', `已成功复制当前 ${formattedNotes.length} 条笔记`);
         setTimeout(() => {
           btnCopyAllNotes.innerHTML = origHtml;
