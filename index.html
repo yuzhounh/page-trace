@@ -626,6 +626,17 @@
       border-color: var(--primary);
       color: var(--primary);
     }
+    .nav-today-btn.active {
+      color: var(--primary);
+      background: var(--badge-bg);
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .nav-today-btn.active:hover {
+      background: var(--badge-bg);
+      color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
     .nav-dropdown-menu {
       display: none;
       position: absolute;
@@ -2759,6 +2770,11 @@
 
       const sortedYears = Array.from(yearsMap.keys()).sort((a, b) => b.localeCompare(a));
 
+      const isSearching = !!currentSearchKeyword.trim();
+      const now = new Date();
+      const nowYear = String(now.getFullYear());
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+
       // 初次加载时，若当前年份不存在笔记，自动定位到最新存在笔记的年份与月份
       if (!hasInitializedFilters) {
         if (!yearsMap.has(selectedYear)) {
@@ -2779,7 +2795,7 @@
           }
         }
         hasInitializedFilters = true;
-      } else if (selectedYear !== 'all' && !yearsMap.has(selectedYear)) {
+      } else if (selectedYear !== 'all' && !yearsMap.has(selectedYear) && !(isSearching && selectedYear === nowYear && selectedMonth === nowMonth)) {
         selectedYear = sortedYears[0] || 'all';
       }
 
@@ -2873,6 +2889,16 @@
         `;
       });
       monthDropdownMenu.innerHTML = monthMenuHtml;
+
+      // 更新「本月」按钮状态（搜索状态下支持选中与反选切换，并显示高亮）
+      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
+      if (isSearching && isCurrentMonthSelected) {
+        btnToday.classList.add('active');
+        btnToday.setAttribute('title', '已筛选本月，再次点击显示所有月份');
+      } else {
+        btnToday.classList.remove('active');
+        btnToday.setAttribute('title', isSearching ? '仅显示本月搜索结果' : '回到本月');
+      }
     }
 
     function selectYear(year) {
@@ -3274,11 +3300,24 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 回到本月
+    // 回到本月 / 搜索时本月筛选切换
     btnToday.addEventListener('click', () => {
       const now = new Date();
-      selectedYear = String(now.getFullYear());
-      selectedMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const nowYear = String(now.getFullYear());
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const isSearching = !!currentSearchKeyword.trim();
+      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
+
+      if (isSearching && isCurrentMonthSelected) {
+        // 搜索状态下再次点击本月：取消选中，变为显示所有月份的结果
+        selectedYear = 'all';
+        selectedMonth = 'all';
+      } else {
+        // 切换为本月
+        selectedYear = nowYear;
+        selectedMonth = nowMonth;
+      }
+
       displayLimit = 50;
       renderList();
       window.scrollTo({ top: 0, behavior: 'smooth' });
