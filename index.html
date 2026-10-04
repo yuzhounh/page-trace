@@ -872,9 +872,7 @@
     .note-item-row {
       padding: 12px 18px;
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
+      flex-direction: column;
       border-bottom: 1px solid var(--divider);
       transition: background-color 0.12s ease;
       position: relative;
@@ -894,16 +892,27 @@
     .note-item-row:has(.note-menu-dropdown.show) {
       z-index: 50;
     }
-    .note-main {
-      flex: 1;
-      min-width: 0;
+    .note-header {
       display: flex;
-      flex-direction: column;
-      gap: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      min-height: 24px;
+    }
+    .note-header.no-title {
+      justify-content: flex-end;
+      min-height: 0;
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      width: auto;
+      z-index: 2;
     }
     .note-title {
       display: block;
-      max-width: 75%;
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -923,6 +932,8 @@
       color: var(--text-muted);
     }
     .note-quote {
+      width: 100%;
+      box-sizing: border-box;
       margin-top: 6px;
       padding-left: 10px;
       border-left: 2px solid var(--border);
@@ -952,23 +963,27 @@
       text-decoration: underline;
     }
     .note-plain-content {
+      width: 100%;
+      box-sizing: border-box;
       font-size: 14px;
       font-weight: 400;
       color: var(--text);
       line-height: 1.6;
       white-space: pre-wrap;
       word-break: break-word;
+      margin-top: 6px;
     }
-    .note-title + .note-plain-content {
-      margin-top: 7px;
+    .note-item-row:has(.note-header.no-title) .note-plain-content:first-of-type,
+    .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
+      margin-top: 0;
     }
     .note-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      /* 元信息位于按钮下方，使用主内容与右侧操作按钮区预留的宽度 */
-      width: calc(100% + 104px);
+      width: 100%;
+      box-sizing: border-box;
       margin-top: 7px;
       font-size: 11px;
       line-height: 1.35;
@@ -1769,29 +1784,55 @@
       /* 4. 笔记卡片内部间距与排版优化 */
       .note-item-row {
         padding: 12px 14px;
-        gap: 10px;
+        gap: 0;
+      }
+      .note-header {
+        min-height: 28px;
+        gap: 8px;
+      }
+      .note-header.no-title {
+        top: 10px;
+        right: 14px;
       }
       .note-title {
-        max-width: 100%;
         font-size: 14.5px;
+        max-width: calc(100% - 36px);
       }
+      .note-side-col {
+        height: 28px;
+        gap: 0;
+      }
+      /* 手机端收纳复制与编辑至「···」下拉菜单 */
+      .note-side-col > .note-copy-btn,
+      .note-side-col > .note-edit-btn {
+        display: none !important;
+      }
+      /* 手机端注释与卡片等宽，不为右侧按钮预留空白 */
       .note-quote {
+        width: 100%;
         margin-top: 5px;
         padding-left: 8px;
         font-size: 13px;
       }
       .note-plain-content {
+        width: 100%;
         font-size: 13.5px;
       }
-      .note-meta {
-        width: calc(100% + 110px);
-        margin-top: 6px;
-        gap: 8px;
+      .note-item-row:has(.note-header.no-title) .note-plain-content:first-of-type,
+      .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
+        padding-right: 36px;
       }
-      .note-side-col {
-        padding-top: 0;
-        height: 20px;
-        align-items: center;
+      /* 手机端注释仅显示缩略 4 行 */
+      .note-body.is-collapsed {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .note-meta {
+        width: 100%;
+        margin-top: 6px;
         gap: 8px;
       }
       .note-action-btn,
@@ -1804,6 +1845,10 @@
       }
       .note-menu-dropdown {
         top: calc(100% + 8px);
+      }
+      .note-menu-item {
+        padding: 9px 12px;
+        font-size: 13.5px;
       }
 
       /* 5. 弹窗针对触屏与键盘的响应式适配 */
@@ -1913,7 +1958,7 @@
       .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
       .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
       .input-send-btn { min-width: 44px; min-height: 44px; }
-      .nav-pill-btn, .nav-today-btn, .trash-btn, .toast-undo-btn,
+      .nav-pill-btn, .nav-today-btn, .nav-action-btn, .trash-btn, .toast-undo-btn,
       .dropdown-actions-group button { min-height: 44px; }
       .month-nav-bar, .month-nav-left, .nav-month-wrap { flex-wrap: wrap; }
       input, textarea, select, .search-bar-input { font-size: 16px; }
@@ -3134,7 +3179,7 @@
                   const titleParts = splitTitleBrand(displayTitle);
                   const noteLines = getNoteLines(item.note || '');
                   const hasNoteBody = noteLines.length > 0;
-                  const canExpand = noteLines.length > 1;
+                  const canExpand = noteLines.length > 1 || (item.note && item.note.length > 80);
                   const isExpanded = expandedNoteIds.has(item.id);
 
                   let displayNoteText = '';
@@ -3160,7 +3205,7 @@
 
                   return `
                     <div class="note-item-row" data-id="${item.id}">
-                      <div class="note-main">
+                      <div class="note-header ${displayTitle ? '' : 'no-title'}">
                         ${displayTitle ? (safeUrl ? `
                           <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="note-title" title="${escapeHtml(displayTitle)}">
                             ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
@@ -3170,56 +3215,70 @@
                             ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
                           </div>
                         `) : ''}
-                        ${hasNoteBody ? `
-                          <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(displayNoteText)}</div>
-                        ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
-                        ${canExpand ? `
-                          <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
-                            ${isExpanded ? '收起' : '展开'}
-                          </button>
-                        ` : ''}
-                        ${(domain || createdTimeStr) ? `
-                          <div class="note-meta">
-                            ${domain ? `<span class="note-meta-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}
-                            ${createdTimeStr ? `<time datetime="${createdD.toISOString()}">${escapeHtml(createdTimeStr)}</time>` : ''}
-                          </div>
-                        ` : ''}
-                      </div>
-                      <div class="note-side-col">
-                        <button class="note-action-btn" onclick="handleMenuCopy(event, '${item.id}')" title="复制" aria-label="复制">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                          </svg>
-                        </button>
-                        <button class="note-action-btn" onclick="handleMenuEdit(event, '${item.id}')" title="编辑" aria-label="编辑">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
-                        <button class="note-action-btn note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="5" cy="12" r="2"></circle>
-                            <circle cx="12" cy="12" r="2"></circle>
-                            <circle cx="19" cy="12" r="2"></circle>
-                          </svg>
-                        </button>
-                        <div class="note-menu-dropdown" id="noteMenu-${item.id}">
-                          <button class="note-menu-item delete" onclick="handleMenuDelete(event, '${item.id}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <div class="note-side-col">
+                          <button class="note-action-btn note-copy-btn" onclick="handleMenuCopy(event, '${item.id}')" title="复制" aria-label="复制">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
-                            <span>删除</span>
                           </button>
-                          <div class="note-menu-meta">
-                            <div>字数统计 : ${charCount}</div>
-                            ${createdTimeStr ? `<div>创建于 ${createdTimeStr}</div>` : ''}
-                            ${isModified ? `<div>编辑于 ${updatedTimeStr}</div>` : ''}
+                          <button class="note-action-btn note-edit-btn" onclick="handleMenuEdit(event, '${item.id}')" title="编辑" aria-label="编辑">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button class="note-action-btn note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="5" cy="12" r="2"></circle>
+                              <circle cx="12" cy="12" r="2"></circle>
+                              <circle cx="19" cy="12" r="2"></circle>
+                            </svg>
+                          </button>
+                          <div class="note-menu-dropdown" id="noteMenu-${item.id}">
+                            <button class="note-menu-item copy" onclick="handleMenuCopy(event, '${item.id}')">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                              <span>复制</span>
+                            </button>
+                            <button class="note-menu-item edit" onclick="handleMenuEdit(event, '${item.id}')">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                              <span>编辑</span>
+                            </button>
+                            <button class="note-menu-item delete" onclick="handleMenuDelete(event, '${item.id}')">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                              <span>删除</span>
+                            </button>
+                            <div class="note-menu-meta">
+                              <div>字数统计 : ${charCount}</div>
+                              ${createdTimeStr ? `<div>创建于 ${createdTimeStr}</div>` : ''}
+                              ${isModified ? `<div>编辑于 ${updatedTimeStr}</div>` : ''}
+                            </div>
                           </div>
                         </div>
                       </div>
+                      ${hasNoteBody ? `
+                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(displayNoteText)}</div>
+                      ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
+                      ${canExpand ? `
+                        <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
+                          ${isExpanded ? '收起' : '展开'}
+                        </button>
+                      ` : ''}
+                      ${(domain || createdTimeStr) ? `
+                        <div class="note-meta">
+                          ${domain ? `<span class="note-meta-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}
+                          ${createdTimeStr ? `<time datetime="${createdD.toISOString()}">${escapeHtml(createdTimeStr)}</time>` : ''}
+                        </div>
+                      ` : ''}
                     </div>
                   `;
                 }).join('')}
@@ -3260,7 +3319,8 @@
       if (!item) return;
 
       const noteLines = getNoteLines(item.note || '');
-      if (noteLines.length <= 1) return;
+      const canExpand = noteLines.length > 1 || (item.note && item.note.length > 80);
+      if (!canExpand) return;
 
       const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
@@ -4265,21 +4325,23 @@
       const textToCopy = formatNoteTextForCopy(item);
       const copied = await copyTextToClipboard(textToCopy);
 
-      if (copied && btn) {
-        if (!btn.dataset.copying) {
-          btn.dataset.copying = 'true';
-          const origHtml = btn.innerHTML;
-          const origTitle = btn.getAttribute('title');
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-          btn.setAttribute('title', '已复制');
+      if (copied) {
+        const row = document.querySelector(`.note-item-row[data-id="${id}"]`);
+        const targetBtn = (btn && !btn.closest('.note-menu-dropdown')) ? btn : (row?.querySelector('.note-more-btn') || btn);
+        if (targetBtn && !targetBtn.dataset.copying) {
+          targetBtn.dataset.copying = 'true';
+          const origHtml = targetBtn.innerHTML;
+          const origTitle = targetBtn.getAttribute('title');
+          targetBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          targetBtn.setAttribute('title', '已复制');
           setTimeout(() => {
-            btn.innerHTML = origHtml;
+            targetBtn.innerHTML = origHtml;
             if (origTitle) {
-              btn.setAttribute('title', origTitle);
+              targetBtn.setAttribute('title', origTitle);
             } else {
-              btn.removeAttribute('title');
+              targetBtn.removeAttribute('title');
             }
-            delete btn.dataset.copying;
+            delete targetBtn.dataset.copying;
           }, 1500);
         }
       }
