@@ -134,7 +134,6 @@
 
     /* 用户信息与头像弹窗 */
     .user-panel {
-      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -193,7 +192,7 @@
     .user-dropdown {
       position: absolute;
       top: calc(100% + 10px);
-      right: 0;
+      left: 0;
       width: 240px;
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -302,11 +301,6 @@
       display: block;
       flex-shrink: 0;
     }
-    .dropdown-item-btn > span:not(.kbd-hint) {
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-    }
     .dropdown-item-btn:hover {
       background: var(--item-hover-bg);
       color: var(--primary);
@@ -317,6 +311,7 @@
 
     /* 顶部右侧功能按钮组（搜索、记笔记） */
     .header-actions {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -331,6 +326,7 @@
       padding: 0;
       border-radius: 9px;
       font-size: 13px;
+      font-family: inherit;
       font-weight: 500;
       line-height: 1;
       cursor: pointer;
@@ -345,10 +341,13 @@
       display: block;
       flex-shrink: 0;
     }
-    .header-btn > span:not(.kbd-hint) {
+    .header-btn > span:not(.kbd-hint),
+    .dropdown-item-btn > span:not(.kbd-hint) {
       line-height: 1;
       display: inline-flex;
       align-items: center;
+      /* 校正中文笔画的视觉中心；em 随字号与页面缩放同比变化。 */
+      transform: translateY(-0.08em);
     }
     .header-btn:hover {
       background: var(--btn-hover-bg);
@@ -388,6 +387,11 @@
       box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
       flex-shrink: 0;
       margin: 0;
+    }
+    .kbd-hint > span {
+      display: block;
+      /* 只调整字符，快捷键外框仍由父按钮垂直居中。 */
+      transform: translateY(0.04em);
     }
     .header-btn.primary .kbd-hint {
       color: #bfdbfe;
@@ -1680,6 +1684,7 @@
       }
       .user-dropdown {
         width: 200px;
+        left: auto;
         right: 0;
         padding: 12px;
         border-radius: 14px;
@@ -1894,6 +1899,9 @@
         height: 32px;
         min-width: 32px;
       }
+      .header-btn > span:not(.kbd-hint) {
+        display: none;
+      }
       .avatar-btn {
         width: 32px;
         height: 32px;
@@ -1931,7 +1939,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
           <span>搜索</span>
-          <span class="kbd-hint">/</span>
+          <span class="kbd-hint"><span>/</span></span>
         </button>
 
         <button class="header-btn" id="openCreateBtn" title="新建速记">
@@ -1940,7 +1948,7 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
           <span>速记</span>
-          <span class="kbd-hint">N</span>
+          <span class="kbd-hint"><span>N</span></span>
         </button>
 
         <div class="user-panel">
@@ -1977,16 +1985,16 @@
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
                 <span id="menuThemeLabel">深色模式</span>
-                <span class="kbd-hint">D</span>
+                <span class="kbd-hint"><span>D</span></span>
               </button>
 
               <button class="dropdown-item-btn" id="menuTrashBtn" title="打开回收站 (T)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="15" height="15" viewBox="0 1 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 7 5 7 21 7"></polyline>
                   <path d="M19 7v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7m3 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
                 <span>回收站</span>
-                <span class="kbd-hint">T</span>
+                <span class="kbd-hint"><span>T</span></span>
               </button>
 
               <button class="dropdown-item-btn" id="menuDocBtn" title="使用说明与快捷键 (?)">
@@ -1995,7 +2003,7 @@
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
                 <span>使用文档</span>
-                <span class="kbd-hint">?</span>
+                <span class="kbd-hint"><span>?</span></span>
               </button>
             </div>
 
