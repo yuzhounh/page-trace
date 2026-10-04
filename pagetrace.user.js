@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.10.9
+// @version      1.10.10
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -193,11 +193,15 @@
       GM_xmlhttpRequest({
         method: 'POST',
         url: endpoint,
+        timeout: 15000,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         data: JSON.stringify(docBody),
+        ontimeout: function () {
+          reject(new Error('网络请求超时，请检查网络并重试'));
+        },
         onload: function (res) {
           if (res.status >= 200 && res.status < 300) {
             try {
@@ -1018,6 +1022,60 @@
       tooltip.classList.remove('show');
     }
 
+    function getDraftStorageKey() {
+      const uid = CONFIG.uid || 'anon';
+      const cleanUrl = window.location.href.split('#')[0];
+      return `pagetrace_draft_${uid}_${encodeURIComponent(cleanUrl)}`;
+    }
+
+    function saveDraft(content) {
+      try {
+        const key = getDraftStorageKey();
+        if (content && content.trim()) {
+          if (typeof GM_setValue === 'function') {
+            GM_setValue(key, content);
+          } else {
+            sessionStorage.setItem(key, content);
+          }
+        } else {
+          clearDraft();
+        }
+      } catch (e) {
+        console.warn('[PageTrace] 保存草稿异常:', e);
+      }
+    }
+
+    function loadDraft() {
+      try {
+        const key = getDraftStorageKey();
+        if (typeof GM_getValue === 'function') {
+          return GM_getValue(key, '') || '';
+        }
+        return sessionStorage.getItem(key) || '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function clearDraft() {
+      try {
+        const key = getDraftStorageKey();
+        if (typeof GM_deleteValue === 'function') {
+          GM_deleteValue(key);
+        } else {
+          sessionStorage.removeItem(key);
+        }
+      } catch (e) {}
+    }
+
+    function restoreDraftIfPresent() {
+      const draft = loadDraft();
+      if (draft && !textarea.value) {
+        textarea.value = draft;
+        autoResizeTextarea(textarea, 75, 320);
+      }
+    }
+
     function toggleCard(show) {
       const isCurrentlyOpen = card.classList.contains('active');
       const targetState = show !== undefined ? show : !isCurrentlyOpen;
@@ -1026,6 +1084,7 @@
         titlePreview.textContent = processTitle(document.title);
         titlePreview.href = window.location.href;
         titlePreview.title = document.title;
+        restoreDraftIfPresent();
         card.classList.add('active');
         mainBtn.classList.add('recording');
         autoResizeTextarea(textarea, 75, 320);
@@ -1056,6 +1115,7 @@
 
       try {
         await saveToFirestore({ title, url, note });
+        clearDraft();
         const copyPayload = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
         copyText(copyPayload).catch(() => {});
 
@@ -1065,6 +1125,7 @@
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
+        saveDraft(textarea.value);
         showButtonStatus('error');
       } finally {
         saveBtn.disabled = false;
@@ -1082,6 +1143,7 @@
         await copyText(text);
         showButtonStatus('success');
         if (textarea.value) {
+          clearDraft();
           textarea.value = '';
           autoResizeTextarea(textarea, 75, 320);
         }
@@ -1181,7 +1243,10 @@
     closeBtn.addEventListener('click', () => toggleCard(false));
     saveBtn.addEventListener('click', submitNote);
 
-    textarea.addEventListener('input', () => autoResizeTextarea(textarea, 75, 320));
+    textarea.addEventListener('input', () => {
+      saveDraft(textarea.value);
+      autoResizeTextarea(textarea, 75, 320);
+    });
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
