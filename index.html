@@ -134,7 +134,6 @@
 
     /* 用户信息与头像弹窗 */
     .user-panel {
-      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -193,7 +192,7 @@
     .user-dropdown {
       position: absolute;
       top: calc(100% + 10px);
-      right: 0;
+      left: 0;
       width: 240px;
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -243,26 +242,34 @@
     }
     .dropdown-logout {
       width: 100%;
-      padding: 8px 6px;
+      height: 36px;
+      padding: 0 10px;
       background: transparent;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--text-muted);
       font-size: 13px;
       font-weight: 500;
+      line-height: 1;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 8px;
+      gap: 10px;
       transition: all 0.15s ease;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .dropdown-logout svg {
+      display: block;
+      flex-shrink: 0;
     }
     .dropdown-logout:hover {
       background: rgba(239, 68, 68, 0.1);
       color: var(--danger);
     }
     .dropdown-actions-group {
-      display: none;
+      display: flex;
       flex-direction: column;
       gap: 2px;
       border-top: 1px solid var(--divider);
@@ -272,20 +279,27 @@
     }
     .dropdown-item-btn {
       width: 100%;
-      padding: 8px 8px;
+      height: 36px;
+      padding: 0 10px;
       background: transparent;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--text);
       font-size: 13px;
       font-weight: 500;
+      line-height: 1;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 9px;
+      gap: 10px;
       transition: all 0.15s ease;
       font-family: inherit;
+      box-sizing: border-box;
+    }
+    .dropdown-item-btn svg {
+      display: block;
+      flex-shrink: 0;
     }
     .dropdown-item-btn:hover {
       background: var(--item-hover-bg);
@@ -297,6 +311,7 @@
 
     /* 顶部右侧功能按钮组（搜索、记笔记） */
     .header-actions {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -305,12 +320,13 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      gap: 6px;
       width: 88px;
       height: 36px;
       padding: 0;
       border-radius: 9px;
       font-size: 13px;
+      font-family: inherit;
       font-weight: 500;
       line-height: 1;
       cursor: pointer;
@@ -319,15 +335,20 @@
       color: var(--text);
       white-space: nowrap;
       transition: all 0.15s ease;
+      box-sizing: border-box;
     }
     .header-btn svg {
       display: block;
       flex-shrink: 0;
     }
-    .header-btn > span:not(.kbd-hint) {
+    .header-btn > span:not(.kbd-hint),
+    .dropdown-item-btn > span:not(.kbd-hint) {
       line-height: 1;
       display: inline-flex;
       align-items: center;
+      /* 使用排版定位校正笔画中心，避免 transform 在页面缩放后的栅格化偏移。 */
+      position: relative;
+      top: -0.04em;
     }
     .header-btn:hover {
       background: var(--btn-hover-bg);
@@ -348,7 +369,7 @@
     .header-btn.primary:hover {
       background: var(--primary-hover);
     }
-    .header-btn .kbd-hint {
+    .kbd-hint {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -357,19 +378,35 @@
       padding: 0 4px;
       font-size: 10px;
       font-weight: 600;
-      font-family: inherit;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
       color: var(--text-muted);
       background: var(--kbd-bg);
-      border: 1px solid var(--border);
+      border: 1px solid var(--kbd-border, var(--border));
       border-radius: 4px;
       line-height: 1;
       box-sizing: border-box;
-      transform: translateY(0.5px);
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .kbd-hint > span {
+      display: block;
+      /* 只调整字符，快捷键外框仍由父按钮垂直居中。 */
+      position: relative;
+      top: 0.04em;
     }
     .header-btn.primary .kbd-hint {
       color: #bfdbfe;
       background: rgba(255, 255, 255, 0.15);
       border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: none;
+    }
+    .dropdown-item-btn .kbd-hint {
+      margin-left: auto;
+    }
+    .dropdown-item-btn:hover .kbd-hint {
+      color: var(--text);
+      border-color: var(--card-hover-border);
     }
 
     /* 文档弹窗专属样式 */
@@ -606,11 +643,13 @@
       display: flex;
       align-items: center;
     }
-    .nav-today-btn {
+    .nav-today-btn,
+    .nav-action-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 5px 15px;
+      gap: 5px;
+      padding: 5px 13px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--pill-bg);
@@ -621,10 +660,43 @@
       transition: all 0.15s ease;
       line-height: 1.4;
     }
-    .nav-today-btn:hover {
+    .nav-today-btn:hover,
+    .nav-action-btn:hover {
       background: var(--item-hover-bg);
       border-color: var(--primary);
       color: var(--primary);
+    }
+    .nav-action-btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .nav-action-btn[data-copying="true"],
+    .month-nav-bar:hover .nav-action-btn,
+    .month-nav-bar:focus-within .nav-action-btn,
+    .nav-action-btn:focus {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .nav-action-btn[data-copying="true"] {
+      color: #10b981;
+      border-color: #10b981;
+    }
+    @media (hover: none) {
+      .nav-action-btn {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+    .nav-today-btn.active {
+      color: var(--primary);
+      background: var(--badge-bg);
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .nav-today-btn.active:hover {
+      background: var(--badge-bg);
+      color: var(--primary-hover);
+      border-color: var(--primary-hover);
     }
     .nav-dropdown-menu {
       display: none;
@@ -895,8 +967,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      /* 元信息位于按钮下方，可使用主内容与选项按钮之间预留的 40px。 */
-      width: calc(100% + 40px);
+      /* 元信息位于按钮下方，使用主内容与右侧操作按钮区预留的宽度 */
+      width: calc(100% + 104px);
       margin-top: 7px;
       font-size: 11px;
       line-height: 1.35;
@@ -921,11 +993,13 @@
     .note-side-col {
       display: flex;
       align-items: center;
+      gap: 8px;
       flex-shrink: 0;
       position: relative;
       padding-top: 0;
       height: 21px;
     }
+    .note-action-btn,
     .note-more-btn {
       display: inline-flex;
       align-items: center;
@@ -942,25 +1016,37 @@
       pointer-events: none;
       transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
       line-height: 1;
+      flex-shrink: 0;
     }
+    .note-action-btn[data-copying="true"],
+    .note-item-row:hover .note-action-btn,
+    .note-item-row:focus-within .note-action-btn,
+    .note-item-row:has(.note-menu-dropdown.show) .note-action-btn,
     .note-item-row:hover .note-more-btn,
     .note-item-row:focus-within .note-more-btn,
     .note-item-row:has(.note-menu-dropdown.show) .note-more-btn {
       opacity: 1;
       pointer-events: auto;
     }
+    .note-action-btn[data-copying="true"] {
+      color: #10b981;
+    }
+    .note-action-btn:hover,
     .note-more-btn:hover {
       background: #f1f5f9;
       color: var(--text);
     }
+    [data-theme="dark"] .note-action-btn:hover,
     [data-theme="dark"] .note-more-btn:hover {
       background: rgba(255, 255, 255, 0.12);
       color: var(--text);
     }
+    .note-action-btn:active,
     .note-more-btn:active {
       transform: scale(0.92);
     }
     @media (hover: none) {
+      .note-action-btn,
       .note-more-btn {
         opacity: 1;
         pointer-events: auto;
@@ -1572,14 +1658,17 @@
         gap: 6px;
       }
       .header-actions {
-        gap: 8px;
+        gap: 6px;
       }
-      #openSearchBtn,
-      #openCreateBtn,
-      #openTrashBtn,
-      #openDocBtn,
-      #themeToggleBtn {
-        display: none !important;
+      .header-btn {
+        width: auto;
+        padding: 0 9px;
+        height: 32px;
+        font-size: 12px;
+        gap: 4px;
+      }
+      .header-btn .kbd-hint {
+        display: none;
       }
       .dropdown-actions-group {
         display: flex;
@@ -1597,6 +1686,7 @@
       }
       .user-dropdown {
         width: 200px;
+        left: auto;
         right: 0;
         padding: 12px;
         border-radius: 14px;
@@ -1624,7 +1714,8 @@
         width: 24px;
         height: 24px;
       }
-      .nav-today-btn {
+      .nav-today-btn,
+      .nav-action-btn {
         padding: 4px 10px;
         font-size: 12px;
       }
@@ -1693,7 +1784,7 @@
         font-size: 13.5px;
       }
       .note-meta {
-        width: calc(100% + 42px);
+        width: calc(100% + 110px);
         margin-top: 6px;
         gap: 8px;
       }
@@ -1701,10 +1792,12 @@
         padding-top: 0;
         height: 20px;
         align-items: center;
+        gap: 8px;
       }
+      .note-action-btn,
       .note-more-btn {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         opacity: 1;
         pointer-events: auto;
         border-radius: 6px;
@@ -1808,6 +1901,9 @@
         height: 32px;
         min-width: 32px;
       }
+      .header-btn > span:not(.kbd-hint) {
+        display: none;
+      }
       .avatar-btn {
         width: 32px;
         height: 32px;
@@ -1868,7 +1964,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
           <span>搜索</span>
-          <span class="kbd-hint">/</span>
+          <span class="kbd-hint"><span>/</span></span>
         </button>
 
         <button class="header-btn" id="openCreateBtn" title="新建速记">
@@ -1877,54 +1973,17 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
           <span>速记</span>
-          <span class="kbd-hint">N</span>
-        </button>
-
-        <button class="header-btn" id="openTrashBtn" title="回收站 (T)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-          <span>回收站</span>
-          <span class="kbd-hint">T</span>
-        </button>
-
-        <button class="header-btn" id="openDocBtn" title="使用说明与快捷键">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>文档</span>
-          <span class="kbd-hint">?</span>
-        </button>
-
-        <button class="header-btn" id="themeToggleBtn" title="切换深色/浅色模式 (D)">
-          <svg id="themeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg id="themeIconMoon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-          <span id="themeToggleLabel">深色</span>
-          <span class="kbd-hint">D</span>
+          <span class="kbd-hint"><span>N</span></span>
         </button>
 
         <div class="user-panel">
           <button class="auth-btn" id="loginBtn">登录 Google</button>
-          <button class="avatar-btn" id="avatarBtn" title="个人信息">
+          <button class="avatar-btn" id="avatarBtn" title="个人信息与设置">
             <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
             <span class="avatar-fallback" id="avatarFallback">U</span>
           </button>
 
-          <!-- 个人信息与退出下拉浮窗 -->
+          <!-- 个人信息与快捷功能下拉浮窗 -->
           <div class="user-dropdown" id="userDropdown">
             <div class="dropdown-profile">
               <img src="" alt="avatar" class="dropdown-avatar" id="dropdownAvatar" />
@@ -1933,33 +1992,9 @@
                 <div class="dropdown-email" id="dropdownEmail">-</div>
               </div>
             </div>
-            <!-- 移动端收纳的功能菜单项（桌面端默认隐藏） -->
+            <!-- 功能菜单项：深色/浅色切换、回收站、文档 -->
             <div class="dropdown-actions-group" id="dropdownActionsGroup">
-              <button class="dropdown-item-btn" id="menuSearchBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span>搜索笔记</span>
-              </button>
-
-              <button class="dropdown-item-btn" id="menuCreateBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>新建速记</span>
-              </button>
-
-              <button class="dropdown-item-btn" id="menuTrashBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                <span>回收站</span>
-              </button>
-
-              <button class="dropdown-item-btn" id="menuThemeBtn">
+              <button class="dropdown-item-btn" id="menuThemeBtn" title="切换深色/浅色模式 (D)">
                 <svg id="menuThemeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="5"></circle>
                   <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -1975,6 +2010,25 @@
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
                 <span id="menuThemeLabel">深色模式</span>
+                <span class="kbd-hint"><span>D</span></span>
+              </button>
+
+              <button class="dropdown-item-btn" id="menuTrashBtn" title="打开回收站 (T)">
+                <svg width="15" height="15" viewBox="0 1 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 7 5 7 21 7"></polyline>
+                  <path d="M19 7v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7m3 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>回收站</span>
+                <span class="kbd-hint"><span>T</span></span>
+              </button>
+
+              <button class="dropdown-item-btn" id="menuDocBtn" title="使用说明与快捷键 (?)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>使用文档</span>
+                <span class="kbd-hint"><span>?</span></span>
               </button>
             </div>
 
@@ -2045,11 +2099,14 @@
             </svg>
           </button>
         </div>
+
+        <!-- 本月按钮移动到左侧区域：先是年，再是月，然后是本月 -->
+        <button class="nav-today-btn" id="btnToday" title="回到本月">本月</button>
       </div>
 
-      <!-- 右侧：本月（回到本月） -->
+      <!-- 右侧区域：批量复制当前筛选的笔记 -->
       <div class="month-nav-right">
-        <button class="nav-today-btn" id="btnToday" title="回到本月">本月</button>
+        <button class="nav-action-btn" id="btnCopyAllNotes" title="复制当前筛选的所有笔记">复制</button>
       </div>
     </div>
 
@@ -2331,6 +2388,7 @@
     const btnPrevMonth = document.getElementById('btnPrevMonth');
     const btnNextMonth = document.getElementById('btnNextMonth');
     const btnToday = document.getElementById('btnToday');
+    const btnCopyAllNotes = document.getElementById('btnCopyAllNotes');
 
     // 分页与筛选状态：年份与月份 (默认跟随当前自然年月)
     const initialNow = new Date();
@@ -2386,6 +2444,7 @@
     const menuSearchBtn = document.getElementById('menuSearchBtn');
     const menuCreateBtn = document.getElementById('menuCreateBtn');
     const menuTrashBtn = document.getElementById('menuTrashBtn');
+    const menuDocBtn = document.getElementById('menuDocBtn');
     const menuThemeBtn = document.getElementById('menuThemeBtn');
     const menuThemeIconSun = document.getElementById('menuThemeIconSun');
     const menuThemeIconMoon = document.getElementById('menuThemeIconMoon');
@@ -2609,6 +2668,13 @@
       });
     }
 
+    if (menuDocBtn) {
+      menuDocBtn.addEventListener('click', () => {
+        userDropdown.classList.remove('show');
+        showDocModal();
+      });
+    }
+
     if (menuThemeBtn) {
       menuThemeBtn.addEventListener('click', () => {
         userDropdown.classList.remove('show');
@@ -2770,6 +2836,11 @@
 
       const sortedYears = Array.from(yearsMap.keys()).sort((a, b) => b.localeCompare(a));
 
+      const isSearching = !!currentSearchKeyword.trim();
+      const now = new Date();
+      const nowYear = String(now.getFullYear());
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+
       // 初次加载时，若当前年份不存在笔记，自动定位到最新存在笔记的年份与月份
       if (!hasInitializedFilters) {
         if (!yearsMap.has(selectedYear)) {
@@ -2790,7 +2861,7 @@
           }
         }
         hasInitializedFilters = true;
-      } else if (selectedYear !== 'all' && !yearsMap.has(selectedYear)) {
+      } else if (selectedYear !== 'all' && !yearsMap.has(selectedYear) && !(isSearching && selectedYear === nowYear && selectedMonth === nowMonth)) {
         selectedYear = sortedYears[0] || 'all';
       }
 
@@ -2884,6 +2955,16 @@
         `;
       });
       monthDropdownMenu.innerHTML = monthMenuHtml;
+
+      // 更新「本月」按钮状态（搜索状态下支持选中与反选切换，并显示高亮）
+      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
+      if (isSearching && isCurrentMonthSelected) {
+        btnToday.classList.add('active');
+        btnToday.setAttribute('title', '已筛选本月，再次点击显示所有月份');
+      } else {
+        btnToday.classList.remove('active');
+        btnToday.setAttribute('title', isSearching ? '仅显示本月搜索结果' : '回到本月');
+      }
     }
 
     function selectYear(year) {
@@ -2957,14 +3038,14 @@
 
       const searchFiltered = getSearchFilteredNotes();
       const kw = currentSearchKeyword.trim();
-      if (searchBarContainer.classList.contains('show') && kw) {
-        searchCountBadge.style.display = 'inline-block';
-        searchCountBadge.textContent = `共 ${searchFiltered.length} 条`;
-      } else {
-        searchCountBadge.style.display = 'none';
-      }
 
       if (searchFiltered.length === 0) {
+        if (searchBarContainer.classList.contains('show') && kw) {
+          searchCountBadge.style.display = 'inline-block';
+          searchCountBadge.textContent = '共 0 条';
+        } else {
+          searchCountBadge.style.display = 'none';
+        }
         monthNavBar.classList.remove('show');
         notesList.innerHTML = `
           <div class="empty-state">
@@ -2980,6 +3061,17 @@
 
       const targetNotes = getTargetNotes();
       const totalCount = targetNotes.length;
+
+      if (searchBarContainer.classList.contains('show') && kw) {
+        searchCountBadge.style.display = 'inline-block';
+        searchCountBadge.textContent = `共 ${totalCount} 条`;
+      } else {
+        searchCountBadge.style.display = 'none';
+      }
+
+      if (btnCopyAllNotes) {
+        btnCopyAllNotes.setAttribute('title', totalCount > 0 ? `复制当前筛选的 ${totalCount} 条笔记` : '当前暂无笔记可复制');
+      }
 
       if (totalCount === 0) {
         notesList.innerHTML = `
@@ -3104,7 +3196,19 @@
                         ` : ''}
                       </div>
                       <div class="note-side-col">
-                        <button class="note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
+                        <button class="note-action-btn" onclick="handleMenuCopy(event, '${item.id}')" title="复制" aria-label="复制">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </button>
+                        <button class="note-action-btn" onclick="handleMenuEdit(event, '${item.id}')" title="编辑" aria-label="编辑">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                        <button class="note-action-btn note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                             <circle cx="5" cy="12" r="2"></circle>
                             <circle cx="12" cy="12" r="2"></circle>
@@ -3112,20 +3216,6 @@
                           </svg>
                         </button>
                         <div class="note-menu-dropdown" id="noteMenu-${item.id}">
-                          <button class="note-menu-item" onclick="handleMenuEdit(event, '${item.id}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            <span>编辑</span>
-                          </button>
-                          <button class="note-menu-item" onclick="handleMenuCopy(event, '${item.id}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                            <span>复制</span>
-                          </button>
                           <button class="note-menu-item delete" onclick="handleMenuDelete(event, '${item.id}')">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                               <polyline points="3 6 5 6 21 6"></polyline>
@@ -3287,11 +3377,24 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 回到本月
+    // 回到本月 / 搜索时本月筛选切换
     btnToday.addEventListener('click', () => {
       const now = new Date();
-      selectedYear = String(now.getFullYear());
-      selectedMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const nowYear = String(now.getFullYear());
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const isSearching = !!currentSearchKeyword.trim();
+      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
+
+      if (isSearching && isCurrentMonthSelected) {
+        // 搜索状态下再次点击本月：取消选中，变为显示所有月份的结果
+        selectedYear = 'all';
+        selectedMonth = 'all';
+      } else {
+        // 切换为本月
+        selectedYear = nowYear;
+        selectedMonth = nowMonth;
+      }
+
       displayLimit = 50;
       renderList();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3484,7 +3587,7 @@
     closeCreateModal.addEventListener('click', hideCreateModal);
     bindSafeBackdropClose(createModal, hideCreateModal);
 
-    openDocBtn.addEventListener('click', showDocModal);
+    if (openDocBtn) openDocBtn.addEventListener('click', showDocModal);
     closeDocModal.addEventListener('click', hideDocModal);
     bindSafeBackdropClose(docModal, hideDocModal);
 
@@ -3570,7 +3673,7 @@
       }).join('');
     }
 
-    openTrashBtn.addEventListener('click', showTrashModal);
+    if (openTrashBtn) openTrashBtn.addEventListener('click', showTrashModal);
     closeTrashModal.addEventListener('click', hideTrashModal);
     bindSafeBackdropClose(trashModal, hideTrashModal);
     btnClearTrash.addEventListener('click', clearAllTrash);
@@ -4127,37 +4230,110 @@
       openEditModal(id);
     };
 
-    window.handleMenuCopy = async function(e, id) {
-      e.stopPropagation();
-      closeAllNoteMenus();
-      const item = notesData.find(n => n.id === id);
-      if (!item) return;
-
+    function formatNoteTextForCopy(item) {
+      if (!item) return '';
       const parts = [];
-      if (item.title) parts.push(item.title);
+      const title = getOptionalTitle(item.title);
+      if (title) parts.push(title);
       if (item.url) parts.push(item.url);
       if (item.note) parts.push(item.note);
-      const textToCopy = parts.join('\n');
+      return parts.join('\n');
+    }
 
+    async function copyTextToClipboard(text) {
+      if (!text) return false;
       try {
         if (navigator.clipboard?.writeText && window.isSecureContext) {
-          await navigator.clipboard.writeText(textToCopy);
+          await navigator.clipboard.writeText(text);
+          return true;
         } else {
           const textarea = document.createElement('textarea');
-          textarea.value = textToCopy;
+          textarea.value = text;
           textarea.style.position = 'fixed';
           textarea.style.opacity = '0';
           textarea.style.pointerEvents = 'none';
           document.body.appendChild(textarea);
           textarea.focus();
           textarea.select();
-          document.execCommand('copy');
+          const successful = document.execCommand('copy');
           textarea.remove();
+          return successful;
         }
       } catch (err) {
         console.error('复制失败:', err);
+        return false;
+      }
+    }
+
+    window.handleMenuCopy = async function(e, id) {
+      const btn = e?.currentTarget || (e?.target ? e.target.closest('button') : null);
+      if (e) e.stopPropagation();
+      closeAllNoteMenus();
+      const item = notesData.find(n => n.id === id);
+      if (!item) return;
+
+      const textToCopy = formatNoteTextForCopy(item);
+      const copied = await copyTextToClipboard(textToCopy);
+
+      if (copied && btn) {
+        if (!btn.dataset.copying) {
+          btn.dataset.copying = 'true';
+          const origHtml = btn.innerHTML;
+          const origTitle = btn.getAttribute('title');
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          btn.setAttribute('title', '已复制');
+          setTimeout(() => {
+            btn.innerHTML = origHtml;
+            if (origTitle) {
+              btn.setAttribute('title', origTitle);
+            } else {
+              btn.removeAttribute('title');
+            }
+            delete btn.dataset.copying;
+          }, 1500);
+        }
       }
     };
+
+    // 复制当前筛选出的所有笔记（两条笔记之间加一个空行分隔）
+    async function handleCopyFilteredNotes(e) {
+      if (e) e.stopPropagation();
+      const targetNotes = getTargetNotes();
+      if (!targetNotes || targetNotes.length === 0) {
+        alert('当前没有可复制的笔记');
+        return;
+      }
+
+      const formattedNotes = targetNotes.map(formatNoteTextForCopy).filter(Boolean);
+      if (formattedNotes.length === 0) {
+        alert('当前笔记内容为空');
+        return;
+      }
+
+      const textToCopy = formattedNotes.join('\n\n');
+      const copied = await copyTextToClipboard(textToCopy);
+
+      if (copied && btnCopyAllNotes && !btnCopyAllNotes.dataset.copying) {
+        btnCopyAllNotes.dataset.copying = 'true';
+        const origHtml = btnCopyAllNotes.innerHTML;
+        const origTitle = btnCopyAllNotes.getAttribute('title');
+        btnCopyAllNotes.textContent = '已复制';
+        btnCopyAllNotes.setAttribute('title', `已成功复制当前 ${formattedNotes.length} 条笔记`);
+        setTimeout(() => {
+          btnCopyAllNotes.innerHTML = origHtml;
+          if (origTitle) {
+            btnCopyAllNotes.setAttribute('title', origTitle);
+          } else {
+            btnCopyAllNotes.removeAttribute('title');
+          }
+          delete btnCopyAllNotes.dataset.copying;
+        }, 1500);
+      }
+    }
+
+    if (btnCopyAllNotes) {
+      btnCopyAllNotes.addEventListener('click', handleCopyFilteredNotes);
+    }
 
     window.handleMenuDelete = function(e, id) {
       e.stopPropagation();
