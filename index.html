@@ -1128,6 +1128,114 @@
       white-space: nowrap;
     }
 
+    /* 骨架屏占位与微动效 */
+    @keyframes skeletonShimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    .skeleton-block {
+      pointer-events: none;
+      user-select: none;
+    }
+    .skeleton-block .month-card:hover {
+      border-color: var(--border);
+      box-shadow: var(--card-shadow);
+    }
+    .skeleton-item-row:hover {
+      background-color: transparent !important;
+    }
+
+    .skeleton-bone {
+      background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.16) 25%,
+        rgba(148, 163, 184, 0.32) 50%,
+        rgba(148, 163, 184, 0.16) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 1.8s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    [data-theme="dark"] .skeleton-bone {
+      background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.1) 25%,
+        rgba(148, 163, 184, 0.22) 50%,
+        rgba(148, 163, 184, 0.1) 75%
+      );
+      background-size: 200% 100%;
+    }
+
+    .skeleton-date-year {
+      width: 44px;
+      height: 12px;
+      margin: 0 auto 5px;
+    }
+    .skeleton-date-month {
+      width: 56px;
+      height: 20px;
+      margin: 0 auto 6px;
+      border-radius: 6px;
+    }
+    .skeleton-date-count {
+      width: 46px;
+      height: 14px;
+      margin: 0 auto;
+      border-radius: 999px;
+    }
+
+    .skeleton-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 22px;
+      margin-bottom: 2px;
+    }
+    .skeleton-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .skeleton-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .skeleton-date-year {
+        margin: 0;
+        width: 40px;
+        height: 12px;
+      }
+      .skeleton-date-month {
+        margin: 0;
+        width: 48px;
+        height: 16px;
+      }
+      .skeleton-date-count {
+        margin: 0 0 0 auto;
+        width: 44px;
+        height: 14px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-bone {
+        animation: none;
+      }
+    }
+
     /* 通用弹窗 Modal Overlay */
     .modal-overlay {
       position: fixed;
@@ -2155,9 +2263,63 @@
     <!-- 主展示列表与按月卡片 -->
     <div class="timeline-layout">
       <div class="notes-list" id="notesList">
-        <div class="empty-state">
-          <div class="empty-icon">⏳</div>
-          <p>正在拉取实时云端数据...</p>
+        <div class="month-block skeleton-block" aria-hidden="true">
+          <div class="month-date-col">
+            <div class="skeleton-bone skeleton-date-year"></div>
+            <div class="skeleton-bone skeleton-date-month"></div>
+            <div class="skeleton-bone skeleton-date-count"></div>
+          </div>
+          <div class="month-card">
+            <div class="month-notes-container">
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 42%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 88%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 62%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 72px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 58%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 60px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 35%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 92%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 80%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-bone" style="width: 45%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 85px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2724,9 +2886,76 @@
       });
     }
 
+    // 骨架屏占位 HTML 生成器
+    function getSkeletonHtml() {
+      return `
+        <div class="month-block skeleton-block" aria-hidden="true">
+          <div class="month-date-col">
+            <div class="skeleton-bone skeleton-date-year"></div>
+            <div class="skeleton-bone skeleton-date-month"></div>
+            <div class="skeleton-bone skeleton-date-count"></div>
+          </div>
+          <div class="month-card">
+            <div class="month-notes-container">
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 42%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 88%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 62%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 72px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 58%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 60px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 35%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 92%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 80%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-bone" style="width: 45%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 85px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // 实时同步 Firestore 数据库 (onSnapshot)
     function bindFirestoreRealtime(uid) {
       if (unsubscribeNotes) unsubscribeNotes();
+      if (notesData.length === 0) {
+        notesList.innerHTML = getSkeletonHtml();
+      }
 
       const ref = db.collection('users').doc(uid).collection('notes');
       unsubscribeNotes = ref.onSnapshot((snapshot) => {
