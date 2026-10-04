@@ -1,17 +1,19 @@
 <p align="center">
-  <img src="logo.svg" width="104" alt="PageTrace Logo" />
+  <img src="logo.svg" width="112" alt="PageTrace logo">
 </p>
 
 <h1 align="center">PageTrace</h1>
 
-<p align="center">网页速记与云端剪藏，多端实时同步。</p>
+<p align="center"><strong>网页速记与云端剪藏，多端实时同步。</strong></p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-f59e0b.svg" alt="License: MIT"></a>
+  <a href="https://page-trace.pages.dev/"><img src="https://img.shields.io/badge/Website-Cloudflare%20Pages-f38020?style=flat&amp;logo=cloudflare&amp;logoColor=white" alt="Website: Cloudflare Pages"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-f59e0b?style=flat" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/JavaScript-Browser-f7df1e?style=flat&amp;logo=javascript&amp;logoColor=white" alt="JavaScript: Browser">
 </p>
 
 <p align="center">
-  <a href="https://page-trace.pages.dev/">在线访问</a>
+  <a href="https://page-trace.pages.dev/">在线体验</a> · <a href="https://github.com/yuzhounh/page-trace/releases/latest">发布版本</a> · <a href="#快速开始">快速开始</a> · <a href="LICENSE">开源协议</a>
 </p>
 
 ## 项目简介
@@ -21,11 +23,11 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - **油猴端**：在网页右下角常驻微交互磨砂玻璃胶囊，支持一键复制网页标题与网址、随时呼出 4 行速记输入卡片，通过轻量 REST API 直接同步至云端 Firestore，无需配置任何 Firebase 密钥。
 - **Web 看板**：基于 Firebase 驱动的实时管理面板，支持实时同步（onSnapshot）、卡片展示、全局搜索（Spotlight 风格）、在线速记与多端协同管理。
 
-## 快速上手 (Quick Start)
+## 快速开始
 
 ### 第一步：安装脚本
 
-在 Greasy Fork 安装已发布的油猴插件：
+当前脚本版本为 **1.10.9**。从 [GitHub Release 安装配套脚本](https://github.com/yuzhounh/page-trace/releases/download/v1.10.9/pagetrace.user.js)，或使用 Greasy Fork 的同版入口：
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 
@@ -80,6 +82,6 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - [light-note](https://github.com/yuzhounh/light-note)：以 Windows 本地笔记管理为主，支持导入、检索与可选同步。
 - [Tampermonkey-scripts](https://github.com/yuzhounh/Tampermonkey-scripts)：作者维护的其他用户脚本合集。
 
-## 开源协议 (License)
+## 开源协议
 
 本项目采用 [MIT 许可证](LICENSE)。
