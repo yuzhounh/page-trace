@@ -2972,14 +2972,14 @@
 
       const searchFiltered = getSearchFilteredNotes();
       const kw = currentSearchKeyword.trim();
-      if (searchBarContainer.classList.contains('show') && kw) {
-        searchCountBadge.style.display = 'inline-block';
-        searchCountBadge.textContent = `共 ${searchFiltered.length} 条`;
-      } else {
-        searchCountBadge.style.display = 'none';
-      }
 
       if (searchFiltered.length === 0) {
+        if (searchBarContainer.classList.contains('show') && kw) {
+          searchCountBadge.style.display = 'inline-block';
+          searchCountBadge.textContent = '共 0 条';
+        } else {
+          searchCountBadge.style.display = 'none';
+        }
         monthNavBar.classList.remove('show');
         notesList.innerHTML = `
           <div class="empty-state">
@@ -2995,6 +2995,13 @@
 
       const targetNotes = getTargetNotes();
       const totalCount = targetNotes.length;
+
+      if (searchBarContainer.classList.contains('show') && kw) {
+        searchCountBadge.style.display = 'inline-block';
+        searchCountBadge.textContent = `共 ${totalCount} 条`;
+      } else {
+        searchCountBadge.style.display = 'none';
+      }
 
       if (totalCount === 0) {
         notesList.innerHTML = `
