@@ -895,8 +895,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      /* 元信息位于按钮下方，可使用主内容与选项按钮之间预留的 40px。 */
-      width: calc(100% + 40px);
+      /* 元信息位于按钮下方，使用主内容与右侧操作按钮区预留的宽度 */
+      width: calc(100% + 92px);
       margin-top: 7px;
       font-size: 11px;
       line-height: 1.35;
@@ -921,11 +921,13 @@
     .note-side-col {
       display: flex;
       align-items: center;
+      gap: 2px;
       flex-shrink: 0;
       position: relative;
       padding-top: 0;
       height: 21px;
     }
+    .note-action-btn,
     .note-more-btn {
       display: inline-flex;
       align-items: center;
@@ -942,25 +944,33 @@
       pointer-events: none;
       transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
       line-height: 1;
+      flex-shrink: 0;
     }
+    .note-item-row:hover .note-action-btn,
+    .note-item-row:focus-within .note-action-btn,
+    .note-item-row:has(.note-menu-dropdown.show) .note-action-btn,
     .note-item-row:hover .note-more-btn,
     .note-item-row:focus-within .note-more-btn,
     .note-item-row:has(.note-menu-dropdown.show) .note-more-btn {
       opacity: 1;
       pointer-events: auto;
     }
+    .note-action-btn:hover,
     .note-more-btn:hover {
       background: #f1f5f9;
       color: var(--text);
     }
+    [data-theme="dark"] .note-action-btn:hover,
     [data-theme="dark"] .note-more-btn:hover {
       background: rgba(255, 255, 255, 0.12);
       color: var(--text);
     }
+    .note-action-btn:active,
     .note-more-btn:active {
       transform: scale(0.92);
     }
     @media (hover: none) {
+      .note-action-btn,
       .note-more-btn {
         opacity: 1;
         pointer-events: auto;
@@ -1693,7 +1703,7 @@
         font-size: 13.5px;
       }
       .note-meta {
-        width: calc(100% + 42px);
+        width: calc(100% + 98px);
         margin-top: 6px;
         gap: 8px;
       }
@@ -1701,10 +1711,12 @@
         padding-top: 0;
         height: 20px;
         align-items: center;
+        gap: 2px;
       }
+      .note-action-btn,
       .note-more-btn {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         opacity: 1;
         pointer-events: auto;
         border-radius: 6px;
@@ -3081,7 +3093,19 @@
                         ` : ''}
                       </div>
                       <div class="note-side-col">
-                        <button class="note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
+                        <button class="note-action-btn" onclick="handleMenuCopy(event, '${item.id}')" title="复制" aria-label="复制">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </button>
+                        <button class="note-action-btn" onclick="handleMenuEdit(event, '${item.id}')" title="编辑" aria-label="编辑">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                        <button class="note-action-btn note-more-btn" onclick="toggleNoteMenu(event, '${item.id}')" title="更多选项" aria-label="更多选项">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                             <circle cx="5" cy="12" r="2"></circle>
                             <circle cx="12" cy="12" r="2"></circle>
@@ -3089,20 +3113,6 @@
                           </svg>
                         </button>
                         <div class="note-menu-dropdown" id="noteMenu-${item.id}">
-                          <button class="note-menu-item" onclick="handleMenuEdit(event, '${item.id}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            <span>编辑</span>
-                          </button>
-                          <button class="note-menu-item" onclick="handleMenuCopy(event, '${item.id}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                            <span>复制</span>
-                          </button>
                           <button class="note-menu-item delete" onclick="handleMenuDelete(event, '${item.id}')">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                               <polyline points="3 6 5 6 21 6"></polyline>
@@ -4116,9 +4126,11 @@
       if (item.note) parts.push(item.note);
       const textToCopy = parts.join('\n');
 
+      let copied = false;
       try {
         if (navigator.clipboard?.writeText && window.isSecureContext) {
           await navigator.clipboard.writeText(textToCopy);
+          copied = true;
         } else {
           const textarea = document.createElement('textarea');
           textarea.value = textToCopy;
@@ -4128,11 +4140,31 @@
           document.body.appendChild(textarea);
           textarea.focus();
           textarea.select();
-          document.execCommand('copy');
+          copied = document.execCommand('copy');
           textarea.remove();
         }
       } catch (err) {
         console.error('复制失败:', err);
+      }
+
+      if (copied && e && e.currentTarget) {
+        const btn = e.currentTarget;
+        if (!btn.dataset.copying) {
+          btn.dataset.copying = 'true';
+          const origHtml = btn.innerHTML;
+          const origTitle = btn.getAttribute('title');
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          btn.setAttribute('title', '已复制');
+          setTimeout(() => {
+            btn.innerHTML = origHtml;
+            if (origTitle) {
+              btn.setAttribute('title', origTitle);
+            } else {
+              btn.removeAttribute('title');
+            }
+            delete btn.dataset.copying;
+          }, 1500);
+        }
       }
     };
 
