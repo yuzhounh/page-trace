@@ -167,7 +167,9 @@
       color: var(--text-muted);
     }
     .auth-btn {
-      width: 88px;
+      width: auto;
+      min-width: 68px;
+      padding: 0 16px;
       height: 36px;
       border-radius: 9px;
       font-size: 13px;
@@ -2330,6 +2332,127 @@
       border-color: #ef4444 !important;
       background: color-mix(in srgb, #ef4444 10%, transparent) !important;
     }
+  
+    /* 未登录欢迎与引导卡片 */
+    .welcome-card {
+      max-width: 520px;
+      margin: 44px auto 24px;
+      padding: 34px 28px 30px;
+      border-radius: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      box-shadow: var(--card-shadow);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn .2s ease;
+      box-sizing: border-box;
+    }
+    .welcome-icon-wrap {
+      margin-bottom: 16px;
+    }
+    .welcome-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .welcome-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .welcome-features {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+      text-align: left;
+      box-sizing: border-box;
+    }
+    .welcome-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    .welcome-feature-badge {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--primary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .welcome-kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-family: inherit;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .welcome-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .welcome-login-btn {
+      width: 100%;
+      height: 42px;
+      border-radius: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .15s ease;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+    .welcome-login-btn:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .welcome-doc-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: all .15s ease;
+    }
+    .welcome-doc-btn:hover {
+      color: var(--primary);
+      background: var(--item-hover-bg);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -2374,25 +2497,8 @@
           <span class="kbd-hint"><span>N</span></span>
         </button>
 
-        <button class="header-btn theme-toggle-desktop" id="themeToggleBtnDesktop" title="切换深色/浅色模式 (D)">
-          <svg id="desktopThemeIconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg id="desktopThemeIconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-
         <div class="user-panel">
-          <button class="auth-btn" id="loginBtn">登录 Google</button>
+          <button class="auth-btn" id="loginBtn">登录</button>
           <button class="avatar-btn" id="avatarBtn" title="个人信息与设置">
             <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
             <span class="avatar-fallback" id="avatarFallback">U</span>
@@ -2550,7 +2656,7 @@
           <div class="mobile-foot-row" id="mobileFootAccountRow">
             <span class="mobile-foot-label">账户状态</span>
             <div id="mobileAccountContainer">
-              <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">Google 登录</button>
+              <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">登录</button>
             </div>
           </div>
         </div>
@@ -3566,11 +3672,74 @@
       if (!currentUser) {
         monthNavBar.classList.remove('show');
         notesList.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">🔐</div>
-            <p>请先登录 Google 账号以查看云端同步笔记</p>
+          <div class="welcome-card">
+            <div class="welcome-icon-wrap">
+              <svg width="44" height="44" viewBox="0 0 48 48" style="border-radius: 12px; overflow: hidden; display: block; box-shadow: 0 4px 14px rgba(16,185,129,0.25);">
+                <defs>
+                  <linearGradient id="ptGradWelcome" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#06b6d4"/>
+                    <stop offset="50%" stop-color="#0ea5e9"/>
+                    <stop offset="100%" stop-color="#10b981"/>
+                  </linearGradient>
+                </defs>
+                <rect width="48" height="48" fill="url(#ptGradWelcome)"/>
+                <g stroke="#ffffff" stroke-width="3.2" stroke-linecap="round">
+                  <line x1="13" y1="17" x2="35" y2="17"/>
+                  <line x1="13" y1="24" x2="35" y2="24"/>
+                  <line x1="13" y1="31" x2="25" y2="31"/>
+                </g>
+              </svg>
+            </div>
+            <h2 class="welcome-title">欢迎使用 PageTrace</h2>
+            <p class="welcome-desc">轻量网页速记 · 浏览足迹 · 云端多端同步</p>
+            
+            <div class="welcome-features">
+              <div class="welcome-feature-item">
+                <span class="welcome-feature-badge">⚡ 速记</span>
+                <span>快捷键 <kbd class="welcome-kbd">N</kbd> 或油猴右下角气泡，随时沉淀碎片灵感</span>
+              </div>
+              <div class="welcome-feature-item">
+                <span class="welcome-feature-badge">🌐 痕迹</span>
+                <span>自动抓取网页标题与来源，建立专属阅读足迹</span>
+              </div>
+              <div class="welcome-feature-item">
+                <span class="welcome-feature-badge">☁️ 同步</span>
+                <span>基于 Google Firebase 云端多端加密实时同步</span>
+              </div>
+            </div>
+
+            <div class="welcome-actions">
+              <button type="button" class="welcome-login-btn" id="welcomeLoginBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                  <polyline points="10 17 15 12 10 7"></polyline>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+                <span>立即登录</span>
+              </button>
+              <button type="button" class="welcome-doc-btn" id="welcomeDocBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>查看使用指南与油猴脚本</span>
+              </button>
+            </div>
           </div>
         `;
+        const wLogin = document.getElementById('welcomeLoginBtn');
+        if (wLogin) {
+          wLogin.addEventListener('click', () => {
+            if (loginBtn) loginBtn.click();
+          });
+        }
+        const wDoc = document.getElementById('welcomeDocBtn');
+        if (wDoc) {
+          wDoc.addEventListener('click', () => {
+            if (menuDocBtn) menuDocBtn.click();
+          });
+        }
         return;
       }
 
@@ -4419,7 +4588,9 @@
       const rawNote = createNoteInput.value.trim();
       if (!rawTitle && !rawUrl && !rawNote) return;
       if (!currentUser) {
-        alert('请登录');
+        if (typeof showUndoToast === 'function') {
+          showUndoToast('请先登录账号以保存速记', () => {}, 3500);
+        }
         loginBtn.click();
         return;
       }
@@ -4998,7 +5169,7 @@
         }
       } else {
         container.innerHTML = `
-          <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">Google 登录</button>
+          <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">登录</button>
         `;
         const mLogin = document.getElementById('mobileLoginBtn');
         if (mLogin) {
@@ -5017,8 +5188,8 @@
       if (!header || !brand) return;
       
       const isNarrow = window.innerWidth <= 640;
-      // 检查在展开状态下所需的最小宽度
-      const neededWidth = 560;
+      // 检查在展开状态下所需的最小宽度（搜索 88 + 速记 88 + 登录 68 + brand 130 + gap 30 ≈ 404）
+      const neededWidth = 430;
       const shouldCollapse = isNarrow || (header.clientWidth < neededWidth);
       document.body.classList.toggle('header-collapsed', shouldCollapse);
     }
