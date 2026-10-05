@@ -1181,18 +1181,31 @@
       gap: 6px;
     }
     .modal-close-x {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 18px;
-      padding: 4px;
-      line-height: 1;
-      border-radius: 6px;
+      background: var(--card-bg) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text-muted) !important;
+      font-size: 18px !important;
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      border-radius: 50% !important;
+      cursor: pointer !important;
+      display: grid !important;
+      place-items: center !important;
+      padding: 0 !important;
+      line-height: 1 !important;
+      transition: all .15s ease !important;
+      box-shadow: none !important;
     }
     .modal-close-x:hover {
-      color: var(--text);
-      background: var(--item-hover-bg);
+      border-color: var(--primary) !important;
+      color: var(--primary) !important;
+      background: var(--item-hover-bg) !important;
+    }
+    .modal-close-x svg {
+      width: 20px !important;
+      height: 20px !important;
     }
 
     /* 表单控件 */
@@ -1952,7 +1965,7 @@
       }
     }
     @media (max-width: 640px) {
-      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
+      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn,
       .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
       .input-send-btn { min-width: 44px; min-height: 44px; }
       .nav-pill-btn, .nav-today-btn, .nav-action-btn, .trash-btn, .toast-undo-btn,
@@ -1965,7 +1978,7 @@
       .toast-bar { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
     }
     @media (min-width: 744px) and (min-height: 600px) and (pointer: coarse) {
-      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
+      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn,
       .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
       .input-send-btn { min-width: 44px; min-height: 44px; }
       .nav-pill-btn, .nav-today-btn, .trash-btn, .toast-undo-btn,
@@ -1973,6 +1986,349 @@
       input, textarea, select, .search-bar-input,
       #createModal .form-input, #editModal .form-input { font-size: 16px; }
       .modal-card, .trash-card, .doc-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
+    }
+  
+    /* 桌面端直属主题切换按钮 */
+    .theme-toggle-desktop {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: none;
+      transition: all .15s ease;
+    }
+    .theme-toggle-desktop:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--item-hover-bg);
+    }
+    .theme-toggle-desktop svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* 移动端/折叠右上角汉堡菜单按钮 */
+    .mobile-drawer-toggle {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .header-actions > .header-btn:not(.mobile-drawer-toggle),
+      .header-actions > .user-panel {
+        display: none !important;
+      }
+      .mobile-drawer-toggle {
+        display: grid !important;
+        place-items: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        border: 1px solid var(--border) !important;
+        background: var(--card-bg) !important;
+        color: var(--text) !important;
+        cursor: pointer !important;
+        box-shadow: none !important;
+        transition: all .15s ease !important;
+      }
+      .mobile-drawer-toggle:hover {
+        border-color: var(--primary) !important;
+        color: var(--primary) !important;
+        background: var(--item-hover-bg) !important;
+      }
+      .mobile-drawer-toggle svg {
+        width: 20px !important;
+        height: 20px !important;
+      }
+    }
+
+    /* 当顶栏宽度不足以展开所有按钮时，自动折叠为汉堡菜单 */
+    body.header-collapsed .header-actions > .header-btn:not(.mobile-drawer-toggle),
+    body.header-collapsed .header-actions > .user-panel {
+      display: none !important;
+    }
+    body.header-collapsed .mobile-drawer-toggle {
+      display: grid !important;
+      place-items: center !important;
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      padding: 0 !important;
+      border-radius: 50% !important;
+      border: 1px solid var(--border) !important;
+      background: var(--card-bg) !important;
+      color: var(--text) !important;
+      cursor: pointer !important;
+      box-shadow: none !important;
+      transition: all .15s ease !important;
+    }
+    body.header-collapsed .mobile-drawer-toggle:hover {
+      border-color: var(--primary) !important;
+      color: var(--primary) !important;
+      background: var(--item-hover-bg) !important;
+    }
+    body.header-collapsed .mobile-drawer-toggle svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    /* Mobile Drawer & Modal Styles (Unified 248px Width, 72px Head, 40px Buttons) */
+    .mobile-drawer-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .mobile-drawer-layer[hidden] {
+      display: none !important;
+    }
+    .mobile-drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      cursor: pointer;
+    }
+    .mobile-drawer-panel {
+      position: relative;
+      z-index: 10;
+      width: min(72vw, 248px) !important;
+      height: 100% !important;
+      background: var(--card-bg);
+      border-left: 1px solid var(--border);
+      border-top-left-radius: 16px;
+      border-bottom-left-radius: 16px;
+      box-shadow: -14px 0 40px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 0 !important;
+      overflow: hidden;
+      animation: mobile-drawer-slide .2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+    @keyframes mobile-drawer-slide {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .mobile-drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 26px 16px 18px !important;
+      border-bottom: 1px solid var(--border);
+      background: var(--card-bg);
+      border-top-left-radius: 16px;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+    }
+    .mobile-drawer-close {
+      display: grid !important;
+      place-items: center !important;
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      padding: 0 !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 50% !important;
+      background: var(--card-bg) !important;
+      color: var(--text-muted) !important;
+      cursor: pointer;
+      box-shadow: none !important;
+      transition: all .15s ease;
+    }
+    .mobile-drawer-close:hover {
+      border-color: var(--primary) !important;
+      color: var(--primary) !important;
+      background: var(--item-hover-bg) !important;
+    }
+    .mobile-drawer-close svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    .mobile-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: 12px;
+      padding: 14px 16px 12px;
+      box-sizing: border-box;
+    }
+    .mobile-menu-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mobile-menu-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      padding-left: 2px;
+    }
+    .mobile-nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mobile-nav-item {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 10px !important;
+      width: 100% !important;
+      min-height: 40px !important;
+      height: 40px !important;
+      padding: 0 12px !important;
+      border-radius: 10px !important;
+      background: var(--bg) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      font-size: 13.5px !important;
+      font-weight: 500 !important;
+      cursor: pointer;
+      text-align: left;
+      transition: all .15s ease;
+      box-sizing: border-box;
+    }
+    .mobile-nav-item:hover {
+      border-color: var(--primary) !important;
+      background: var(--card-bg) !important;
+      color: var(--primary) !important;
+    }
+    .mobile-nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+    .mobile-nav-item:hover svg {
+      color: var(--primary);
+    }
+
+    .mobile-drawer-foot {
+      padding: 12px 16px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+    }
+    .mobile-foot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      min-height: 48px;
+      box-sizing: border-box;
+    }
+    .mobile-foot-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .mobile-drawer-action-btn {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      padding: 0 !important;
+      display: grid !important;
+      place-items: center !important;
+      flex: 0 0 40px !important;
+      border-radius: 50% !important;
+      background: var(--card-bg) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: none !important;
+      color: var(--text) !important;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .mobile-drawer-action-btn:hover {
+      border-color: var(--primary) !important;
+      color: var(--primary) !important;
+      background: var(--item-hover-bg) !important;
+    }
+    .mobile-drawer-action-btn svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+    .mobile-auth-btn {
+      padding: 8px 14px !important;
+      border-radius: 10px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      min-height: 40px !important;
+      height: 40px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+      border: 1px solid var(--border) !important;
+      background: var(--card-bg) !important;
+      color: var(--text) !important;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .mobile-auth-btn:hover {
+      border-color: var(--primary) !important;
+      color: var(--primary) !important;
+      background: var(--item-hover-bg) !important;
+    }
+    .mobile-user-profile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .mobile-user-name {
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .mobile-signout-btn {
+      padding: 6px 12px !important;
+      min-height: 32px !important;
+      height: 32px !important;
+      border-radius: 8px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      border: 1px solid var(--border) !important;
+      background: var(--card-bg) !important;
+      color: #ef4444 !important;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .mobile-signout-btn:hover {
+      border-color: #ef4444 !important;
+      background: color-mix(in srgb, #ef4444 10%, transparent) !important;
     }
   </style>
 </head>
@@ -2016,6 +2372,23 @@
           </svg>
           <span>速记</span>
           <span class="kbd-hint"><span>N</span></span>
+        </button>
+
+        <button class="header-btn theme-toggle-desktop" id="themeToggleBtnDesktop" title="切换深色/浅色模式 (D)">
+          <svg id="desktopThemeIconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="desktopThemeIconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
         </button>
 
         <div class="user-panel">
@@ -2084,8 +2457,105 @@
             </button>
           </div>
         </div>
+
+        <button id="mobile-drawer-toggle" class="mobile-drawer-toggle" type="button" aria-label="打开导航与设置菜单" title="打开导航与设置菜单">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </header>
+
+    <!-- 移动端侧滑抽屉菜单 -->
+    <div id="mobile-drawer-layer" class="mobile-drawer-layer" hidden role="presentation">
+      <div id="mobile-drawer-backdrop" class="mobile-drawer-backdrop"></div>
+      <aside class="mobile-drawer-panel" role="dialog" aria-modal="true" aria-label="快捷设置与导航">
+        <div class="mobile-drawer-head">
+          <div class="brand" style="margin: 0; font-size: 16px; gap: 8px;">
+            <svg width="24" height="24" viewBox="0 0 48 48" style="border-radius: 7px; overflow: hidden; display: block; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+              <defs>
+                <linearGradient id="ptGradDrawer" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#06b6d4"/>
+                  <stop offset="50%" stop-color="#0ea5e9"/>
+                  <stop offset="100%" stop-color="#10b981"/>
+                </linearGradient>
+              </defs>
+              <rect width="48" height="48" fill="url(#ptGradDrawer)"/>
+              <g stroke="#ffffff" stroke-width="3.2" stroke-linecap="round">
+                <line x1="13" y1="17" x2="35" y2="17"/>
+                <line x1="13" y1="24" x2="35" y2="24"/>
+                <line x1="13" y1="31" x2="25" y2="31"/>
+              </g>
+            </svg>
+            <span style="font-weight: 700; letter-spacing: -0.02em;">PageTrace</span>
+          </div>
+          <button type="button" id="mobile-drawer-close" class="mobile-drawer-close" aria-label="关闭菜单">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="mobile-drawer-body">
+          <div class="mobile-menu-section">
+            <span class="mobile-menu-section-title">功能导航</span>
+            <nav class="mobile-nav-list" aria-label="移动端功能导航">
+              <button type="button" class="mobile-nav-item" id="mobileDrawerSearch">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>搜索笔记</span>
+              </button>
+              <button type="button" class="mobile-nav-item" id="mobileDrawerCreate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>新建速记</span>
+              </button>
+              <button type="button" class="mobile-nav-item" id="mobileDrawerTrash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 7 5 7 21 7"></polyline><path d="M19 7v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7m3 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>回收站</span>
+              </button>
+              <button type="button" class="mobile-nav-item" id="mobileDrawerDoc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span>使用文档</span>
+              </button>
+              <button type="button" class="mobile-nav-item" id="mobileDrawerCopy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>复制当前筛选笔记</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <div class="mobile-drawer-foot">
+          <div class="mobile-foot-row">
+            <span class="mobile-foot-label">外观主题</span>
+            <button type="button" id="mobileThemeToggle" class="mobile-drawer-action-btn" aria-label="切换外观主题" title="切换外观主题">
+              <svg id="mobileThemeIconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg id="mobileThemeIconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="mobile-foot-row" id="mobileFootAccountRow">
+            <span class="mobile-foot-label">账户状态</span>
+            <div id="mobileAccountContainer">
+              <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">Google 登录</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
 
     <!-- 顶部内联搜索栏（即输即见，实时过滤） -->
     <div class="search-bar-container" id="searchBarContainer">
@@ -2170,7 +2640,10 @@
         <div class="modal-title">
           <span>✍️ 新建速记</span>
         </div>
-        <button class="modal-close-x" id="closeCreateModal">✕</button>
+        <button class="modal-close-x" id="closeCreateModal" aria-label="关闭速记窗口" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg></button>
       </div>
       <div class="form-group">
         <label class="form-label">标题（可选）</label>
@@ -2203,7 +2676,10 @@
         <div class="modal-title">
           <span>📖 PageTrace 功能与快捷键指南</span>
         </div>
-        <button class="modal-close-x" id="closeDocModal">✕</button>
+        <button class="modal-close-x" id="closeDocModal" aria-label="关闭使用指南" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg></button>
       </div>
 
       <div class="doc-section">
@@ -2317,7 +2793,10 @@
         <div class="modal-title">
           <span>✏️ 编辑速记</span>
         </div>
-        <button class="modal-close-x" id="closeEditModal">✕</button>
+        <button class="modal-close-x" id="closeEditModal" aria-label="关闭编辑窗口" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg></button>
       </div>
       <div class="form-group">
         <label class="form-label">标题（可选）</label>
@@ -2353,7 +2832,10 @@
         </div>
         <div class="trash-header-actions">
           <button class="trash-clear-btn" id="btnClearTrash" title="永久清空回收站中所有笔记">清空回收站</button>
-          <button class="modal-close-x" id="closeTrashModal">✕</button>
+          <button class="modal-close-x" id="closeTrashModal" aria-label="关闭回收站" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg></button>
         </div>
       </div>
       <div class="trash-body" id="trashBody"></div>
@@ -2493,7 +2975,8 @@
     const menuThemeLabel = document.getElementById('menuThemeLabel');
 
     function updateThemeUI(theme) {
-      if (theme === 'dark') {
+      const isDark = theme === 'dark';
+      if (isDark) {
         document.documentElement.setAttribute('data-theme', 'dark');
         if (themeIconSun) themeIconSun.style.display = 'none';
         if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
@@ -2510,8 +2993,19 @@
         if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'none';
         if (menuThemeLabel) menuThemeLabel.textContent = '深色模式';
       }
+
+      const dSun = document.getElementById('desktopThemeIconSun');
+      const dMoon = document.getElementById('desktopThemeIconMoon');
+      if (dSun) dSun.style.display = isDark ? 'none' : 'inline-block';
+      if (dMoon) dMoon.style.display = isDark ? 'inline-block' : 'none';
+
+      const mSun = document.getElementById('mobileThemeIconSun');
+      const mMoon = document.getElementById('mobileThemeIconMoon');
+      if (mSun) mSun.style.display = isDark ? 'none' : 'inline-block';
+      if (mMoon) mMoon.style.display = isDark ? 'inline-block' : 'none';
+
       try {
-        window.postMessage({ source: 'PAGETRACE_THEME_CHANGE', theme: theme === 'dark' ? 'dark' : 'light' }, '*');
+        window.postMessage({ source: 'PAGETRACE_THEME_CHANGE', theme: isDark ? 'dark' : 'light' }, '*');
       } catch (_) {}
     }
 
@@ -2645,6 +3139,8 @@
           window.postMessage({ source: 'PAGETRACE_AUTH_LOGOUT', nonce: authBridgeNonce }, window.location.origin);
         }
       }
+      updateMobileAccountUI(user);
+      checkHeaderWrap();
     });
 
     // 监听来自插件的消息通道（如握手 Ping、插件端退出等）
@@ -4400,6 +4896,136 @@
         closeAllNoteMenus();
       }
     });
+  
+    // ---- 移动端抽屉控制器与账户同步 ----
+    const drawerLayer = document.getElementById('mobile-drawer-layer');
+    const drawerCloseBtn = document.getElementById('mobile-drawer-close');
+    const drawerToggleBtn = document.getElementById('mobile-drawer-toggle');
+    const drawerBackdrop = document.getElementById('mobile-drawer-backdrop');
+    const themeToggleBtnDesktop = document.getElementById('themeToggleBtnDesktop');
+    const mobileThemeToggle = document.getElementById('mobileThemeToggle');
+
+    function openMobileDrawer() {
+      if (drawerLayer) {
+        drawerLayer.removeAttribute('hidden');
+        drawerLayer.hidden = false;
+        document.body.style.overflow = 'hidden';
+        updateMobileAccountUI(currentUser);
+      }
+    }
+
+    function closeMobileDrawer() {
+      if (drawerLayer) {
+        drawerLayer.setAttribute('hidden', '');
+        drawerLayer.hidden = true;
+        document.body.style.overflow = '';
+      }
+    }
+
+    if (drawerToggleBtn) drawerToggleBtn.addEventListener('click', openMobileDrawer);
+    if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeMobileDrawer);
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeMobileDrawer);
+    if (themeToggleBtnDesktop) themeToggleBtnDesktop.addEventListener('click', toggleTheme);
+    if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawerLayer && !drawerLayer.hidden) {
+        closeMobileDrawer();
+      }
+    });
+
+    const mDrawerSearch = document.getElementById('mobileDrawerSearch');
+    if (mDrawerSearch) {
+      mDrawerSearch.addEventListener('click', () => {
+        closeMobileDrawer();
+        const sc = document.getElementById('searchBarContainer');
+        const inp = document.getElementById('inlineSearchInput');
+        if (sc) sc.classList.add('show');
+        if (inp) { inp.focus(); }
+      });
+    }
+
+    const mDrawerCreate = document.getElementById('mobileDrawerCreate');
+    if (mDrawerCreate) {
+      mDrawerCreate.addEventListener('click', () => {
+        closeMobileDrawer();
+        if (openCreateBtn) openCreateBtn.click();
+      });
+    }
+
+    const mDrawerTrash = document.getElementById('mobileDrawerTrash');
+    if (mDrawerTrash) {
+      mDrawerTrash.addEventListener('click', () => {
+        closeMobileDrawer();
+        if (menuTrashBtn) menuTrashBtn.click();
+      });
+    }
+
+    const mDrawerDoc = document.getElementById('mobileDrawerDoc');
+    if (mDrawerDoc) {
+      mDrawerDoc.addEventListener('click', () => {
+        closeMobileDrawer();
+        if (menuDocBtn) menuDocBtn.click();
+      });
+    }
+
+    const mDrawerCopy = document.getElementById('mobileDrawerCopy');
+    if (mDrawerCopy) {
+      mDrawerCopy.addEventListener('click', () => {
+        closeMobileDrawer();
+        const copyBtn = document.getElementById('btnCopyAllNotes');
+        if (copyBtn) copyBtn.click();
+      });
+    }
+
+    function updateMobileAccountUI(user) {
+      const container = document.getElementById('mobileAccountContainer');
+      if (!container) return;
+      if (user) {
+        const name = user.displayName || user.email || 'Google 用户';
+        container.innerHTML = `
+          <div class="mobile-user-profile">
+            <span class="mobile-user-name" title="${name}">${name}</span>
+            <button type="button" class="mobile-signout-btn" id="mobileLogoutBtn">退出</button>
+          </div>
+        `;
+        const logoutBtn = document.getElementById('mobileLogoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+            closeMobileDrawer();
+            if (dropdownLogout) dropdownLogout.click();
+          });
+        }
+      } else {
+        container.innerHTML = `
+          <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">Google 登录</button>
+        `;
+        const mLogin = document.getElementById('mobileLoginBtn');
+        if (mLogin) {
+          mLogin.addEventListener('click', () => {
+            closeMobileDrawer();
+            if (loginBtn) loginBtn.click();
+          });
+        }
+      }
+    }
+
+    // 动态侦测顶栏元素换行（当宽度不足需要换行时自动折叠入汉堡菜单）
+    function checkHeaderWrap() {
+      const header = document.querySelector('header');
+      const brand = document.querySelector('header .brand');
+      if (!header || !brand) return;
+      
+      const isNarrow = window.innerWidth <= 640;
+      // 检查在展开状态下所需的最小宽度
+      const neededWidth = 560;
+      const shouldCollapse = isNarrow || (header.clientWidth < neededWidth);
+      document.body.classList.toggle('header-collapsed', shouldCollapse);
+    }
+    window.addEventListener('resize', checkHeaderWrap);
+    checkHeaderWrap();
+    setTimeout(checkHeaderWrap, 100);
+
   </script>
 </body>
 </html>
