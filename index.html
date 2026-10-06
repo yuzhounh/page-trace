@@ -600,7 +600,9 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 11px;
+      height: 30px;
+      padding: 0 11px;
+      box-sizing: border-box;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--pill-bg);
@@ -609,7 +611,7 @@
       color: var(--text);
       cursor: pointer;
       transition: all 0.15s ease;
-      line-height: 1.4;
+      line-height: 28px;
     }
     .nav-pill-btn:hover {
       background: var(--item-hover-bg);
@@ -624,7 +626,8 @@
       align-items: center;
       justify-content: center;
       width: 28px;
-      height: 28px;
+      height: 30px;
+      box-sizing: border-box;
       border-radius: 6px;
       border: none;
       background: transparent;
@@ -651,7 +654,9 @@
       align-items: center;
       justify-content: center;
       gap: 5px;
-      padding: 5px 13px;
+      height: 30px;
+      padding: 0 13px;
+      box-sizing: border-box;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--pill-bg);
@@ -660,7 +665,7 @@
       color: var(--text);
       cursor: pointer;
       transition: all 0.15s ease;
-      line-height: 1.4;
+      line-height: 28px;
     }
     .nav-today-btn:hover,
     .nav-action-btn:hover {
@@ -953,6 +958,8 @@
       line-clamp: 4;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.5;
+      max-height: calc(1.5em * 4);
     }
     .note-expand-btn {
       align-self: flex-start;
@@ -1007,7 +1014,7 @@
       flex-shrink: 0;
       margin-left: auto;
     }
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
       .note-title {
         max-width: 100%;
       }
@@ -1128,6 +1135,114 @@
       color: var(--text-muted);
       line-height: 1.6;
       white-space: nowrap;
+    }
+
+    /* 骨架屏占位与微动效 */
+    @keyframes skeletonShimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    .skeleton-block {
+      pointer-events: none;
+      user-select: none;
+    }
+    .skeleton-block .month-card:hover {
+      border-color: var(--border);
+      box-shadow: var(--card-shadow);
+    }
+    .skeleton-item-row:hover {
+      background-color: transparent !important;
+    }
+
+    .skeleton-bone {
+      background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.16) 25%,
+        rgba(148, 163, 184, 0.32) 50%,
+        rgba(148, 163, 184, 0.16) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 1.8s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    [data-theme="dark"] .skeleton-bone {
+      background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.1) 25%,
+        rgba(148, 163, 184, 0.22) 50%,
+        rgba(148, 163, 184, 0.1) 75%
+      );
+      background-size: 200% 100%;
+    }
+
+    .skeleton-date-year {
+      width: 44px;
+      height: 12px;
+      margin: 0 auto 5px;
+    }
+    .skeleton-date-month {
+      width: 56px;
+      height: 20px;
+      margin: 0 auto 6px;
+      border-radius: 6px;
+    }
+    .skeleton-date-count {
+      width: 46px;
+      height: 14px;
+      margin: 0 auto;
+      border-radius: 999px;
+    }
+
+    .skeleton-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 22px;
+      margin-bottom: 2px;
+    }
+    .skeleton-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .skeleton-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .skeleton-date-year {
+        margin: 0;
+        width: 40px;
+        height: 12px;
+      }
+      .skeleton-date-month {
+        margin: 0;
+        width: 48px;
+        height: 16px;
+      }
+      .skeleton-date-count {
+        margin: 0 0 0 auto;
+        width: 44px;
+        height: 14px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-bone {
+        animation: none;
+      }
     }
 
     /* 通用弹窗 Modal Overlay */
@@ -1671,10 +1786,10 @@
     }
 
     /* ============================================================
-       移动端响应式布局优化 (<= 640px)
+       移动端响应式布局优化 (<= 768px)
        不影响桌面端原有设计
        ============================================================ */
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
       body {
         padding: 12px 10px calc(84px + env(safe-area-inset-bottom, 0px));
         -webkit-tap-highlight-color: transparent;
@@ -1727,32 +1842,59 @@
         border-radius: 14px;
       }
 
-      /* 2. 月份/年份导航工具条移动端适配 */
+      /* 2. 月份/年份导航工具条移动端适配：严格统一 28px 高度，防止复制按钮偏高 */
       .month-nav-bar {
         margin-left: 0;
         padding: 6px 8px;
         margin-bottom: 16px;
         gap: 6px;
+        align-items: center;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .month-nav-left {
         gap: 6px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .month-nav-right {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
       }
       .nav-month-wrap {
         gap: 2px;
+        align-items: center;
+        flex-shrink: 0;
       }
-      .nav-pill-btn {
-        padding: 4px 8px;
-        font-size: 12px;
-        gap: 4px;
-      }
-      .nav-arrow-btn {
-        width: 24px;
-        height: 24px;
-      }
+      .nav-pill-btn,
       .nav-today-btn,
       .nav-action-btn {
-        padding: 4px 10px;
-        font-size: 12px;
+        height: 28px !important;
+        min-height: 28px !important;
+        max-height: 28px !important;
+        padding: 0 9px !important;
+        font-size: 12px !important;
+        line-height: 26px !important;
+        box-sizing: border-box !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      .nav-pill-btn {
+        gap: 4px !important;
+      }
+      .nav-arrow-btn {
+        width: 24px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        max-height: 28px !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       }
       .nav-dropdown-menu {
         min-width: 140px;
@@ -1816,31 +1958,71 @@
       }
       .note-title {
         font-size: 14.5px;
-        max-width: calc(100% - 36px);
+        max-width: calc(100% - 32px);
       }
       .note-side-col {
         height: 28px;
         gap: 0;
       }
       /* 手机端收纳复制与编辑至「···」下拉菜单 */
-      .note-side-col > .note-copy-btn,
-      .note-side-col > .note-edit-btn {
+      .note-side-col .note-copy-btn,
+      .note-side-col .note-edit-btn,
+      .note-copy-btn,
+      .note-edit-btn {
         display: none !important;
+      }
+      .note-menu-dropdown .note-menu-item.copy,
+      .note-menu-dropdown .note-menu-item.edit {
+        display: flex !important;
       }
       /* 手机端注释与卡片等宽，不为右侧按钮预留空白 */
       .note-quote {
-        width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
         margin-top: 5px;
         padding-left: 8px;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
         font-size: 13px;
+        line-height: 1.5 !important;
       }
       .note-plain-content {
-        width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
         font-size: 13.5px;
+        line-height: 1.5 !important;
       }
       .note-item-row:has(.note-header.no-title) .note-plain-content:first-of-type,
       .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
-        padding-right: 36px;
+        padding-right: 36px !important;
+      }
+      /* 手机端备注内容仅显示 4 行文字，超过 4 行折叠并显示“展开”按钮 */
+      .note-body.is-collapsed {
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 4 !important;
+        line-clamp: 4 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 1.5 !important;
+        max-height: calc(1.5em * 4) !important;
+      }
+      .note-body.is-expanded {
+        display: block !important;
+        max-height: none !important;
+        -webkit-line-clamp: unset !important;
+        line-clamp: unset !important;
+        overflow: visible !important;
+      }
+      .note-expand-btn {
+        font-size: 12px;
+        padding: 2px 0;
+        margin-top: 4px;
+        color: var(--primary);
       }
       .note-meta {
         width: 100%;
@@ -1849,10 +2031,12 @@
       }
       .note-action-btn,
       .note-more-btn {
-        width: 28px;
-        height: 28px;
-        opacity: 1;
-        pointer-events: auto;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
         border-radius: 6px;
       }
       .note-menu-dropdown {
@@ -1967,12 +2151,11 @@
       }
     }
     @media (max-width: 640px) {
-      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn,
+      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
       .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
       .input-send-btn { min-width: 44px; min-height: 44px; }
-      .nav-pill-btn, .nav-today-btn, .nav-action-btn, .trash-btn, .toast-undo-btn,
+      .trash-btn, .toast-undo-btn,
       .dropdown-actions-group button { min-height: 44px; }
-      .month-nav-bar, .month-nav-left, .nav-month-wrap { flex-wrap: wrap; }
       input, textarea, select, .search-bar-input { font-size: 16px; }
       #createModal .form-input, #editModal .form-input { font-size: 16px; }
       .modal-card, .trash-card, .doc-card { max-height: calc(100dvh - 28px); overscroll-behavior: contain; }
@@ -1980,10 +2163,10 @@
       .toast-bar { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
     }
     @media (min-width: 744px) and (min-height: 600px) and (pointer: coarse) {
-      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn,
+      .auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x,
       .search-bar-clear-btn, .toast-close-btn, .note-more-btn,
       .input-send-btn { min-width: 44px; min-height: 44px; }
-      .nav-pill-btn, .nav-today-btn, .trash-btn, .toast-undo-btn,
+      .trash-btn, .toast-undo-btn,
       .dropdown-actions-group button { min-height: 44px; }
       input, textarea, select, .search-bar-input,
       #createModal .form-input, #editModal .form-input { font-size: 16px; }
@@ -2452,10 +2635,34 @@
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
+
+    /* 顶部同步微指示条 (GitHub / Linear 风格) */
+    #topSyncBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 2px;
+      background: linear-gradient(90deg, #06b6d4, #0ea5e9, #3b82f6);
+      z-index: 99999;
+      pointer-events: none;
+      opacity: 0;
+      transition: width 0.3s ease, opacity 0.3s ease;
+    }
+    #topSyncBar.syncing {
+      opacity: 1;
+      width: 65%;
+      transition: width 1.2s cubic-bezier(0.1, 0.5, 0.1, 1);
+    }
+    #topSyncBar.finished {
+      opacity: 1;
+      width: 100%;
+      transition: width 0.2s ease;
     }
   </style>
 </head>
 <body>
+  <div id="topSyncBar"></div>
   <div class="container">
     <!-- 顶部导航与用户头像下拉 -->
     <header>
@@ -2731,9 +2938,63 @@
     <!-- 主展示列表与按月卡片 -->
     <div class="timeline-layout">
       <div class="notes-list" id="notesList">
-        <div class="empty-state">
-          <div class="empty-icon">⏳</div>
-          <p>正在拉取实时云端数据...</p>
+        <div class="month-block skeleton-block" aria-hidden="true">
+          <div class="month-date-col">
+            <div class="skeleton-bone skeleton-date-year"></div>
+            <div class="skeleton-bone skeleton-date-month"></div>
+            <div class="skeleton-bone skeleton-date-count"></div>
+          </div>
+          <div class="month-card">
+            <div class="month-notes-container">
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 42%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 88%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 62%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 72px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 58%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 60px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 35%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 92%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 80%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-bone" style="width: 45%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 85px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3204,11 +3465,147 @@
       }
     }
 
+    // 顶部微进度条指示器
+    const topSyncBar = document.getElementById('topSyncBar');
+    let syncBarTimer = null;
+
+    function startTopSync() {
+      if (!topSyncBar) return;
+      clearTimeout(syncBarTimer);
+      topSyncBar.className = 'syncing';
+    }
+
+    function finishTopSync() {
+      if (!topSyncBar) return;
+      clearTimeout(syncBarTimer);
+      topSyncBar.className = 'finished';
+      syncBarTimer = setTimeout(() => {
+        topSyncBar.style.opacity = '0';
+        syncBarTimer = setTimeout(() => {
+          topSyncBar.className = '';
+          topSyncBar.style.width = '0%';
+          topSyncBar.style.opacity = '';
+        }, 350);
+      }, 200);
+    }
+
+    // 本地缓存（LocalStorage 0ms 秒开）支持
+    function serializeNoteForCache(note) {
+      const raw = { ...note };
+      if (raw.createdAt) {
+        if (raw.createdAt.toDate) {
+          raw.createdAt = raw.createdAt.toDate().toISOString();
+        } else if (raw.createdAt instanceof Date) {
+          raw.createdAt = raw.createdAt.toISOString();
+        }
+      }
+      if (raw.updatedAt) {
+        if (raw.updatedAt.toDate) {
+          raw.updatedAt = raw.updatedAt.toDate().toISOString();
+        } else if (raw.updatedAt instanceof Date) {
+          raw.updatedAt = raw.updatedAt.toISOString();
+        }
+      }
+      if (raw.deletedAt) {
+        if (raw.deletedAt.toDate) {
+          raw.deletedAt = raw.deletedAt.toDate().toISOString();
+        } else if (raw.deletedAt instanceof Date) {
+          raw.deletedAt = raw.deletedAt.toISOString();
+        }
+      }
+      return raw;
+    }
+
+    function saveNotesToCache(uid, list) {
+      if (!uid || !Array.isArray(list)) return;
+      try {
+        const serialized = list.map(serializeNoteForCache);
+        localStorage.setItem('pagetrace_notes_cache_' + uid, JSON.stringify(serialized));
+      } catch (e) {
+        console.warn('[PageTrace] 写入本地笔记缓存失败:', e);
+      }
+    }
+
+    function loadNotesFromCache(uid) {
+      if (!uid) return null;
+      try {
+        const cachedStr = localStorage.getItem('pagetrace_notes_cache_' + uid);
+        if (!cachedStr) return null;
+        const parsed = JSON.parse(cachedStr);
+        return Array.isArray(parsed) ? parsed : null;
+      } catch (e) {
+        console.warn('[PageTrace] 读取本地笔记缓存失败:', e);
+        return null;
+      }
+    }
+
+    function saveUserToCache(user) {
+      if (!user || !user.uid) return;
+      try {
+        const payload = {
+          uid: user.uid,
+          displayName: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || ''
+        };
+        localStorage.setItem('pagetrace_last_user', JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function loadUserFromCache() {
+      try {
+        const str = localStorage.getItem('pagetrace_last_user');
+        if (!str) return null;
+        const parsed = JSON.parse(str);
+        return parsed && parsed.uid ? parsed : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // 预读缓存实现首屏即刻就绪
+    (function initFromCache() {
+      const cachedUser = loadUserFromCache();
+      if (!cachedUser) return;
+
+      currentUser = cachedUser;
+      loginBtn.style.display = 'none';
+      avatarBtn.style.display = 'inline-flex';
+
+      if (cachedUser.photoURL) {
+        avatarImg.src = cachedUser.photoURL;
+        avatarImg.style.display = 'block';
+        avatarFallback.style.display = 'none';
+        dropdownAvatar.src = cachedUser.photoURL;
+        dropdownAvatar.style.display = 'block';
+      } else {
+        avatarImg.style.display = 'none';
+        avatarFallback.style.display = 'block';
+        avatarFallback.textContent = (cachedUser.displayName || cachedUser.email || 'U')[0].toUpperCase();
+        dropdownAvatar.style.display = 'none';
+      }
+
+      dropdownName.textContent = cachedUser.displayName || '未设置昵称';
+      dropdownEmail.textContent = cachedUser.email || '';
+
+      const cachedNotes = loadNotesFromCache(cachedUser.uid);
+      if (cachedNotes && cachedNotes.length > 0) {
+        notesData = cachedNotes;
+        notesData.sort((a, b) => {
+          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+          return tB - tA;
+        });
+        renderList();
+      }
+    })();
+
     // 监听 Google 登录状态及 Token 自动刷新
     auth.onIdTokenChanged(async (user) => {
       authStateReady = true;
       currentUser = user;
       if (user) {
+        saveUserToCache(user);
         loginBtn.style.display = 'none';
         avatarBtn.style.display = 'inline-flex';
         
@@ -3233,6 +3630,7 @@
         // 同步登录态到油猴插件
         syncAuthToUserscript(user);
       } else {
+        localStorage.removeItem('pagetrace_last_user');
         loginBtn.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
         userDropdown.classList.remove('show');
@@ -3288,6 +3686,10 @@
 
     dropdownLogout.addEventListener('click', () => {
       userDropdown.classList.remove('show');
+      if (currentUser && currentUser.uid) {
+        localStorage.removeItem('pagetrace_notes_cache_' + currentUser.uid);
+      }
+      localStorage.removeItem('pagetrace_last_user');
       auth.signOut();
     });
 
@@ -3326,9 +3728,77 @@
       });
     }
 
+    // 骨架屏占位 HTML 生成器
+    function getSkeletonHtml() {
+      return `
+        <div class="month-block skeleton-block" aria-hidden="true">
+          <div class="month-date-col">
+            <div class="skeleton-bone skeleton-date-year"></div>
+            <div class="skeleton-bone skeleton-date-month"></div>
+            <div class="skeleton-bone skeleton-date-count"></div>
+          </div>
+          <div class="month-card">
+            <div class="month-notes-container">
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 42%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 88%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 62%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 72px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 58%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 60px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+
+              <div class="note-item-row skeleton-item-row">
+                <div class="skeleton-header">
+                  <div class="skeleton-bone" style="width: 35%; height: 16px;"></div>
+                  <div class="skeleton-actions">
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                    <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bone" style="width: 92%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 80%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-bone" style="width: 45%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-meta">
+                  <div class="skeleton-bone" style="width: 85px; height: 11px;"></div>
+                  <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // 实时同步 Firestore 数据库 (onSnapshot)
     function bindFirestoreRealtime(uid) {
       if (unsubscribeNotes) unsubscribeNotes();
+      if (notesData.length === 0) {
+        notesList.innerHTML = getSkeletonHtml();
+      }
+      startTopSync();
 
       const ref = db.collection('users').doc(uid).collection('notes');
       unsubscribeNotes = ref.onSnapshot((snapshot) => {
@@ -3344,13 +3814,20 @@
           return tB - tA;
         });
 
+        // 写入本地持久化缓存以供下次秒开
+        saveNotesToCache(uid, notesData);
+        finishTopSync();
+
         renderList();
         if (trashModal && trashModal.classList.contains('show')) {
           renderTrashModal();
         }
       }, (err) => {
         console.error('拉取笔记失败:', err);
-        notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
+        finishTopSync();
+        if (notesData.length === 0) {
+          notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
+        }
       });
     }
 
