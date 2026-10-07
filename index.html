@@ -1422,7 +1422,8 @@
       padding: 6px 8px 8px;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 8px;
       background: var(--input-bg);
     }
     .input-send-btn:hover {
@@ -3048,8 +3049,8 @@
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
           <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签..." aria-describedby="createNoteHint"></textarea>
-          <p class="note-format-hint" id="createNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
           <div class="input-action-row">
+            <p class="note-format-hint" id="createNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
             <button class="input-send-btn" id="btnSubmitCreate" title="保存 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -3202,8 +3203,8 @@
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
           <textarea class="form-input" id="editNote" rows="4" placeholder="输入随手笔记 / 摘要..." aria-describedby="editNoteHint"></textarea>
-          <p class="note-format-hint" id="editNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
           <div class="input-action-row">
+            <p class="note-format-hint" id="editNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
             <button class="input-send-btn" id="btnSaveEdit" title="保存更改 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
