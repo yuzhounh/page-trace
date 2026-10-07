@@ -63,5 +63,23 @@
       return escape(source).replace(/\n/g, '<br>');
     }
   }
-  window.PageTraceNotes = { render, normalizeSource };
+  const BLOCKS = 'p,li,h1,h2,h3,h4,h5,h6,blockquote,pre,tr,table,ul,ol,div,br,hr';
+  function collapse(value) { return String(value).replace(/\s+/g, ' ').trim(); }
+  function preview(text) {
+    const source = normalizeSource(text);
+    if (!window.marked || !window.DOMPurify) return collapse(source);
+    try {
+      const container = document.createElement('div');
+      container.innerHTML = render(source);
+      container.querySelectorAll('.katex').forEach(math => {
+        const tex = math.querySelector('annotation[encoding="application/x-tex"]');
+        math.replaceWith(document.createTextNode(tex ? tex.textContent : ''));
+      });
+      container.querySelectorAll(BLOCKS).forEach(el => el.append(document.createTextNode(' ')));
+      return collapse(container.textContent);
+    } catch (_) {
+      return collapse(source);
+    }
+  }
+  window.PageTraceNotes = { render, preview, normalizeSource };
 })();
