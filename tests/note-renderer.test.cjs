@@ -84,3 +84,10 @@ test('expand and collapse retain formatted DOM', () => {
 test('page inline scripts compile', () => {
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
 });
+test('collapsed preview joins blocks with spaces and keeps formulas as TeX', () => {
+  const { dom } = setup();
+  const preview = source => dom.window.PageTraceNotes.preview(source);
+  assert.equal(preview('第一段。\n\n第二段 **加粗**。\n\n- 甲\n- 乙'), '第一段。 第二段 加粗。 甲 乙');
+  assert.equal(preview('公式 $x^2$ 结束'), '公式 x^2 结束');
+  assert.equal(preview('<b>x</b>\n\n# 标题\n\n```\na\n  b\n```'), '<b>x</b> 标题 a b');
+});
