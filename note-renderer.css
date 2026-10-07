@@ -22,6 +22,6 @@
 
 .note-body.is-collapsed .note-full, .note-body.is-expanded .note-preview { display: none; }
 .note-body .note-preview {
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   overflow: hidden; line-height: 1.5; white-space: normal; word-break: break-word;
 }
