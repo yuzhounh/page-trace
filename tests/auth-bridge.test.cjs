@@ -89,6 +89,9 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
   for (const id of ['loginBtn', 'avatarBtn', 'avatarImg', 'avatarFallback', 'dropdownAvatar',
     'dropdownName', 'dropdownEmail', 'userDropdown']) sandbox[id] = element(id);
   p.context = vm.createContext(sandbox);
+  sandbox.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  sandbox.updateMobileAccountUI = () => {};
+  sandbox.checkHeaderWrap = () => {};
   p.loadUserscript = () => vm.runInContext(`${bridgeCode}\nsetupAuthBridgeListener();
     globalThis.api = { CONFIG, saveToFirestore };`, p.context);
   p.loadAuth = () => vm.runInContext(authCode, p.context);
@@ -112,7 +115,7 @@ test('all production JavaScript parses; credentials never go to opener', () => {
   new vm.Script(userscript);
   for (const code of [...inlineScripts(authHtml), ...inlineScripts(indexHtml)]) new vm.Script(code);
   assert.doesNotMatch(authHtml + userscript, /window\.opener\.postMessage/);
-  assert.match(userscript, /@version\s+1\.10\.9/);
+  assert.equal(userscript.match(/@version\s+(\S+)/)[1], read('VERSION').trim());
   assert.match(userscript, /@match\s+\*:\/\/\*\/\*/);
   assert.match(userscript, /window\.open\(CONFIG\.authAppUrl, '_blank', '[^']*noopener/);
 });
