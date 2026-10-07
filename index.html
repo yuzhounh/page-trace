@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>PageTrace - 云端速记看板</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='ptGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2306b6d4'/%3E%3Cstop offset='50%25' stop-color='%230ea5e9'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='48' height='48' rx='12' fill='url(%23ptGrad)'/%3E%3Cg stroke='%23ffffff' stroke-width='3.2' stroke-linecap='round'%3E%3Cline x1='13' y1='17' x2='35' y2='17'/%3E%3Cline x1='13' y1='24' x2='35' y2='24'/%3E%3Cline x1='13' y1='31' x2='25' y2='31'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css" />
+  <script src="vendor/marked/marked.umd.js"></script>
+  <script src="vendor/dompurify/purify.min.js"></script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="note-renderer.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -2424,10 +2429,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 4px 10px;
-      border-radius: 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      padding: 4px 0;
+      background: transparent;
       min-height: 48px;
       box-sizing: border-box;
     }
@@ -2435,6 +2438,18 @@
       font-size: 13px;
       font-weight: 500;
       color: var(--text);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #mobileFootAccountRow {
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    #mobileAccountContainer {
+      display: flex;
+      justify-content: flex-end;
+      min-width: 0;
+      width: 100%;
     }
     .mobile-drawer-action-btn {
       width: 40px !important;
@@ -2486,23 +2501,59 @@
     }
     .mobile-user-profile {
       display: flex;
+      width: 100%;
+      min-width: 0;
       align-items: center;
       gap: 8px;
       font-size: 12px;
     }
-    .mobile-user-name {
-      max-width: 80px;
+    .mobile-user-details {
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-user-avatar {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #00b884;
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+    }
+    .mobile-user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      grid-area: 1 / 1;
+    }
+    .mobile-user-avatar span { grid-area: 1 / 1; }
+    .mobile-user-name, .mobile-user-email {
+      display: block;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-weight: 500;
+      line-height: 1.5;
+    }
+    .mobile-user-name {
+      font-weight: 600;
       color: var(--text);
     }
+    .mobile-user-email { color: var(--text-muted); font-size: 11px; }
     .mobile-signout-btn {
-      padding: 6px 12px !important;
-      min-height: 32px !important;
-      height: 32px !important;
-      border-radius: 8px !important;
+      padding: 0 !important;
+      min-height: 40px !important;
+      height: 40px;
+      width: 40px;
+      min-width: 40px;
+      flex: 0 0 40px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50% !important;
       font-size: 12px !important;
       font-weight: 600 !important;
       border: 1px solid var(--border) !important;
@@ -2660,6 +2711,7 @@
       transition: width 0.2s ease;
     }
   </style>
+  <link rel="stylesheet" href="note-renderer.css" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -2861,7 +2913,6 @@
             </button>
           </div>
           <div class="mobile-foot-row" id="mobileFootAccountRow">
-            <span class="mobile-foot-label">账户状态</span>
             <div id="mobileAccountContainer">
               <button type="button" class="mobile-auth-btn" id="mobileLoginBtn">登录</button>
             </div>
@@ -3023,7 +3074,8 @@
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
-          <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签..."></textarea>
+          <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签..." aria-describedby="createNoteHint"></textarea>
+          <p class="note-format-hint" id="createNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
           <div class="input-action-row">
             <button class="input-send-btn" id="btnSubmitCreate" title="保存 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -3176,7 +3228,8 @@
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
-          <textarea class="form-input" id="editNote" rows="4" placeholder="输入随手笔记 / 摘要..."></textarea>
+          <textarea class="form-input" id="editNote" rows="4" placeholder="输入随手笔记 / 摘要..." aria-describedby="editNoteHint"></textarea>
+          <p class="note-format-hint" id="editNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
           <div class="input-action-row">
             <button class="input-send-btn" id="btnSaveEdit" title="保存更改 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -3669,6 +3722,10 @@
 
     // 登录 / 退出 / 头像浮窗
     loginBtn.addEventListener('click', () => {
+      if (window.PageTraceAndroid) {
+        window.PageTraceAndroid.signIn();
+        return;
+      }
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider);
     });
@@ -4326,14 +4383,9 @@
                   const storedTitle = getOptionalTitle(item.title);
                   const displayTitle = storedTitle || (safeUrl ? domain : '');
                   const titleParts = splitTitleBrand(displayTitle);
-                  const noteLines = getNoteLines(item.note || '');
-                  const hasNoteBody = noteLines.length > 0;
-                  const canExpand = noteLines.length > 1 || (item.note && item.note.length > 80);
+                  const hasNoteBody = !!(item.note || '').trim();
+                  const canExpand = hasNoteBody;
                   const isExpanded = expandedNoteIds.has(item.id);
-
-                  const displayNoteText = isExpanded
-                    ? noteLines.join('\n\n')
-                    : noteLines.join('\n');
 
                   let isModified = false;
                   let updatedTimeStr = '';
@@ -4410,7 +4462,7 @@
                         </div>
                       </div>
                       ${hasNoteBody ? `
-                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${escapeHtml(displayNoteText)}</div>
+                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${PageTraceNotes.render(item.note)}</div>
                       ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
                       ${canExpand ? `
                         <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
@@ -4449,8 +4501,21 @@
       }
 
       notesList.innerHTML = html;
+      updateNoteExpandButtons();
       setupScrollObserver();
     }
+
+    function updateNoteExpandButtons() {
+      notesList.querySelectorAll('.note-body').forEach(body => {
+        const button = body.nextElementSibling;
+        if (button?.classList.contains('note-expand-btn')) {
+          button.hidden = !body.classList.contains('is-expanded') && body.scrollHeight <= body.clientHeight + 1;
+        }
+      });
+    }
+    window.addEventListener('resize', updateNoteExpandButtons);
+    notesList.addEventListener('load', updateNoteExpandButtons, true);
+    if (document.fonts) document.fonts.ready.then(updateNoteExpandButtons);
 
     window.toggleNoteExpanded = function(e, id) {
       e.stopPropagation();
@@ -4462,23 +4527,17 @@
       const item = notesData.find(n => n.id === id);
       if (!item) return;
 
-      const noteLines = getNoteLines(item.note || '');
-      const canExpand = noteLines.length > 1 || (item.note && item.note.length > 80);
-      if (!canExpand) return;
-
       const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
         expandedNoteIds.add(id);
         body.classList.remove('is-collapsed');
         body.classList.add('is-expanded');
-        body.textContent = noteLines.join('\n\n');
         btn.textContent = '收起';
         btn.setAttribute('aria-expanded', 'true');
       } else {
         expandedNoteIds.delete(id);
         body.classList.remove('is-expanded');
         body.classList.add('is-collapsed');
-        body.textContent = noteLines.join('\n');
         btn.textContent = '展开';
         btn.setAttribute('aria-expanded', 'false');
       }
@@ -4625,17 +4684,6 @@
         .replace(/"/g, '&quot;');
     }
 
-    // 提取笔记中所有非空行
-    function getNoteLines(text) {
-      if (!text) return [];
-      return text.trim().split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim() !== '');
-    }
-
-    // 规范化笔记段落（两段之间始终保持一个空行）
-    function formatNoteWithBlankLines(text) {
-      const lines = getNoteLines(text);
-      return lines.join('\n\n');
-    }
 
     // 顶部内联搜索栏逻辑 (即输即显，实时过滤)
     function showSearchBar() {
@@ -5008,7 +5056,7 @@
     async function resolveNoteFields(rawTitle, rawUrl, rawNote) {
       let title = (rawTitle || '').trim();
       let url = (rawUrl || '').trim();
-      let note = (rawNote || '').trim();
+      let note = PageTraceNotes.normalizeSource(rawNote);
 
       let targetUrl = '';
 
@@ -5023,19 +5071,14 @@
         title = ''; // 清空作为 URL 的标题框，等待填入拉取的真实标题
       }
 
-      // 情况 3：速记备注框中包含了 URL（且链接框与标题框均未输入 URL）
-      if (!targetUrl && note) {
+      // 只将单独的网址提升到链接框；正文中的 Markdown 链接保留原样。
+      if (!targetUrl && note && isUrlLike(note.trim()) && !/\s/.test(note.trim())) {
         const extracted = extractUrlFromText(note);
         if (extracted) {
           targetUrl = extracted.url;
           // 若备注框全部内容就是该 URL，则清空备注
           if (note.trim() === extracted.url || note.trim() === extracted.url.replace(/^https?:\/\//i, '')) {
             note = '';
-          } else {
-            // 剥离备注中的 URL，保留其余文字作为随手笔记
-            const before = note.slice(0, extracted.index).trim();
-            const after = note.slice(extracted.index + extracted.length).trim();
-            note = [before, after].filter(Boolean).join('\n');
           }
         }
       }
@@ -5060,10 +5103,15 @@
     }
 
     async function handleCreateSubmit() {
+      if (btnSubmitCreate.disabled) return;
+      if (window.PageTraceAndroid && !navigator.onLine) {
+        alert('当前离线，速记草稿已保留。请联网后再保存到云端。');
+        return;
+      }
       const rawTitle = createTitle.value.trim();
       const rawUrl = createUrl.value.trim();
-      const rawNote = createNoteInput.value.trim();
-      if (!rawTitle && !rawUrl && !rawNote) return;
+      const rawNote = createNoteInput.value;
+      if (!rawTitle && !rawUrl && !rawNote.trim()) return;
       if (!currentUser) {
         if (typeof showUndoToast === 'function') {
           showUndoToast('请先登录账号以保存速记', () => {}, 3500);
@@ -5073,6 +5121,8 @@
       }
 
       btnSubmitCreate.disabled = true;
+      const savingUid = currentUser.uid;
+      [createTitle, createUrl, createNoteInput].forEach(field => { field.readOnly = true; });
       const originalBtnContent = btnSubmitCreate.innerHTML;
       btnSubmitCreate.innerHTML = `
         <svg class="btn-spinner" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5082,26 +5132,30 @@
 
       try {
         const resolved = await resolveNoteFields(rawTitle, rawUrl, rawNote);
-        const noteToSave = formatNoteWithBlankLines(resolved.note);
+        const noteToSave = PageTraceNotes.normalizeSource(resolved.note);
 
-        await db.collection('users').doc(currentUser.uid).collection('notes').add({
+        if (currentUser?.uid !== savingUid) throw new Error('账号已切换，请重新保存');
+        await db.collection('users').doc(savingUid).collection('notes').add({
           title: resolved.title,
           url: resolved.url,
           note: noteToSave || '',
           status: 'inbox',
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          source: 'web_dashboard'
+          source: window.PageTraceAndroid ? 'android_share' : 'web_dashboard'
         });
         createTitle.value = '';
         createUrl.value = '';
         createNoteInput.value = '';
         autoResizeTextarea(createNoteInput, 96, 320);
         hideCreateModal();
+        window.PageTraceAndroid?.saved();
       } catch (err) {
         alert('保存失败: ' + err.message);
       } finally {
         btnSubmitCreate.innerHTML = originalBtnContent;
         btnSubmitCreate.disabled = false;
+        [createTitle, createUrl, createNoteInput].forEach(field => { field.readOnly = false; });
+        window.PageTraceAndroid?.idle();
       }
     }
 
@@ -5227,7 +5281,7 @@
       currentEditingId = id;
       editTitle.value = getOptionalTitle(item.title);
       editUrl.value = item.url || '';
-      editNote.value = formatNoteWithBlankLines(item.note || '');
+      editNote.value = PageTraceNotes.normalizeSource(item.note);
       editModal.classList.add('show');
       autoResizeTextarea(editNote, 96, 320);
       setTimeout(() => {
@@ -5267,7 +5321,7 @@
 
       try {
         const resolved = await resolveNoteFields(rawTitle, rawUrl, rawNote);
-        const noteToSave = formatNoteWithBlankLines(resolved.note);
+        const noteToSave = PageTraceNotes.normalizeSource(resolved.note);
 
         await db.collection('users').doc(currentUser.uid).collection('notes').doc(currentEditingId).update({
           title: resolved.title,
@@ -5633,10 +5687,32 @@
         const name = user.displayName || user.email || 'Google 用户';
         container.innerHTML = `
           <div class="mobile-user-profile">
-            <span class="mobile-user-name" title="${name}">${name}</span>
-            <button type="button" class="mobile-signout-btn" id="mobileLogoutBtn">退出</button>
+            <div class="mobile-user-avatar" aria-hidden="true"><span></span></div>
+            <div class="mobile-user-details">
+              <span class="mobile-user-name"></span>
+              <span class="mobile-user-email"></span>
+            </div>
+            <button type="button" class="mobile-signout-btn" id="mobileLogoutBtn" aria-label="退出登录" title="退出登录">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M10 12h11M17 8l4 4-4 4" /></svg>
+            </button>
           </div>
         `;
+        const nameEl = container.querySelector('.mobile-user-name');
+        nameEl.textContent = name;
+        nameEl.title = name;
+        const emailEl = container.querySelector('.mobile-user-email');
+        emailEl.textContent = user.email || '';
+        emailEl.title = user.email || '';
+        const avatar = container.querySelector('.mobile-user-avatar');
+        avatar.querySelector('span').textContent = Array.from(name)[0].toUpperCase();
+        if (user.photoURL && /^https:\/\//i.test(user.photoURL)) {
+          const img = document.createElement('img');
+          img.alt = '';
+          img.referrerPolicy = 'no-referrer';
+          img.addEventListener('error', () => img.remove());
+          img.src = user.photoURL;
+          avatar.appendChild(img);
+        }
         const logoutBtn = document.getElementById('mobileLogoutBtn');
         if (logoutBtn) {
           logoutBtn.addEventListener('click', () => {
@@ -5675,5 +5751,6 @@
     setTimeout(checkHeaderWrap, 100);
 
   </script>
+  <script src="android-bridge.js"></script>
 </body>
 </html>
