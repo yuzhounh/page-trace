@@ -56,6 +56,18 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - Firebase 只部署 `firebase-retired/` 中不含认证脚本的迁移提示页及跳转配置；`/__/auth/*` 等 Firebase 保留路径继续提供 Google 登录辅助服务。Authentication、Firestore 和现有笔记继续使用原项目。
 - 维护命令：`firebase deploy --only hosting --project page-trace-app`。不要将 Hosting 的 `public` 改回根目录，以免再次发布旧业务入口。
 
+## 备注格式
+
+看板备注支持 Markdown：标题、加粗、斜体、列表、引用、链接、表格及代码块。
+公式使用 `$x^2$`（行内）或 `$$x^2$$`（独立显示），也支持 `\(…\)` 和 `\[…\]`。
+多行公式可将 `$$` 放在首尾单独一行。代码块中的公式标记保持原文，无法解析的公式显示源码。
+编辑与复制保留原始 Markdown；保存不再自动插入空行或剥离正文中的链接。
+历史备注按原有文本渲染，不改写云端数据。原始 HTML 作为文字显示。
+
+渲染依赖固定版本并随站点提供，运行时不需要额外 CDN。
+维护依赖后运行 `npm ci && npm run vendor`，将更新后的 `vendor/` 一同发布；运行 `npm test` 验证。
+渲染实现遵循 [Marked 的净化要求](https://marked.js.org/) 和 [KaTeX 的安全选项](https://katex.org/docs/options)。
+
 ## 交互快捷键
 
 | 操作 | 触发方式 | 说明 |
