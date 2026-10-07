@@ -956,16 +956,6 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
-    .note-body.is-collapsed {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 4;
-      line-clamp: 4;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.5;
-      max-height: calc(1.5em * 4);
-    }
     .note-expand-btn {
       align-self: flex-start;
       margin-top: 5px;
@@ -2006,23 +1996,6 @@
         padding-right: 36px !important;
       }
       /* 手机端备注内容仅显示 4 行文字，超过 4 行折叠并显示“展开”按钮 */
-      .note-body.is-collapsed {
-        display: -webkit-box !important;
-        -webkit-box-orient: vertical !important;
-        -webkit-line-clamp: 4 !important;
-        line-clamp: 4 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        line-height: 1.5 !important;
-        max-height: calc(1.5em * 4) !important;
-      }
-      .note-body.is-expanded {
-        display: block !important;
-        max-height: none !important;
-        -webkit-line-clamp: unset !important;
-        line-clamp: unset !important;
-        overflow: visible !important;
-      }
       .note-expand-btn {
         font-size: 12px;
         padding: 2px 0;
@@ -4462,7 +4435,7 @@
                         </div>
                       </div>
                       ${hasNoteBody ? `
-                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}">${PageTraceNotes.render(item.note)}</div>
+                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}"><div class="note-preview">${escapeHtml(PageTraceNotes.preview(item.note))}</div><div class="note-full">${PageTraceNotes.render(item.note)}</div></div>
                       ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
                       ${canExpand ? `
                         <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
@@ -4509,7 +4482,8 @@
       notesList.querySelectorAll('.note-body').forEach(body => {
         const button = body.nextElementSibling;
         if (button?.classList.contains('note-expand-btn')) {
-          button.hidden = !body.classList.contains('is-expanded') && body.scrollHeight <= body.clientHeight + 1;
+          const preview = body.querySelector('.note-preview');
+          button.hidden = !body.classList.contains('is-expanded') && !!preview && preview.scrollHeight <= preview.clientHeight + 1;
         }
       });
     }
