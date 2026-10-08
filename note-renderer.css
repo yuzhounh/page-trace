@@ -26,3 +26,4 @@
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   overflow: hidden; line-height: 1.5; white-space: normal; word-break: break-word;
 }
+.note-body.is-collapsed .note-preview { cursor: pointer; }
