@@ -1122,6 +1122,13 @@
       background: rgba(239, 68, 68, 0.12);
       color: var(--danger-hover);
     }
+    /* 桌面端悬停已有复制/编辑按钮，更多菜单中不再重复（手机端按钮收纳进菜单） */
+    @media (min-width: 769px) {
+      .note-menu-dropdown .note-menu-item.copy,
+      .note-menu-dropdown .note-menu-item.edit {
+        display: none;
+      }
+    }
     .note-menu-meta {
       border-top: 1px solid var(--divider);
       margin-top: 4px;
