@@ -4497,6 +4497,14 @@
     }
     window.addEventListener('resize', updateNoteExpandButtons);
     notesList.addEventListener('load', updateNoteExpandButtons, true);
+    // 点击折叠的摘要即可展开（拖选文字时不触发）
+    notesList.addEventListener('click', e => {
+      const preview = e.target.closest('.note-preview');
+      if (!preview || !preview.closest('.note-body.is-collapsed')) return;
+      if (window.getSelection && String(window.getSelection()).length) return;
+      const button = preview.closest('.note-body').nextElementSibling;
+      if (button?.classList.contains('note-expand-btn') && !button.hidden) button.click();
+    });
     if (document.fonts) document.fonts.ready.then(updateNoteExpandButtons);
 
     window.toggleNoteExpanded = function(e, id) {
