@@ -26,3 +26,5 @@
   overflow: hidden; line-height: 1.5; white-space: normal; word-break: break-word;
 }
 .note-body.is-collapsed .note-preview { cursor: pointer; }
+/* 折叠时点击摘要即可展开，不再显示“展开”行；展开后保留“收起” */
+.note-body.is-collapsed + .note-expand-btn { display: none !important; }
