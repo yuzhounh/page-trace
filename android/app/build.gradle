@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
+def signing = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+android {
+    namespace 'com.pagetrace.app'
+    compileSdk 35
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    defaultConfig {
+        applicationId 'com.pagetrace.app'
+        minSdk 26
+        targetSdk 35
+        versionCode 6
+        versionName '1.10.12'
+    }
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file(signing['storeFile'])
+                storePassword signing['storePassword']
+                keyAlias signing['keyAlias']
+                keyPassword signing['keyPassword']
+            }
+        }
+    }
+    buildTypes { release { signingConfig signingConfigs.release } }
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/assets')
+}
+tasks.register('bundleDashboard', Copy) {
+    from('../..') {
+        include 'index.html', 'logo.svg', 'android-bridge.js', 'android-ui.js', 'android-ui.css',
+                'note-renderer.js', 'note-renderer.css'
+        filter { line -> line.replace('https://www.gstatic.com/firebasejs/10.12.0/', 'vendor/') }
+    }
+    from('src/main/vendor') { into 'vendor' }
+    // Markdown / formula libraries are copied byte for byte (fonts are binary).
+    from('../../vendor') { into 'vendor' }
+    into layout.buildDirectory.dir('generated/assets')
+}
+tasks.named('preBuild').configure { dependsOn 'bundleDashboard' }
+dependencies {
+    implementation 'androidx.core:core:1.13.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.credentials:credentials:1.3.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.3.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+}
