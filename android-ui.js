@@ -139,7 +139,7 @@
   }
   async function copyNote({ item }) {
     const ok = await copyTextToClipboard(formatNoteTextForCopy(item));
-    showUndoToast(ok ? '已复制' : '复制失败', null, 1800);
+    showUndoToast(ok ? '已复制' : '复制失败', null, 1800, ok ? '✅' : '⚠️');
   }
   function shareNote({ item }) {
     const text = formatNoteTextForCopy(item);
