@@ -958,7 +958,7 @@
       word-break: break-word;
     }
     .note-expand-btn {
-      align-self: flex-start;
+      align-self: flex-end;
       margin-top: 5px;
       padding: 0;
       border: 0;
@@ -1745,11 +1745,14 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex: 1;
+      min-width: 0;
     }
     .toast-right {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex: none;
     }
     .toast-undo-btn {
       background: var(--primary);
@@ -3246,7 +3249,7 @@
   <!-- 底部浮动撤销 Toast -->
   <div class="toast-bar" id="undoToast">
     <div class="toast-left">
-      <span class="toast-icon">🗑️</span>
+      <span class="toast-icon" id="undoToastIcon">🗑️</span>
       <span class="toast-text" id="undoToastText">已移至回收站</span>
     </div>
     <div class="toast-right">
@@ -3356,6 +3359,7 @@
     const btnClearTrash = document.getElementById('btnClearTrash');
     const undoToast = document.getElementById('undoToast');
     const undoToastText = document.getElementById('undoToastText');
+    const undoToastIcon = document.getElementById('undoToastIcon');
     const undoToastBtn = document.getElementById('undoToastBtn');
     const undoToastClose = document.getElementById('undoToastClose');
 
@@ -4914,12 +4918,16 @@
     let undoToastTimer = null;
     let currentUndoCallback = null;
 
-    function showUndoToast(msg, onUndo, duration = 5000) {
+    function showUndoToast(msg, onUndo, duration = 5000, icon) {
       if (undoToastTimer) {
         clearTimeout(undoToastTimer);
         undoToastTimer = null;
       }
       undoToastText.textContent = msg;
+      // Plain notices (no undo action) get a neutral icon and no undo/close buttons.
+      undoToastIcon.textContent = icon || (onUndo ? '🗑️' : '✅');
+      undoToastBtn.hidden = !onUndo;
+      undoToastClose.hidden = !onUndo;
       currentUndoCallback = onUndo;
       undoToast.classList.add('show');
 
@@ -5095,7 +5103,7 @@
     async function handleCreateSubmit() {
       if (btnSubmitCreate.disabled) return;
       if (window.PageTraceAndroid && !navigator.onLine) {
-        alert('当前离线，速记草稿已保留。请联网后再保存到云端。');
+        showUndoToast('当前离线，速记草稿已保留。请联网后再保存到云端。', null, 4000, '⚠️');
         return;
       }
       const rawTitle = createTitle.value.trim();
@@ -5104,7 +5112,7 @@
       if (!rawTitle && !rawUrl && !rawNote.trim()) return;
       if (!currentUser) {
         if (typeof showUndoToast === 'function') {
-          showUndoToast('请先登录账号以保存速记', () => {}, 3500);
+          showUndoToast('请先登录账号以保存速记', null, 3500, 'ℹ️');
         }
         loginBtn.click();
         return;
@@ -5140,7 +5148,7 @@
         hideCreateModal();
         window.PageTraceAndroid?.saved();
       } catch (err) {
-        alert('保存失败: ' + err.message);
+        showUndoToast('保存失败: ' + err.message, null, 4000, '⚠️');
       } finally {
         btnSubmitCreate.innerHTML = originalBtnContent;
         btnSubmitCreate.disabled = false;
@@ -5297,7 +5305,7 @@
       const rawNote = editNote.value;
 
       if (!rawTitle && !rawUrl && !rawNote.trim()) {
-        alert('标题、链接和速记备注不能同时为空');
+        showUndoToast('标题、链接和速记备注不能同时为空', null, 4000, '⚠️');
         return;
       }
 
@@ -5322,7 +5330,7 @@
         editModal.classList.remove('show');
         currentEditingId = null;
       } catch (err) {
-        alert('修改失败: ' + err.message);
+        showUndoToast('修改失败: ' + err.message, null, 4000, '⚠️');
       } finally {
         btnSaveEdit.innerHTML = originalBtnContent;
         btnSaveEdit.disabled = false;
@@ -5375,7 +5383,7 @@
         });
       } catch (err) {
         console.error('移至回收站失败:', err);
-        alert('删除失败: ' + err.message);
+        showUndoToast('删除失败: ' + err.message, null, 4000, '⚠️');
       }
     }
     window.moveToTrash = moveToTrash;
@@ -5392,7 +5400,7 @@
         hideUndoToast();
       } catch (err) {
         console.error('还原失败:', err);
-        alert('还原失败: ' + err.message);
+        showUndoToast('还原失败: ' + err.message, null, 4000, '⚠️');
       }
     }
     window.restoreFromTrash = restoreFromTrash;
@@ -5408,7 +5416,7 @@
         await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
       } catch (err) {
         console.error('彻底删除失败:', err);
-        alert('彻底删除失败: ' + err.message);
+        showUndoToast('彻底删除失败: ' + err.message, null, 4000, '⚠️');
       }
     }
     window.permanentDeleteNote = permanentDeleteNote;
@@ -5434,7 +5442,7 @@
         }
       } catch (err) {
         console.error('清空回收站失败:', err);
-        alert('清空失败: ' + err.message);
+        showUndoToast('清空失败: ' + err.message, null, 4000, '⚠️');
       } finally {
         btnClearTrash.disabled = false;
       }
@@ -5545,13 +5553,13 @@
       if (e) e.stopPropagation();
       const targetNotes = getTargetNotes();
       if (!targetNotes || targetNotes.length === 0) {
-        alert('当前没有可复制的笔记');
+        showUndoToast('当前没有可复制的笔记', null, 4000, '⚠️');
         return;
       }
 
       const formattedNotes = targetNotes.map(formatNoteTextForCopy).filter(Boolean);
       if (formattedNotes.length === 0) {
-        alert('当前笔记内容为空');
+        showUndoToast('当前笔记内容为空', null, 4000, '⚠️');
         return;
       }
 

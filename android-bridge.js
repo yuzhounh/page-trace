@@ -39,7 +39,7 @@
       try {
         await auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(token));
         if (fields.some(field => field.value.trim())) showCreateModal();
-      } catch (error) { alert('登录失败：' + error.message); }
+      } catch (error) { showUndoToast('登录失败：' + error.message, null, 4000, '⚠️'); }
     },
     saved() {
       localStorage.removeItem(key);
