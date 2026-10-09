@@ -1,8 +1,12 @@
-/* Android-only interaction layer: long-press note sheet, back-key overlay stack, theme and haptics bridge. */
+/* Touch interaction layer for phones and tablets (web and the Android app): long-press note sheet and in-page
+   confirm panels. The Android app also gets the back-key overlay stack, haptics, theme and share bridge. */
 (() => {
-  if (!window.PageTraceNative) return;
+  const native = !!window.PageTraceNative;
+  const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (!native && !coarse) return;
   const root = document.documentElement;
-  root.classList.add('is-android');
+  root.classList.add('is-touch');
+  if (native) root.classList.add('is-android');
   const send = message => { try { window.PageTraceNative.postMessage(message); } catch (_) { /* native side unavailable */ } };
   const ICONS = {
     edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
@@ -141,27 +145,59 @@
     const ok = await copyTextToClipboard(formatNoteTextForCopy(item));
     showUndoToast(ok ? '已复制' : '复制失败', null, 1800, ok ? '✅' : '⚠️');
   }
+  const canShare = native || typeof navigator.share === 'function';
   function shareNote({ item }) {
     const text = formatNoteTextForCopy(item);
-    if (text) send('share:' + text);
+    if (!text) return;
+    if (native) send('share:' + text);
+    else navigator.share({ text }).catch(() => { /* cancelled */ });
   }
-  document.addEventListener('contextmenu', event => {
-    const target = event.target;
-    if (target.closest('input, textarea, .modal-overlay, .pt-sheet-mask')) return;
+  const haptic = () => { if (native) send('haptic'); else if (navigator.vibrate) navigator.vibrate(12); };
+  function openNoteSheet(target) {
+    if (!target || !target.closest || target.closest('input, textarea, .modal-overlay, .pt-sheet-mask')) return false;
     const hit = rowItem(target);
-    if (!hit || !hit.item) return;
-    if (hit.row.classList.contains('pt-selecting')) return;
-    event.preventDefault();
-    send('haptic');
+    if (!hit || !hit.item || hit.row.classList.contains('pt-selecting')) return false;
+    if (document.querySelector('.pt-sheet-mask')) return true; // contextmenu and the timer can both fire for one press
+    haptic();
     openSheet([
       { icon: 'edit', label: '编辑', handler: () => window.handleMenuEdit(noEvent, hit.id) },
       { icon: 'text', label: '选择文字', handler: () => selectText(hit) },
       { icon: 'copy', label: '复制', handler: () => copyNote(hit) },
-      { icon: 'share', label: '分享', handler: () => shareNote(hit) },
+      ...(canShare ? [{ icon: 'share', label: '分享', handler: () => shareNote(hit) }] : []),
       { icon: 'trash', label: '删除', danger: true, handler: () => window.handleMenuDelete(noEvent, hit.id) },
       { icon: 'info', label: '笔记详情', handler: () => showDetails(hit) }
     ], hit.row);
+    return true;
+  }
+  // Android fires "contextmenu" on a long press; iOS Safari does not, so a timer drives the long press everywhere.
+  document.addEventListener('contextmenu', event => {
+    if (!rowItem(event.target) || event.target.closest('input, textarea, .modal-overlay, .pt-sheet-mask')) return;
+    if (rowItem(event.target).row.classList.contains('pt-selecting')) return;
+    event.preventDefault();
+    openNoteSheet(event.target);
   });
+  let pressTimer = null; let pressX = 0; let pressY = 0;
+  const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+  document.addEventListener('touchstart', event => {
+    cancelPress();
+    if (event.touches.length !== 1) return;
+    const target = event.target;
+    pressX = event.touches[0].clientX; pressY = event.touches[0].clientY;
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (!openNoteSheet(target)) return;
+      // Releasing the finger after a long press must not count as a tap (expand / open a link).
+      const swallow = e => { e.preventDefault(); e.stopPropagation(); };
+      document.addEventListener('click', swallow, true);
+      setTimeout(() => document.removeEventListener('click', swallow, true), 600);
+    }, 500);
+  }, { passive: true });
+  document.addEventListener('touchmove', event => {
+    const t = event.touches[0];
+    if (pressTimer && t && Math.hypot(t.clientX - pressX, t.clientY - pressY) > 10) cancelPress();
+  }, { passive: true });
+  document.addEventListener('touchend', cancelPress, { passive: true });
+  document.addEventListener('touchcancel', cancelPress, { passive: true });
 
   const overlays = [
     () => editModal.classList.contains('show') && (closeEditModal.click(), true),
@@ -178,46 +214,64 @@
     return overlays.some(close => { try { return close() === true; } catch (_) { return false; } });
   }
 
-  // Touch has no hover: drop :hover rules so a tapped control never keeps its hover look.
-  function splitSelectors(text) {
-    const parts = []; let depth = 0; let start = 0;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === '(' || c === '[') depth++;
-      else if (c === ')' || c === ']') depth--;
-      else if (c === ',' && depth === 0) { parts.push(text.slice(start, i)); start = i + 1; }
+  if (native) {
+    // Touch has no hover: drop :hover rules so a tapped control never keeps its hover look.
+    function splitSelectors(text) {
+      const parts = []; let depth = 0; let start = 0;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '(' || c === '[') depth++;
+        else if (c === ')' || c === ']') depth--;
+        else if (c === ',' && depth === 0) { parts.push(text.slice(start, i)); start = i + 1; }
+      }
+      parts.push(text.slice(start));
+      return parts;
     }
-    parts.push(text.slice(start));
-    return parts;
-  }
-  function stripHover(rules) {
-    for (let i = rules.length - 1; i >= 0; i--) {
-      const rule = rules[i];
-      if (rule.cssRules && !rule.selectorText) { stripHover(rule.cssRules); continue; }
-      if (!rule.selectorText || !rule.selectorText.includes(':hover')) continue;
-      const kept = splitSelectors(rule.selectorText).filter(s => !s.includes(':hover'));
-      if (kept.length) rule.selectorText = kept.join(',');
-      else (rule.parentRule || rule.parentStyleSheet).deleteRule(i);
+    function stripHover(rules) {
+      for (let i = rules.length - 1; i >= 0; i--) {
+        const rule = rules[i];
+        if (rule.cssRules && !rule.selectorText) { stripHover(rule.cssRules); continue; }
+        if (!rule.selectorText || !rule.selectorText.includes(':hover')) continue;
+        const kept = splitSelectors(rule.selectorText).filter(s => !s.includes(':hover'));
+        if (kept.length) rule.selectorText = kept.join(',');
+        else (rule.parentRule || rule.parentStyleSheet).deleteRule(i);
+      }
     }
-  }
-  for (const sheet of document.styleSheets) {
-    try { stripHover(sheet.cssRules); } catch (_) { /* cross-origin sheet */ }
-  }
-  document.querySelectorAll('[title*="Enter"]').forEach(el => {
-    el.title = el.title.replace(/\s*[（(][^）)]*(Enter|Ctrl|Shift)[^）)]*[）)]/g, '');
-  });
+    for (const sheet of document.styleSheets) {
+      try { stripHover(sheet.cssRules); } catch (_) { /* cross-origin sheet */ }
+    }
+    document.querySelectorAll('[title*="Enter"]').forEach(el => {
+      el.title = el.title.replace(/\s*[（(][^）)]*(Enter|Ctrl|Shift)[^）)]*[）)]/g, '');
+    });
 
-  const hex = color => {
-    const m = String(color).match(/\d+(\.\d+)?/g);
-    return m ? '#' + m.slice(0, 3).map(n => Number(n).toString(16).padStart(2, '0')).join('') : '#f8fafc';
-  };
-  const syncTheme = () => {
-    const dark = !!document.querySelector('[data-theme="dark"]');
-    send(`theme:${dark ? 'dark' : 'light'}:${hex(getComputedStyle(document.body).backgroundColor)}`);
-  };
-  new MutationObserver(syncTheme).observe(root, { attributes: true, subtree: true, attributeFilter: ['data-theme'] });
-  syncTheme();
+    const hex = color => {
+      const m = String(color).match(/\d+(\.\d+)?/g);
+      return m ? '#' + m.slice(0, 3).map(n => Number(n).toString(16).padStart(2, '0')).join('') : '#f8fafc';
+    };
+    const syncTheme = () => {
+      const dark = !!document.querySelector('[data-theme="dark"]');
+      send(`theme:${dark ? 'dark' : 'light'}:${hex(getComputedStyle(document.body).backgroundColor)}`);
+    };
+    new MutationObserver(syncTheme).observe(root, { attributes: true, subtree: true, attributeFilter: ['data-theme'] });
+    syncTheme();
+  }
 
-  window.PageTraceAndroidUI = { back, openSheet, confirm: confirmPanel, layers };
+  // On the web, tell first-time touch users once that notes are operated by long press.
+  if (!native) {
+    try {
+      const list = document.getElementById('notesList');
+      if (list && !localStorage.getItem('pagetrace_longpress_hint')) {
+        const watcher = new MutationObserver(() => {
+          if (!list.querySelector('.note-item-row[data-id]')) return;
+          watcher.disconnect();
+          localStorage.setItem('pagetrace_longpress_hint', '1');
+          if (typeof showUndoToast === 'function') showUndoToast('长按笔记可编辑、复制、删除', null, 4500, '👆');
+        });
+        watcher.observe(list, { childList: true, subtree: true });
+      }
+    } catch (_) { /* storage unavailable: skip the hint */ }
+  }
+
+  window.PageTraceTouchUI = { back, openSheet, confirm: confirmPanel, layers };
   if (window.PageTraceAndroid) window.PageTraceAndroid.confirm = confirmPanel;
 })();

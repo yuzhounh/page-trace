@@ -741,6 +741,7 @@
       gap: 12px;
       padding: 7px 10px;
       font-size: 13px;
+      white-space: nowrap;
       border-radius: 6px;
       color: var(--text);
       cursor: pointer;
@@ -841,6 +842,7 @@
     }
     .month-date-count {
       display: inline-block;
+      white-space: nowrap;
       font-size: 11px;
       color: var(--text-muted);
       background: rgba(100, 116, 139, 0.12);
@@ -1892,7 +1894,8 @@
         justify-content: center !important;
       }
       .nav-dropdown-menu {
-        min-width: 140px;
+        min-width: 150px;
+        width: max-content;
       }
 
       /* 3. 时间线布局：由双列改为单列满宽流式 + 吸顶月份分组标头 */
@@ -1995,12 +1998,9 @@
       .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
         padding-right: 36px !important;
       }
-      /* 手机端备注内容仅显示 4 行文字，超过 4 行折叠并显示“展开”按钮 */
+      /* 手机端不再单独占一行放“展开/收起”按钮：点击备注正文即可展开，再点一次收起 */
       .note-expand-btn {
-        font-size: 12px;
-        padding: 2px 0;
-        margin-top: 4px;
-        color: var(--primary);
+        display: none !important;
       }
       .note-meta {
         width: 100%;
@@ -2685,6 +2685,7 @@
     }
   </style>
   <link rel="stylesheet" href="note-renderer.css" />
+  <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
 </head>
 <body>
@@ -4489,13 +4490,19 @@
     }
     window.addEventListener('resize', updateNoteExpandButtons);
     notesList.addEventListener('load', updateNoteExpandButtons, true);
-    // 点击折叠的摘要即可展开（拖选文字时不触发）
+    // 点击折叠的摘要即可展开；手机上再点一次正文收起（拖选文字、点链接时不触发）
+    const phoneLayout = window.matchMedia('(max-width: 768px), (pointer: coarse)');
     notesList.addEventListener('click', e => {
-      const preview = e.target.closest('.note-preview');
-      if (!preview || !preview.closest('.note-body.is-collapsed')) return;
+      const body = e.target.closest('.note-body');
+      if (!body || e.target.closest('a, button')) return;
       if (window.getSelection && String(window.getSelection()).length) return;
-      const button = preview.closest('.note-body').nextElementSibling;
-      if (button?.classList.contains('note-expand-btn') && !button.hidden) button.click();
+      const expanded = body.classList.contains('is-expanded');
+      if (expanded ? !phoneLayout.matches : !e.target.closest('.note-preview')) return;
+      const button = body.nextElementSibling;
+      if (!button?.classList.contains('note-expand-btn') || (button.hidden && !expanded)) return;
+      button.click();
+      // After collapsing a long note, keep its card in view instead of leaving the reader far below it.
+      if (expanded) body.closest('.note-item-row')?.scrollIntoView({ block: 'nearest' });
     });
     if (document.fonts) document.fonts.ready.then(updateNoteExpandButtons);
 
@@ -5403,7 +5410,7 @@
     window.restoreFromTrash = restoreFromTrash;
 
     // 手机 APK 使用应用内圆角确认面板，网页沿用浏览器确认框
-    const askConfirm = message => window.PageTraceAndroidUI ? window.PageTraceAndroidUI.confirm(message) : Promise.resolve(confirm(message));
+    const askConfirm = message => window.PageTraceTouchUI ? window.PageTraceTouchUI.confirm(message) : Promise.resolve(confirm(message));
 
     // 彻底删除单条笔记
     async function permanentDeleteNote(id) {
@@ -5750,6 +5757,6 @@
 
   </script>
   <script src="android-bridge.js"></script>
-  <script src="android-ui.js"></script>
+  <script src="touch-ui.js"></script>
 </body>
 </html>

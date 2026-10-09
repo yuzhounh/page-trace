@@ -48,7 +48,7 @@
     idle() { window.PageTraceNative.postMessage('ready'); },
     back() {
       persist();
-      if (window.PageTraceAndroidUI && window.PageTraceAndroidUI.back()) return true;
+      if (window.PageTraceTouchUI && window.PageTraceTouchUI.back()) return true;
       if (!createModal.classList.contains('show')) return false;
       hideCreateModal();
       return true;
