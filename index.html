@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <script>if (window.PageTraceNative) document.documentElement.classList.add('is-android');</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>PageTrace - 云端速记看板</title>
@@ -2693,6 +2694,7 @@
     }
   </style>
   <link rel="stylesheet" href="note-renderer.css" />
+  <link rel="stylesheet" href="android-ui.css" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -5397,10 +5399,13 @@
     }
     window.restoreFromTrash = restoreFromTrash;
 
+    // 手机 APK 使用应用内圆角确认面板，网页沿用浏览器确认框
+    const askConfirm = message => window.PageTraceAndroidUI ? window.PageTraceAndroidUI.confirm(message) : Promise.resolve(confirm(message));
+
     // 彻底删除单条笔记
     async function permanentDeleteNote(id) {
       if (!currentUser) return;
-      if (!confirm('确定彻底删除该条笔记吗？此操作将永久抹除，无法找回。')) return;
+      if (!await askConfirm('确定彻底删除该条笔记吗？此操作将永久抹除，无法找回。')) return;
       try {
         await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
       } catch (err) {
@@ -5415,7 +5420,7 @@
       if (!currentUser) return;
       const trashNotes = notesData.filter(n => n.isDeleted === true);
       if (trashNotes.length === 0) return;
-      if (!confirm(`确定彻底清空回收站中的 ${trashNotes.length} 条笔记吗？此操作无法撤销。`)) return;
+      if (!await askConfirm(`确定彻底清空回收站中的 ${trashNotes.length} 条笔记吗？此操作无法撤销。`)) return;
 
       try {
         btnClearTrash.disabled = true;
@@ -5742,5 +5747,6 @@
 
   </script>
   <script src="android-bridge.js"></script>
+  <script src="android-ui.js"></script>
 </body>
 </html>

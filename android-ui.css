@@ -1,0 +1,42 @@
+/* Phone-app interaction layer: only active when android-ui.js marks the page with .is-android. */
+.is-android * { -webkit-tap-highlight-color: transparent; }
+.is-android .note-side-col { display: none !important; }
+.is-android .note-title { max-width: 100% !important; }
+.is-android .note-item-row:has(.note-header.no-title) .note-quote:first-of-type { padding-right: 0 !important; }
+.is-android .note-item-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.is-android :is(.auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x, .search-bar-clear-btn,
+  .toast-close-btn, .input-send-btn) { min-width: 44px; min-height: 44px; }
+.is-android :is(.trash-btn, .toast-undo-btn, .dropdown-actions-group button, .note-expand-btn) { min-height: 44px; }
+.is-android :is(input, textarea, select) { font-size: 16px; }
+.is-android .modal-overlay { padding: 8px; }
+.is-android .modal-card { max-height: 100%; }
+
+.pt-sheet-mask { position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.4); }
+.pt-sheet {
+  position: absolute; left: 12px; right: 12px; margin: 0 auto; max-width: 420px; box-sizing: border-box;
+  background: var(--modal-bg); color: var(--text); border-radius: 20px; padding: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25); display: flex; flex-direction: column;
+}
+.pt-sheet > button {
+  display: flex; align-items: center; gap: 16px; height: 56px; padding: 0 16px; background: none; border: 0;
+  border-radius: 12px; color: var(--text); font: inherit; font-size: 19px; text-align: left;
+}
+.pt-sheet > button:active { background: var(--border); }
+.pt-sheet > button svg { flex: none; color: var(--text-muted); }
+.pt-sheet > button.danger, .pt-sheet > button.danger svg { color: var(--danger); }
+.pt-card { padding: 20px 20px 12px; gap: 12px; }
+.pt-card h3 { margin: 0; font-size: 19px; }
+.pt-card p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); }
+.pt-detail-row { padding: 10px 0; border-top: 1px solid var(--divider); font-size: 16px; word-break: break-all; }
+.pt-detail-row:first-of-type { border-top: 0; }
+.pt-select-text {
+  max-height: 55vh; overflow-y: auto; font-size: 16px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+  -webkit-user-select: text; user-select: text;
+}
+.pt-card .pt-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.pt-card .pt-actions button {
+  min-width: 88px; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; font: inherit; font-size: 17px;
+  background: var(--border); color: var(--text);
+}
+.pt-card .pt-actions button.primary { background: var(--primary); color: #fff; }
+.pt-card .pt-actions button.danger { background: var(--danger); color: #fff; }
