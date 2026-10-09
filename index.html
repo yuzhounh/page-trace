@@ -726,10 +726,6 @@
       padding: 6px;
       z-index: 100;
     }
-    #monthDropdownMenu {
-      left: 50%;
-      transform: translateX(-50%);
-    }
     .nav-dropdown-menu.show {
       display: block;
       animation: menuFadeIn 0.12s ease-out;
@@ -737,13 +733,6 @@
     @keyframes menuFadeIn {
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
-    }
-    #monthDropdownMenu.show {
-      animation: menuFadeInCenter 0.12s ease-out;
-    }
-    @keyframes menuFadeInCenter {
-      from { opacity: 0; transform: translate(-50%, -4px); }
-      to { opacity: 1; transform: translate(-50%, 0); }
     }
     .nav-dropdown-item {
       display: flex;
@@ -1857,8 +1846,7 @@
         gap: 6px;
         align-items: center;
         flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        /* overflow must stay visible: the year/month dropdowns hang below the bar and would be clipped */
       }
       .month-nav-left {
         gap: 6px;
@@ -4537,6 +4525,13 @@
       }
     };
 
+    // 下拉菜单统一左对齐到各自按钮的左边缘；若超出屏幕右侧则整体左移，保持完整可见
+    function placeNavMenu(menu) {
+      menu.style.left = '';
+      if (!menu.classList.contains('show')) return;
+      const over = menu.getBoundingClientRect().right - (window.innerWidth - 8);
+      if (over > 0) menu.style.left = `${-over}px`;
+    }
     // 年份与月份下拉打开/切换
     yearSelectorBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -4545,6 +4540,7 @@
       const willShow = !yearDropdownMenu.classList.contains('show');
       yearDropdownMenu.classList.toggle('show', willShow);
       yearSelectorWrap.classList.toggle('open', willShow);
+      placeNavMenu(yearDropdownMenu);
     });
 
     yearDropdownMenu.addEventListener('click', (e) => {
@@ -4560,6 +4556,7 @@
       const willShow = !monthDropdownMenu.classList.contains('show');
       monthDropdownMenu.classList.toggle('show', willShow);
       monthSelectorWrap.classList.toggle('open', willShow);
+      placeNavMenu(monthDropdownMenu);
     });
 
     monthDropdownMenu.addEventListener('click', (e) => {
