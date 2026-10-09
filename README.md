@@ -27,7 +27,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前脚本版本为 **1.10.13**。从 [GitHub Release 安装配套脚本](https://github.com/yuzhounh/page-trace/releases/latest/download/pagetrace.user.js)，或使用 Greasy Fork 的同版入口：
+当前脚本版本为 **1.10.14**。从 [GitHub Release 安装配套脚本](https://github.com/yuzhounh/page-trace/releases/latest/download/pagetrace.user.js)，或使用 Greasy Fork 的同版入口：
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 
