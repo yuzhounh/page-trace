@@ -97,17 +97,45 @@
     let close = () => {};
     close = mount(card('笔记详情', box, [button('完成', () => close(), 'primary')]));
   }
-  function selectText({ item }) {
-    const text = document.createElement('div');
-    text.className = 'pt-select-text';
-    text.textContent = String(item.note || item.title || '');
-    let close = () => {};
-    close = mount(card('选择文字', text, [button('完成', () => close(), 'primary')]));
+  // Select text in place: expand the note on the main screen and select its rendered text there.
+  let stopSelecting = null;
+  function selectText({ row }) {
+    if (stopSelecting) stopSelecting();
+    const body = row.querySelector('.note-body');
+    if (!body) return;
+    const toggle = body.nextElementSibling;
+    if (body.classList.contains('is-collapsed') && toggle && toggle.classList.contains('note-expand-btn') && !toggle.hidden) toggle.click();
+    const target = body.classList.contains('is-expanded') ? body.querySelector('.note-full') : body.querySelector('.note-preview');
+    if (!target) return;
+    row.classList.add('pt-selecting');
+    // KaTeX keeps a hidden MathML copy of each formula; leave it out of what gets copied.
+    const onCopy = event => {
+      const selection = window.getSelection();
+      if (!selection.rangeCount || !event.clipboardData) return;
+      const holder = document.createElement('div');
+      holder.append(selection.getRangeAt(0).cloneContents());
+      holder.querySelectorAll('.katex-mathml').forEach(el => el.remove());
+      holder.style.cssText = 'position:fixed;left:-9999px;white-space:pre-wrap';
+      document.body.append(holder);
+      const text = holder.innerText;
+      holder.remove();
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+    };
+    const onChange = () => { if (!String(window.getSelection()).length) stopSelecting(); };
+    stopSelecting = () => {
+      row.classList.remove('pt-selecting');
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('selectionchange', onChange);
+      stopSelecting = null;
+    };
+    document.addEventListener('copy', onCopy);
     const range = document.createRange();
-    range.selectNodeContents(text);
+    range.selectNodeContents(target);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+    setTimeout(() => document.addEventListener('selectionchange', onChange), 0);
   }
   async function copyNote({ item }) {
     const ok = await copyTextToClipboard(formatNoteTextForCopy(item));
@@ -122,6 +150,7 @@
     if (target.closest('input, textarea, .modal-overlay, .pt-sheet-mask')) return;
     const hit = rowItem(target);
     if (!hit || !hit.item) return;
+    if (hit.row.classList.contains('pt-selecting')) return;
     event.preventDefault();
     send('haptic');
     openSheet([

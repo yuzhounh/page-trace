@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.10.11
+// @version      1.10.12
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -896,7 +896,7 @@
 
     const textarea = document.createElement('textarea');
     textarea.className = 'pt-textarea';
-    textarea.placeholder = '输入随手笔记 / 摘要 / 标签...';
+    textarea.placeholder = '输入随手笔记 / 摘要 / 标签...\n支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$';
     textarea.rows = 3;
 
     const saveBtn = document.createElement('button');

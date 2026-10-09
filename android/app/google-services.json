@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "118528854647",
+    "project_id": "page-trace-app",
+    "storage_bucket": "page-trace-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:118528854647:android:f8f82e6bebedc7937a5472",
+        "android_client_info": {
+          "package_name": "com.pagetrace.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "118528854647-bnsrj9ag7gcs8ssrug6ig4amepn1lmhq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pagetrace.app",
+            "certificate_hash": "73768b3a723430d743ce3928d9adfb36aeb15f75"
+          }
+        },
+        {
+          "client_id": "118528854647-n0bqug8osm0e8go98uicrqevvqjtu5f0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAR2EB6juU-Mmo87rqOEBKEKBcWALvU6WY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "118528854647-n0bqug8osm0e8go98uicrqevvqjtu5f0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
