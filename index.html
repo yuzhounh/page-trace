@@ -2988,7 +2988,7 @@
                     <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
                   </div>
                 </div>
-                <div class="skeleton-bone" style="width: 88%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 100%; height: 14px; margin-top: 10px;"></div>
                 <div class="skeleton-bone" style="width: 62%; height: 14px; margin-top: 6px;"></div>
                 <div class="skeleton-meta">
                   <div class="skeleton-bone" style="width: 72px; height: 11px;"></div>
@@ -3004,7 +3004,8 @@
                     <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
                   </div>
                 </div>
-                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 100%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 76%; height: 14px; margin-top: 6px;"></div>
                 <div class="skeleton-meta">
                   <div class="skeleton-bone" style="width: 60px; height: 11px;"></div>
                   <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
@@ -3019,9 +3020,8 @@
                     <div class="skeleton-bone" style="width: 18px; height: 18px; border-radius: 4px;"></div>
                   </div>
                 </div>
-                <div class="skeleton-bone" style="width: 92%; height: 14px; margin-top: 10px;"></div>
-                <div class="skeleton-bone" style="width: 80%; height: 14px; margin-top: 6px;"></div>
-                <div class="skeleton-bone" style="width: 45%; height: 14px; margin-top: 6px;"></div>
+                <div class="skeleton-bone" style="width: 100%; height: 14px; margin-top: 10px;"></div>
+                <div class="skeleton-bone" style="width: 48%; height: 14px; margin-top: 6px;"></div>
                 <div class="skeleton-meta">
                   <div class="skeleton-bone" style="width: 85px; height: 11px;"></div>
                   <div class="skeleton-bone" style="width: 36px; height: 11px;"></div>
@@ -3057,9 +3057,8 @@
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
-          <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签..." aria-describedby="createNoteHint"></textarea>
+          <textarea class="form-input" id="createNoteInput" rows="4" placeholder="输入随手笔记 / 摘要 / 标签...&#10;支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$"></textarea>
           <div class="input-action-row">
-            <p class="note-format-hint" id="createNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
             <button class="input-send-btn" id="btnSubmitCreate" title="保存 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -3211,9 +3210,8 @@
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">速记备注</label>
         <div class="create-input-wrap">
-          <textarea class="form-input" id="editNote" rows="4" placeholder="输入随手笔记 / 摘要..." aria-describedby="editNoteHint"></textarea>
+          <textarea class="form-input" id="editNote" rows="4" placeholder="输入随手笔记 / 摘要 / 标签...&#10;支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$"></textarea>
           <div class="input-action-row">
-            <p class="note-format-hint" id="editNoteHint">支持 Markdown；行内公式 $x^2$，独立公式 $$x^2$$</p>
             <button class="input-send-btn" id="btnSaveEdit" title="保存更改 (Shift+Enter / Ctrl+Enter)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
