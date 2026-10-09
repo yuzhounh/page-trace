@@ -13,7 +13,7 @@ function setup(initialDraft, native = true) {
     document: { addEventListener() {} }, localStorage: {
       getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key)
     }, showCreateModal: () => { ctx.open = true; }, hideCreateModal: () => { ctx.open = false; },
-    createModal: { classList: { contains: () => ctx.open } }, showUndoToast: () => { ctx.saved = true; },
+    createModal: { classList: { contains: () => ctx.open } }, showUndoToast: (message, undo, duration, icon) => { if (icon === '⚠️') ctx.error = message; else ctx.saved = true; },
     firebase: { auth: { GoogleAuthProvider: { credential: token => ({ token }) } } },
     auth: { signInWithCredential: async credential => { ctx.credential = credential; } }
   };
