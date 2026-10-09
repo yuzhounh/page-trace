@@ -1,0 +1,33 @@
+/* Touch layer (phones and tablets, web and app): active when touch-ui.js marks the page with .is-touch. */
+.is-touch .note-side-col { display: none !important; }
+.is-touch .note-expand-btn { display: none !important; }
+.is-touch .note-title { max-width: 100% !important; }
+.is-touch .note-item-row:has(.note-header.no-title) .note-quote:first-of-type { padding-right: 0 !important; }
+.is-touch .note-item-row.pt-selecting { -webkit-user-select: text; user-select: text; }
+.is-touch .note-item-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+.pt-sheet-mask { position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.4); }
+.pt-sheet {
+  position: absolute; left: 12px; right: 12px; margin: 0 auto; max-width: 420px; box-sizing: border-box;
+  background: var(--modal-bg); color: var(--text); border-radius: 20px; padding: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25); display: flex; flex-direction: column;
+}
+.pt-sheet > button {
+  display: flex; align-items: center; gap: 16px; height: 56px; padding: 0 16px; background: none; border: 0;
+  border-radius: 12px; color: var(--text); font: inherit; font-size: 15px; text-align: left;
+}
+.pt-sheet > button:active { background: var(--border); }
+.pt-sheet > button svg { flex: none; color: var(--text-muted); }
+.pt-sheet > button.danger, .pt-sheet > button.danger svg { color: var(--danger); }
+.pt-card { padding: 20px 20px 12px; gap: 12px; }
+.pt-card h3 { margin: 0; font-size: 16px; }
+.pt-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+.pt-detail-row { padding: 10px 0; border-top: 1px solid var(--divider); font-size: 14px; word-break: break-all; }
+.pt-detail-row:first-of-type { border-top: 0; }
+.pt-card .pt-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.pt-card .pt-actions button {
+  min-width: 88px; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; font: inherit; font-size: 14px;
+  background: var(--border); color: var(--text);
+}
+.pt-card .pt-actions button.primary { background: var(--primary); color: #fff; }
+.pt-card .pt-actions button.danger { background: var(--danger); color: #fff; }
