@@ -8,6 +8,15 @@
 .is-android .note-item-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .is-android :is(.auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x, .search-bar-clear-btn,
   .toast-close-btn, .input-send-btn) { min-width: 44px; min-height: 44px; }
+/* Year / month / today / copy: spread out and taller for easier taps, but still on one row at large system font sizes. */
+.is-android .nav-arrow-btn { min-width: 32px; width: 32px !important; }
+.is-android :is(.nav-pill-btn, .nav-today-btn, .nav-action-btn, .nav-arrow-btn) {
+  height: 36px !important; min-height: 36px !important; max-height: 36px !important; line-height: 34px !important;
+}
+.is-android :is(.nav-pill-btn, .nav-today-btn, .nav-action-btn) { padding: 0 8px !important; }
+.is-android .month-nav-bar { gap: 4px; padding-inline: 6px; }
+.is-android .month-nav-left { gap: 10px; min-width: 0; }
+.is-android .nav-month-wrap { gap: 6px; }
 .is-android :is(.trash-btn, .toast-undo-btn, .dropdown-actions-group button, .note-expand-btn) { min-height: 44px; }
 .is-android :is(input, textarea, select) { font-size: 16px; }
 .is-android .modal-overlay { padding: 8px; }
