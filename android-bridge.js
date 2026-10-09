@@ -16,14 +16,23 @@
   window.PageTraceAndroid = {
     receive(payload) {
       if (btnSubmitCreate.disabled) return false;
-      if (fields.some(field => field.value.trim()) && !confirm('当前还有未保存的速记，是否用新分享的内容替换？')) return true;
+      const message = '当前还有未保存的速记，是否用新分享的内容替换？';
+      const dirty = fields.some(field => field.value.trim());
+      if (dirty && window.PageTraceAndroid.confirm) {
+        window.PageTraceAndroid.confirm(message, '替换').then(ok => { if (ok) window.PageTraceAndroid.apply(payload); });
+        return true;
+      }
+      if (dirty && !confirm(message)) return true;
+      window.PageTraceAndroid.apply(payload);
+      return true;
+    },
+    apply(payload) {
       const text = String(payload.text || '');
       const match = text.match(/https?:\/\/[^\s<>"\u3000]+/i);
       const url = match ? match[0].replace(/[，。！？、；：）】》」』,.!?;:)\]]+$/u, '') : '';
       const note = url ? text.replace(url, '').trim() : text;
       const title = String(payload.title || '').trim();
       fill({ title: title === url ? '' : title, url, note });
-      return true;
     },
     signIn() { persist(); window.PageTraceNative.postMessage('signIn'); },
     async signedIn(token) {
@@ -39,6 +48,7 @@
     idle() { window.PageTraceNative.postMessage('ready'); },
     back() {
       persist();
+      if (window.PageTraceAndroidUI && window.PageTraceAndroidUI.back()) return true;
       if (!createModal.classList.contains('show')) return false;
       hideCreateModal();
       return true;
