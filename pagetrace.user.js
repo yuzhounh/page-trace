@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.11.1
+// @version      1.11.2
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -176,29 +176,44 @@
       throw new Error('认证凭证失效，请重新登录');
     }
 
-    const endpoint = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(uid)}/notes?key=${encodeURIComponent(apiKey)}`;
+    if (CONFIG.uid !== uid) throw new Error('登录账户已经改变，请重新保存');
+    const pendingKey = `pagetrace_pending_save_${projectId}_${uid}_${encodeURIComponent(url.split('#')[0])}`;
+    const readPending = () => typeof GM_getValue === 'function' ? GM_getValue(pendingKey, null)
+      : JSON.parse(sessionStorage.getItem(pendingKey) || 'null');
+    let operation = readPending();
+    const content = note || '';
+    if (!operation || !/^[a-f0-9]{32}$/.test(operation.id) || operation.title !== title || operation.url !== url || operation.note !== content) {
+      operation = {
+        id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join(''),
+        title, url, note: content, createdAt: new Date().toISOString()
+      };
+      if (typeof GM_setValue === 'function') GM_setValue(pendingKey, operation);
+      else sessionStorage.setItem(pendingKey, JSON.stringify(operation));
+    }
+    const endpoint = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(uid)}/notes`;
+    const apiQuery = `key=${encodeURIComponent(apiKey)}`;
 
     const docBody = {
       fields: {
         title: { stringValue: title },
         url: { stringValue: url },
-        note: { stringValue: note || '' },
+        note: { stringValue: content },
         status: { stringValue: 'inbox' },
-        createdAt: { timestampValue: new Date().toISOString() },
+        createdAt: { timestampValue: operation.createdAt },
         source: { stringValue: 'userscript' }
       }
     };
 
-    return new Promise((resolve, reject) => {
+    const request = (method, requestUrl, body) => new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
-        method: 'POST',
-        url: endpoint,
+        method,
+        url: requestUrl,
         timeout: 15000,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        data: JSON.stringify(docBody),
+        ...(body ? { data: JSON.stringify(body) } : {}),
         ontimeout: function () {
           reject(new Error('网络请求超时，请检查网络并重试'));
         },
@@ -216,7 +231,7 @@
               const errObj = JSON.parse(res.responseText);
               if (errObj.error?.message) errorMsg += `: ${errObj.error.message}`;
             } catch (_) {}
-            reject(new Error(errorMsg));
+            reject(Object.assign(new Error(errorMsg), { status: res.status }));
           }
         },
         onerror: function (err) {
@@ -224,6 +239,26 @@
         }
       });
     });
+    let result;
+    try {
+      result = await request('POST', `${endpoint}?${apiQuery}&documentId=${operation.id}`, docBody);
+    } catch (error) {
+      if (error.status !== 409) throw error;
+      if (CONFIG.uid !== uid) throw new Error('登录账户已经改变，请重新保存');
+      result = await request('GET', `${endpoint}/${operation.id}?${apiQuery}`);
+      const fields = result.fields || {};
+      if (fields.title?.stringValue !== title || fields.url?.stringValue !== url ||
+          fields.note?.stringValue !== content || fields.source?.stringValue !== 'userscript' ||
+          Date.parse(fields.createdAt?.timestampValue) !== Date.parse(operation.createdAt)) {
+        throw new Error('已有记录与待提交内容不同，草稿已保留，请检查后重试');
+      }
+    }
+    if (CONFIG.uid !== uid) throw new Error('登录账户已经改变，待提交记录已保留');
+    if (readPending()?.id === operation.id) {
+      if (typeof GM_deleteValue === 'function') GM_deleteValue(pendingKey);
+      else sessionStorage.removeItem(pendingKey);
+    }
+    return result;
   }
 
   // ==========================================
