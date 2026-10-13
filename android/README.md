@@ -1,6 +1,6 @@
-# PageTrace Android 1.11.0
+# PageTrace Android 1.11.1
 
-安装包：`../dist/PageTrace-1.11.0.apk`。最低 Android 8.0；Google 登录需要可用的 Google Play 服务和网络。沿用 1.0.0 的签名，可直接覆盖安装，无需卸载。
+安装包：`../dist/PageTrace-1.11.1.apk`。最低 Android 8.0；Google 登录需要可用的 Google Play 服务和网络。沿用 1.0.0 的签名，可直接覆盖安装，无需卸载。1.11.1 包含当前触屏排版更新，Web、Android 与油猴脚本版本号统一。
 
 1.11.0 手机网页版和 APK 统一为长按菜单：触屏设备（手机、平板）上去掉“···”按钮和“展开/收起”按钮，长按笔记弹出编辑、选择文字、复制、分享、删除、笔记详情，点备注正文展开、再点收起；网页版首次使用提示一次“长按笔记可编辑、复制、删除”。共用代码拆为 touch-ui.js / touch-ui.css，APK 专属内容仍在 android-ui.css。年份、月份下拉菜单项不换行、数量标签不换行。
 
