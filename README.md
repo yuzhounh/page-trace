@@ -21,13 +21,13 @@
 PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**油猴扩展插件**与**云端实时速记看板**两部分组成：
 
 - **油猴端**：在网页右下角常驻微交互磨砂玻璃胶囊，支持一键复制网页标题与网址、随时呼出 4 行速记输入卡片，通过轻量 REST API 直接同步至云端 Firestore，无需配置任何 Firebase 密钥。
-- **Web 看板**：基于 Firebase 驱动的实时管理面板，支持实时同步（onSnapshot）、卡片展示、全局搜索（Spotlight 风格）、在线速记与多端协同管理。
+- **Web 看板**：默认按月从 Firebase 加载并实时同步，切月复用对应缓存；输入搜索关键词后才加载历史全文，保留标题、网址与正文的全局搜索。未加载月份明确标注，回收站独立查询全部删除记录。
 
 ## 快速开始
 
 ### 第一步：安装脚本
 
-当前源码与配套脚本版本为 **1.11.2**，已修复保存确认丢失后的重复提交。本次只修改用户脚本；已有 Android 安装包仍为 **1.11.1**。从 [Cloudflare 安装当前脚本](https://page-trace.pages.dev/pagetrace.user.js)，或使用 [GitHub 源码入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js)。GitHub Release 和 Greasy Fork 的版本需另行同步：
+当前源码、油猴脚本与 Android 构建版本均为 **1.13.0**（Android versionCode 11），包含共享缓存、按月加载和按需全局搜索。APK 通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.0) 分发。油猴可从 [Cloudflare 安装脚本](https://page-trace.pages.dev/pagetrace.user.js)，或使用 [GitHub 源码入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新；Greasy Fork 的版本需另行同步：
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 

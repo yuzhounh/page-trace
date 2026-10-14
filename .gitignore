@@ -10,3 +10,4 @@ __pycache__/
 dist/
 firebase-debug.log
 node_modules/
+tmp/

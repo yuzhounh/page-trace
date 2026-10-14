@@ -28,7 +28,7 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
   const p = { store, sent: [], openerMessages: [], requests: [], subscriptions: [], closed: false };
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, { style: {}, textContent: '', className: '',
-      handlers: {}, classList: { remove() {} },
+      handlers: {}, classList: { remove() {}, contains() { return false; } },
       addEventListener(type, callback) { this.handlers[type] = callback; } });
     return elements.get(id);
   };
@@ -72,9 +72,15 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
     firebase: { apps: [{}], auth: firebaseAuth, initializeApp() {} },
     firebaseConfig, auth: p.auth, currentUser: null, notesData: [], unsubscribeNotes: null,
     bindFirestoreRealtime: (uid) => p.subscriptions.push(uid), renderList() {},
+    getSkeletonHtml: () => '<div>Loading</div>',
+    currentSearchKeyword: '', selectedYear: String(new Date().getFullYear()),
+    selectedMonth: String(new Date().getMonth() + 1).padStart(2, '0'),
+    updateMonthNavigator() {}, getTargetNotes: () => [],
+    navigator: { onLine: true },
     GM_getValue: (key, fallback) => store.has(key) ? store.get(key) : fallback,
     GM_setValue: (key, value) => store.set(key, value),
     GM_deleteValue: (key) => store.delete(key),
+    GM_listValues: () => [...store.keys()],
     GM_xmlhttpRequest(options) {
       p.requests.push(options);
       options.onload({ status: 200, responseText: JSON.stringify(options.url.includes('securetoken')
@@ -87,7 +93,7 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
     clearTimeout: (id) => timers.delete(id)
   };
   for (const id of ['loginBtn', 'avatarBtn', 'avatarImg', 'avatarFallback', 'dropdownAvatar',
-    'dropdownName', 'dropdownEmail', 'userDropdown']) sandbox[id] = element(id);
+    'dropdownName', 'dropdownEmail', 'userDropdown', 'notesList', 'trashModal']) sandbox[id] = element(id);
   p.context = vm.createContext(sandbox);
   sandbox.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
   sandbox.updateMobileAccountUI = () => {};
@@ -244,7 +250,7 @@ test('dashboard synchronizes login, token updates, account switches, and logout 
   await p.flush();
   assert.equal(p.store.get('pt_id_token'), 'updated-bob');
   assert.equal(p.closed, false);
-  assert.deepEqual(p.subscriptions, ['alice', 'bob', 'bob']);
+  assert.deepEqual(p.subscriptions, ['alice', 'bob']);
   await p.setUser(null);
   await p.flush();
   assert.equal(p.store.size, 0);
@@ -295,7 +301,7 @@ test('dashboard rejects external handshake and forged script logout', async () =
   p.emit({ source: 'PAGETRACE_PING', nonce }, 'https://evil.example');
   p.emit({ source: 'PAGETRACE_PING', nonce }, undefined, {});
   await p.flush();
-  assert.equal(p.sent.length, 0);
+  assert.equal(p.sent.filter(({ data }) => data.source === 'PAGETRACE_AUTH_SUCCESS').length, 0);
   p.loadUserscript();
   await p.flush();
   p.emit({ source: 'PAGETRACE_SCRIPT_LOGOUT', nonce: p.nonce() }, 'https://evil.example');

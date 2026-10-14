@@ -2896,6 +2896,8 @@
       </aside>
     </div>
 
+    <p id="notesLoadStatus" role="status" style="display:none;color:var(--text-muted);padding:8px 0;font-size:13px"></p>
+
     <!-- 顶部内联搜索栏（即输即见，实时过滤） -->
     <div class="search-bar-container" id="searchBarContainer">
       <div class="search-bar-inner">
@@ -3465,6 +3467,30 @@
 
     let authBridgeNonce = '';
     let authStateReady = false;
+    let notesCacheUid = '';
+    let notesSubscriptionUid = '';
+    let notesListenerGeneration = 0;
+    let hasCompleteNotesCache = false;
+    let hasServerNotesSnapshot = false;
+    let lastNotesSignature = null;
+    let settledSharedIds = new Set();
+    let sharedSavedNotes = new Map();
+    let sharedCacheRequest = null;
+    let activeNotesScope = null;
+    let notesSubscriptionScope = '';
+    let scopeCaches = new Map();
+    let notesScopeLoading = false;
+    let notesScopeError = '';
+    let calendarMinYear = new Date().getFullYear() - 12;
+    let calendarMaxYear = new Date().getFullYear();
+    let calendarBoundsUid = '';
+    let trashNotesData = [];
+    let trashLoading = false;
+    let trashClearing = false;
+    let trashComplete = false;
+    let trashError = '';
+    let unsubscribeTrash = null;
+    let trashGeneration = 0;
 
     // 仅在本页油猴脚本完成握手后同步凭据。
     async function syncAuthToUserscript(user) {
@@ -3543,27 +3569,266 @@
       return raw;
     }
 
-    function saveNotesToCache(uid, list) {
-      if (!uid || !Array.isArray(list)) return;
+    function noteContentSignature(note) {
+      const raw = serializeNoteForCache(note);
+      delete raw.serverCreateTime;
+      delete raw.serverUpdateTime;
+      if (!raw.isDeleted) delete raw.isDeleted;
+      for (const field of ['createdAt', 'updatedAt', 'deletedAt']) {
+        if (raw[field] == null) delete raw[field];
+        else {
+          const date = new Date(raw[field]);
+          raw[field] = Number.isFinite(date.getTime()) ? date.toISOString() : String(raw[field]);
+        }
+      }
+      return JSON.stringify(Object.keys(raw).sort().map(key => [key, raw[key]]));
+    }
+
+    function applyNotesData(list) {
+      const known = new Map([...notesData, ...[...sharedSavedNotes.values()].filter(note => !settledSharedIds.has(note.id))].map(note => [note.id, note]));
+      notesData = list.map(note => {
+        const raw = serializeNoteForCache(note);
+        const previous = known.get(raw.id);
+        // Web SDK 不返回系统版本；只有正文仍匹配时才保留保存响应的版本。
+        if (previous && noteContentSignature(previous) === noteContentSignature(raw)) {
+          raw.serverCreateTime = previous.serverCreateTime || raw.serverCreateTime || null;
+          raw.serverUpdateTime = previous.serverUpdateTime || raw.serverUpdateTime || null;
+        }
+        return raw;
+      }).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || a.id.localeCompare(b.id));
+      const signature = JSON.stringify(notesData.map(noteContentSignature));
+      saveNotesToCache(notesCacheUid, notesData);
+      updateNotesStatus();
+      updateMonthNavigator();
+      if (signature === lastNotesSignature) return;
+      const scrollY = window.scrollY;
+      lastNotesSignature = signature;
+      renderList();
+      updateNotesStatus();
+      if (Number.isFinite(scrollY) && scrollY > 0) window.scrollTo({ top: scrollY, behavior: 'instant' });
+      if (trashModal && trashModal.classList.contains('show')) renderTrashModal();
+    }
+
+    function mergeSharedNotes(list) {
+      const merged = new Map(list.map(note => [note.id, note]));
+      for (const [id, note] of sharedSavedNotes) {
+        if (!settledSharedIds.has(id) && !merged.has(id) && noteInScope(note, activeNotesScope)) merged.set(id, note);
+      }
+      return [...merged.values()];
+    }
+
+
+    function selectedNotesScope() {
+      if (currentSearchKeyword.trim() || selectedYear === 'all') return { key: 'all', start: null, end: null };
+      const year = Number(selectedYear);
+      const month = selectedMonth === 'all' ? null : Number(selectedMonth) - 1;
+      const start = new Date(year, month === null ? 0 : month, 1).getTime();
+      const end = new Date(month === null ? year + 1 : year, month === null ? 0 : month + 1, 1).getTime();
+      return { key: `${month === null ? 'year' : 'month'}:${selectedYear}${month === null ? '' : '-' + selectedMonth}:${start}`, start, end };
+    }
+
+    function noteInScope(note, scope) {
+      if (!scope || scope.start === null) return true;
+      const date = note.createdAt?.toDate ? note.createdAt.toDate().getTime() : Date.parse(note.createdAt);
+      return date >= scope.start && date < scope.end;
+    }
+
+    function scopeStorageKey(uid, scope) {
+      return `pagetrace_scope_v3_${uid}_${scope.key}`;
+    }
+
+    function persistScopeCache(uid, state) {
+      if (state.scope.key === 'all') return; // 搜索全文只在本次页面会话复用。
       try {
-        const serialized = list.map(serializeNoteForCache);
-        localStorage.setItem('pagetrace_notes_cache_' + uid, JSON.stringify(serialized));
-      } catch (e) {
-        console.warn('[PageTrace] 写入本地笔记缓存失败:', e);
+        const key = scopeStorageKey(uid, state.scope);
+        const value = JSON.stringify({ version: 3, scope: state.scope, complete: state.complete, notes: state.notes, touched: Date.now() });
+        const indexKey = `pagetrace_scope_index_v3_${uid}`;
+        let index = JSON.parse(localStorage.getItem(indexKey) || '[]').filter(item => item.key !== key);
+        index.push({ key, bytes: value.length * 2, touched: Date.now() });
+        index.sort((a, b) => Number(b.key === key) - Number(a.key === key) || b.touched - a.touched);
+        let bytes = 0;
+        index = index.filter((item, i) => {
+          bytes += item.bytes;
+          if (i === 0 || (i < 12 && bytes <= 3 * 1024 * 1024)) return true;
+          localStorage.removeItem(item.key);
+          return false;
+        });
+        localStorage.setItem(key, value);
+        localStorage.setItem(indexKey, JSON.stringify(index));
+        return true;
+      } catch (error) {
+        console.warn('[PageTrace] 写入月份缓存失败，仍保留当前会话数据:', error);
+        return false;
       }
     }
 
-    function loadNotesFromCache(uid) {
-      if (!uid) return null;
+    function readScopeCache(uid, scope) {
       try {
-        const cachedStr = localStorage.getItem('pagetrace_notes_cache_' + uid);
-        if (!cachedStr) return null;
-        const parsed = JSON.parse(cachedStr);
-        return Array.isArray(parsed) ? parsed : null;
-      } catch (e) {
-        console.warn('[PageTrace] 读取本地笔记缓存失败:', e);
-        return null;
+        const value = JSON.parse(localStorage.getItem(scopeStorageKey(uid, scope)) || 'null');
+        if (value?.version === 3 && Array.isArray(value.notes)) return value;
+        if (scope.key !== 'all' && localStorage.getItem(`pagetrace_scope_migrated_v3_${uid}`) === 'true') return null;
+        // 首次兼容旧全量缓存，只把当前范围交给首屏；之后正常启动不读取它。
+        const legacy = JSON.parse(localStorage.getItem('pagetrace_notes_cache_' + uid) || 'null');
+        const notes = Array.isArray(legacy) ? legacy : legacy?.version === 2 ? legacy.notes : null;
+        if (!Array.isArray(notes) || legacy?.complete === false) return null;
+        if (Array.isArray(legacy?.settledIds)) for (const id of legacy.settledIds) settledSharedIds.add(id);
+        const state = { scope, complete: true, notes: notes.filter(note => note && typeof note.id === 'string' && noteInScope(note, scope)) };
+        if (scope.key !== 'all') {
+          const months = new Map();
+          let unclassified = false;
+          for (const note of notes) {
+            const date = getItemDate(note);
+            if (!date || !Number.isFinite(date.getTime())) { unclassified = true; continue; }
+            const year = date.getFullYear(), month = date.getMonth();
+            const start = new Date(year, month, 1).getTime(), end = new Date(year, month + 1, 1).getTime();
+            const key = `month:${year}-${String(month + 1).padStart(2, '0')}:${start}`;
+            if (!months.has(key)) months.set(key, { scope: { key, start, end }, complete: true, notes: [] });
+            months.get(key).notes.push(note);
+          }
+          let stored = true;
+          for (const entry of [...months.values()].sort((a, b) => a.scope.start - b.scope.start)) {
+            stored = persistScopeCache(uid, entry) && stored;
+          }
+          stored = persistScopeCache(uid, state) && stored;
+          if (stored) {
+            localStorage.setItem(`pagetrace_shared_settled_v3_${uid}`, JSON.stringify([...settledSharedIds]));
+            localStorage.setItem(`pagetrace_scope_migrated_v3_${uid}`, 'true');
+            if (!unclassified) localStorage.removeItem('pagetrace_notes_cache_' + uid);
+          }
+        }
+        return state;
+      } catch (_) { return null; }
+    }
+
+    function prepareNotesCache(uid) {
+      const scope = selectedNotesScope();
+      if (notesCacheUid === uid && activeNotesScope?.key === scope.key) return;
+      if (unsubscribeNotes) unsubscribeNotes();
+      unsubscribeNotes = null;
+      notesSubscriptionUid = '';
+      notesSubscriptionScope = '';
+      notesListenerGeneration++;
+      if (notesCacheUid !== uid) {
+        scopeCaches = new Map();
+        settledSharedIds = new Set();
+        try {
+          const ids = JSON.parse(localStorage.getItem(`pagetrace_shared_settled_v3_${uid}`) || '[]');
+          if (Array.isArray(ids)) settledSharedIds = new Set(ids);
+        } catch (_) {}
+        if (unsubscribeTrash) unsubscribeTrash();
+        unsubscribeTrash = null;
+        trashGeneration++;
+        trashNotesData = [];
+        trashComplete = false;
+        trashLoading = false;
+        trashClearing = false;
+        trashModal.classList.remove('show');
       }
+      notesCacheUid = uid;
+      if (activeNotesScope?.key === 'all' && scope.key !== 'all') scopeCaches.delete('all');
+      activeNotesScope = scope;
+      notesScopeLoading = true;
+      notesScopeError = '';
+      hasServerNotesSnapshot = false;
+      lastNotesSignature = null;
+      sharedSavedNotes = new Map();
+      const state = scopeCaches.get(scope.key) || readScopeCache(uid, scope);
+      hasCompleteNotesCache = !!state?.complete;
+      if (state) notesData = state.notes;
+      else if (scope.key === 'all') {
+        const known = new Map();
+        for (const entry of scopeCaches.values()) for (const note of entry.notes) known.set(note.id, note);
+        notesData = [...known.values()];
+      } else notesData = [];
+      notesList.innerHTML = getSkeletonHtml();
+      updateNotesStatus();
+      updateMonthNavigator();
+    }
+
+    function requestSharedNotes(uid) {
+      const scope = activeNotesScope;
+      if (sharedCacheRequest?.uid === uid && sharedCacheRequest.scopeKey === scope.key) return sharedCacheRequest.promise;
+      if (sharedCacheRequest) {
+        clearTimeout(sharedCacheRequest.timer);
+        clearInterval(sharedCacheRequest.retry);
+        sharedCacheRequest.resolve(false);
+      }
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      const request = { uid, scopeKey: scope.key, start: scope.start, end: scope.end,
+        nonce: Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('') };
+      request.promise = new Promise(resolve => { request.resolve = resolve; });
+      sharedCacheRequest = request;
+      const send = () => sendSharedNotesRequest(request);
+      request.retry = setInterval(send, 50);
+      request.timer = setTimeout(() => { clearInterval(request.retry); request.resolve(false); }, 250);
+      send();
+      return request.promise;
+    }
+
+    function sendSharedNotesRequest(request) {
+      window.postMessage({ source: 'PAGETRACE_CACHE_REQUEST', nonce: request.nonce, uid: request.uid,
+        start: request.start, end: request.end }, window.location.origin);
+    }
+
+    function activateSelectedScope() {
+      if (!currentUser) return;
+      const uid = currentUser.uid;
+      const selected = selectedNotesScope();
+      if (notesCacheUid === uid && activeNotesScope?.key === selected.key &&
+          notesSubscriptionUid === uid && notesSubscriptionScope === selected.key && !notesScopeError) return;
+      prepareNotesCache(uid);
+      const key = activeNotesScope.key;
+      requestSharedNotes(uid).then(ready => {
+        if (currentUser?.uid !== uid || activeNotesScope?.key !== key) return;
+        if (ready || window.PageTraceNative || navigator.onLine === false) applyNotesData(mergeSharedNotes(notesData));
+        if (authStateReady && auth.currentUser?.uid === uid &&
+            (notesSubscriptionUid !== uid || notesSubscriptionScope !== key)) {
+          notesSubscriptionUid = uid;
+          notesSubscriptionScope = key;
+          bindFirestoreRealtime(uid);
+        }
+      });
+    }
+
+    function saveNotesToCache(uid, list) {
+      if (!uid || !activeNotesScope || !Array.isArray(list)) return;
+      const state = { scope: activeNotesScope, complete: hasCompleteNotesCache, notes: list.map(serializeNoteForCache), touched: Date.now() };
+      scopeCaches.delete(state.scope.key);
+      scopeCaches.set(state.scope.key, state);
+      while (scopeCaches.size > 12) scopeCaches.delete(scopeCaches.keys().next().value);
+      persistScopeCache(uid, state);
+      if (state.scope.key === 'all' && state.complete) {
+        for (const entry of scopeCaches.values()) {
+          if (entry.scope.key === 'all') continue;
+          entry.notes = state.notes.filter(note => noteInScope(note, entry.scope));
+          entry.complete = true;
+          persistScopeCache(uid, entry);
+        }
+      }
+      try { localStorage.setItem(`pagetrace_shared_settled_v3_${uid}`, JSON.stringify([...settledSharedIds])); }
+      catch (_) {}
+    }
+
+    function loadNotesFromCache(uid) {
+      const state = readScopeCache(uid, activeNotesScope || selectedNotesScope());
+      return state?.complete ? state.notes : null;
+    }
+
+    function updateNotesStatus() {
+      const status = document.getElementById('notesLoadStatus');
+      const global = activeNotesScope?.key === 'all';
+      const message = notesScopeError || (notesScopeLoading ? (global ? '正在加载历史笔记，结果尚未完整…' : '正在同步所选月份…') : '');
+      if (status) { status.textContent = message; status.style.display = message ? 'block' : 'none'; }
+      const copy = document.getElementById('btnCopyAllNotes');
+      if (copy) copy.disabled = !currentUser || !!notesScopeError || notesScopeLoading || !hasCompleteNotesCache;
+      if (currentSearchKeyword.trim()) {
+        searchCountBadge.style.display = 'inline-block';
+        searchCountBadge.textContent = notesScopeLoading || !hasCompleteNotesCache || notesScopeError
+          ? `${notesScopeError ? '加载失败' : '检索中'} · 已找到 ${getTargetNotes().length} 条` : `共 ${getTargetNotes().length} 条`;
+      }
+      const empty = notesList.querySelector?.('.notes-empty-message');
+      if (empty) empty.textContent = message || (currentSearchKeyword.trim() ? '未找到匹配的笔记' : '该月份暂无笔记');
     }
 
     function saveUserToCache(user) {
@@ -3615,16 +3880,8 @@
       dropdownName.textContent = cachedUser.displayName || '未设置昵称';
       dropdownEmail.textContent = cachedUser.email || '';
 
-      const cachedNotes = loadNotesFromCache(cachedUser.uid);
-      if (cachedNotes && cachedNotes.length > 0) {
-        notesData = cachedNotes;
-        notesData.sort((a, b) => {
-          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
-          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
-          return tB - tA;
-        });
-        renderList();
-      }
+      activateSelectedScope();
+
     })();
 
     // 监听 Google 登录状态及 Token 自动刷新
@@ -3652,18 +3909,42 @@
         dropdownName.textContent = user.displayName || '未设置昵称';
         dropdownEmail.textContent = user.email || '';
 
-        bindFirestoreRealtime(user.uid);
-
         // 同步登录态到油猴插件
         syncAuthToUserscript(user);
+        activateSelectedScope();
+
       } else {
         localStorage.removeItem('pagetrace_last_user');
         loginBtn.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
         userDropdown.classList.remove('show');
         if (unsubscribeNotes) unsubscribeNotes();
+        unsubscribeNotes = null;
+        notesSubscriptionUid = '';
+        notesCacheUid = '';
+        activeNotesScope = null;
+        scopeCaches.clear();
+        notesSubscriptionScope = '';
+        notesScopeLoading = false;
+        notesScopeError = '';
+        if (unsubscribeTrash) unsubscribeTrash();
+        unsubscribeTrash = null;
+        trashGeneration++;
+        trashNotesData = [];
+        trashComplete = false;
+        trashLoading = false;
+        notesListenerGeneration++;
+        hasServerNotesSnapshot = false;
+        sharedSavedNotes.clear();
+        if (sharedCacheRequest) {
+          clearTimeout(sharedCacheRequest.timer);
+          clearInterval(sharedCacheRequest.retry);
+          sharedCacheRequest.resolve(false);
+          sharedCacheRequest = null;
+        }
         notesData = [];
         renderList();
+        updateNotesStatus();
 
         // 同步退出登录态到油猴插件
         if (authBridgeNonce) {
@@ -3679,8 +3960,29 @@
       if (e.origin !== window.location.origin || e.source !== window) return;
       const data = e.data;
       if (!data || typeof data !== 'object') return;
-      if (data.source === 'PAGETRACE_PING' && /^[a-f0-9]{32}$/.test(data.nonce || '')) {
+      if (data.source === 'PAGETRACE_CACHE_RESULT') {
+        const request = sharedCacheRequest;
+        if (!request || data.nonce !== request.nonce || data.uid !== request.uid || currentUser?.uid !== data.uid || request.scopeKey !== activeNotesScope?.key) return;
+        clearTimeout(request.timer);
+        clearInterval(request.retry);
+        const ready = Array.isArray(data.records);
+        if (ready) {
+          const currentIds = new Set(notesData.map(note => note.id));
+          for (const note of data.records) {
+            if (!note || !/^[a-f0-9]{32}$/.test(note.id || '') ||
+                !['title', 'url', 'note', 'createdAt'].every(field => typeof note[field] === 'string') ||
+                !Number.isFinite(Date.parse(note.createdAt)) || !noteInScope(note, activeNotesScope)) continue;
+            // 晚到的初始桥接不能恢复服务器快照已删除的笔记。
+            if (!hasServerNotesSnapshot || currentIds.has(note.id) || data.changedId === note.id) {
+              sharedSavedNotes.set(note.id, note);
+            }
+          }
+          applyNotesData(mergeSharedNotes(notesData));
+        }
+        request.resolve(ready);
+      } else if (data.source === 'PAGETRACE_PING' && /^[a-f0-9]{32}$/.test(data.nonce || '')) {
         authBridgeNonce = data.nonce;
+        if (sharedCacheRequest) sendSharedNotesRequest(sharedCacheRequest);
         if (authStateReady && currentUser) {
           syncAuthToUserscript(currentUser);
         } else if (authStateReady) {
@@ -3826,35 +4128,60 @@
     // 实时同步 Firestore 数据库 (onSnapshot)
     function bindFirestoreRealtime(uid) {
       if (unsubscribeNotes) unsubscribeNotes();
-      if (notesData.length === 0) {
+      notesScopeLoading = true;
+      notesScopeError = '';
+      updateNotesStatus();
+      const generation = ++notesListenerGeneration;
+      const scope = activeNotesScope;
+      const initialSharedIds = new Set(sharedSavedNotes.keys());
+      if (lastNotesSignature === null) {
         notesList.innerHTML = getSkeletonHtml();
       }
       startTopSync();
 
-      const ref = db.collection('users').doc(uid).collection('notes');
-      unsubscribeNotes = ref.onSnapshot((snapshot) => {
-        notesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // 按创建时间倒序排序
-        notesData.sort((a, b) => {
-          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
-          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
-          return tB - tA;
-        });
-
-        // 写入本地持久化缓存以供下次秒开
-        saveNotesToCache(uid, notesData);
-        finishTopSync();
-
-        renderList();
-        if (trashModal && trashModal.classList.contains('show')) {
-          renderTrashModal();
+      let ref = db.collection('users').doc(uid).collection('notes');
+      if (scope.start !== null) ref = ref.where('createdAt', '>=', new Date(scope.start))
+        .where('createdAt', '<', new Date(scope.end)).orderBy('createdAt', 'desc');
+      unsubscribeNotes = ref.onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
+        if (generation !== notesListenerGeneration || currentUser?.uid !== uid) return;
+        if (snapshot.metadata.fromCache) {
+          // SDK 的初始空/旧缓存不能覆盖完整首屏；本页待提交操作仍可显示。
+          if (snapshot.metadata.hasPendingWrites) {
+            const merged = new Map(notesData.map(note => [note.id, note]));
+            for (const change of snapshot.docChanges()) {
+              if (change.type === 'removed') {
+                merged.delete(change.doc.id);
+                settledSharedIds.add(change.doc.id);
+              }
+              else merged.set(change.doc.id, { ...change.doc.data(), id: change.doc.id });
+            }
+            applyNotesData([...merged.values()]);
+          }
+          return;
         }
+        const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        hasCompleteNotesCache = !snapshot.metadata.hasPendingWrites;
+        hasServerNotesSnapshot = true;
+        notesScopeLoading = snapshot.metadata.hasPendingWrites;
+        notesScopeError = '';
+        if (!snapshot.metadata.hasPendingWrites) {
+          // 建立监听前已保存的记录包含在本次服务器读取中，缺失即已删除。
+          // 监听期间刚保存的记录要保留，直到快照真正包含它。
+          for (const id of initialSharedIds) settledSharedIds.add(id);
+          for (const note of list) if (sharedSavedNotes.has(note.id)) settledSharedIds.add(note.id);
+          for (const change of snapshot.docChanges()) {
+            if (change.type === 'removed') settledSharedIds.add(change.doc.id);
+          }
+        }
+        applyNotesData(mergeSharedNotes(list));
+        finishTopSync();
       }, (err) => {
+        if (generation !== notesListenerGeneration || currentUser?.uid !== uid) return;
         console.error('拉取笔记失败:', err);
+        notesScopeLoading = false;
+        notesScopeError = '加载失败，请切换月份或重新打开重试。';
+        notesSubscriptionScope = '';
+        updateNotesStatus();
         finishTopSync();
         if (notesData.length === 0) {
           notesList.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">拉取笔记失败: ${err.message}</p></div>`;
@@ -3974,177 +4301,126 @@
       });
     }
 
+
+    function knownCalendarCount(year, month) {
+      if (currentSearchKeyword.trim()) {
+        if (!hasCompleteNotesCache || notesScopeLoading) return null;
+        return getSearchFilteredNotes().filter(note => {
+          const date = getItemDate(note);
+          return date && (year === 'all' || String(date.getFullYear()) === year) &&
+            (month === 'all' || String(date.getMonth() + 1).padStart(2, '0') === month);
+        }).length;
+      }
+      for (const state of [...scopeCaches.values()].reverse()) {
+        if (!state.complete) continue;
+        const covers = state.scope.key === 'all' || (year !== 'all' &&
+          state.scope.start <= new Date(Number(year), month === 'all' ? 0 : Number(month) - 1, 1).getTime() &&
+          state.scope.end >= new Date(month === 'all' ? Number(year) + 1 : Number(year), month === 'all' ? 0 : Number(month), 1).getTime());
+        if (!covers) continue;
+        return state.notes.filter(note => {
+          if (note.isDeleted) return false;
+          const date = getItemDate(note);
+          return (year === 'all' || date && String(date.getFullYear()) === year) &&
+            (month === 'all' || date && String(date.getMonth() + 1).padStart(2, '0') === month);
+        }).length;
+      }
+      return null;
+    }
+
     function updateMonthNavigator() {
-      const searchFiltered = getSearchFilteredNotes();
-      const { yearsMap, totalAll } = getYearAndMonthStats(searchFiltered);
-      const availablePairs = getAllAvailableMonthPairs(searchFiltered);
-
-      if (totalAll === 0) {
-        monthNavBar.classList.remove('show');
-        return;
-      }
-
+      if (!currentUser) { monthNavBar.classList.remove('show'); return; }
       monthNavBar.classList.add('show');
-
-      const sortedYears = Array.from(yearsMap.keys()).sort((a, b) => b.localeCompare(a));
-
-      const isSearching = !!currentSearchKeyword.trim();
-      const now = new Date();
-      const nowYear = String(now.getFullYear());
-      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
-
-      // 初次加载时，若当前年份不存在笔记，自动定位到最新存在笔记的年份与月份
-      if (!hasInitializedFilters) {
-        if (!yearsMap.has(selectedYear)) {
-          if (sortedYears.length > 0) {
-            selectedYear = sortedYears[0];
-            const yData = yearsMap.get(selectedYear);
-            const availMonths = Array.from(yData.months.keys()).sort((a, b) => b.localeCompare(a));
-            selectedMonth = availMonths[0] || 'all';
+      yearCurrentLabel.textContent = selectedYear === 'all' ? '全部年份' : `${selectedYear}年`;
+      monthCurrentLabel.textContent = selectedMonth === 'all' ? '全部月份' : `${Number(selectedMonth)}月`;
+      const selected = selectedYear === 'all' ? new Date().getFullYear() : Number(selectedYear);
+      const min = Math.min(calendarMinYear, selected), max = Math.max(calendarMaxYear, selected);
+      const searched = currentSearchKeyword.trim();
+      const searchStats = searched && hasCompleteNotesCache && !notesScopeLoading && !notesScopeError
+        ? getYearAndMonthStats(getSearchFilteredNotes()) : null;
+      const counts = new Map();
+      let allKnown = !!searchStats;
+      const set = (year, month, count) => { const key = `${year}/${month}`; if (!counts.has(key)) counts.set(key, count); };
+      const addStats = (stats, scope) => {
+        if (scope.key === 'all') {
+          allKnown = true;
+          set('all', 'all', stats.totalAll);
+          for (let month = 1; month <= 12; month++) {
+            const key = String(month).padStart(2, '0');
+            set('all', key, [...stats.yearsMap.values()].reduce((sum, year) => sum + (year.months.get(key) || 0), 0));
+          }
+          for (const [year, entry] of stats.yearsMap) {
+            set(year, 'all', entry.totalCount);
+            for (let month = 1; month <= 12; month++) { const key = String(month).padStart(2, '0'); set(year, key, entry.months.get(key) || 0); }
           }
         } else {
-          // 当前年份存在，检查当前月份是否存在笔记，若无则切到该年最新月份
-          const yData = yearsMap.get(selectedYear);
-          if (yData && !yData.months.has(selectedMonth)) {
-            const availMonths = Array.from(yData.months.keys()).sort((a, b) => b.localeCompare(a));
-            if (availMonths.length > 0) {
-              selectedMonth = availMonths[0];
-            }
+          const period = scope.key.split(':')[1], [year, month] = period.split('-');
+          if (month) set(year, month, stats.totalAll);
+          else {
+            set(year, 'all', stats.totalAll);
+            for (let i = 1; i <= 12; i++) { const key = String(i).padStart(2, '0'); set(year, key, stats.yearsMap.get(year)?.months.get(key) || 0); }
           }
         }
-        hasInitializedFilters = true;
-      } else if (selectedYear !== 'all' && !yearsMap.has(selectedYear) && !(isSearching && selectedYear === nowYear && selectedMonth === nowMonth)) {
-        selectedYear = sortedYears[0] || 'all';
+      };
+      if (searchStats) addStats(searchStats, { key: 'all' });
+      else if (!searched) for (const entry of [...scopeCaches.values()].reverse()) {
+        if (entry.complete) addStats(getYearAndMonthStats(entry.notes.filter(note => !note.isDeleted)), entry.scope);
       }
-
-      // 更新年份按钮文案
-      if (selectedYear === 'all') {
-        yearCurrentLabel.textContent = '全部年份';
-      } else {
-        yearCurrentLabel.textContent = `${selectedYear}年`;
+      const badge = (year, month) => {
+        const count = counts.get(`${year}/${month}`) ?? (allKnown ? 0 : null);
+        return `<span class="nav-count-badge">${count === null ? '未加载' : count + ' 条'}</span>`;
+      };
+      let years = `<div class="nav-dropdown-item ${selectedYear === 'all' ? 'active' : ''}" data-year="all"><span>全部年份</span>${badge('all', 'all')}</div>`;
+      for (let year = max; year >= min; year--) years += `<div class="nav-dropdown-item ${selectedYear === String(year) ? 'active' : ''}" data-year="${year}"><span>${year} 年</span>${badge(String(year), 'all')}</div>`;
+      yearDropdownMenu.innerHTML = years;
+      let months = `<div class="nav-dropdown-item ${selectedMonth === 'all' ? 'active' : ''}" data-month="all"><span>全部月份</span>${badge(selectedYear, 'all')}</div>`;
+      for (let month = 12; month >= 1; month--) {
+        const key = String(month).padStart(2, '0');
+        months += `<div class="nav-dropdown-item ${selectedMonth === key ? 'active' : ''}" data-month="${key}"><span>${month} 月</span>${badge(selectedYear, key)}</div>`;
       }
+      monthDropdownMenu.innerHTML = months;
+      btnPrevMonth.disabled = false;
+      btnNextMonth.disabled = selectedYear === 'all' || selectedMonth === 'all' ||
+        (Number(selectedYear) >= new Date().getFullYear() && Number(selectedMonth) >= new Date().getMonth() + 1);
+      btnToday.classList.toggle('active', !!currentSearchKeyword.trim() && selectedYear === String(new Date().getFullYear()) &&
+        selectedMonth === String(new Date().getMonth() + 1).padStart(2, '0'));
+    }
 
-      // 更新月份按钮文案
-      if (selectedMonth === 'all') {
-        monthCurrentLabel.textContent = '全部月份';
-      } else {
-        monthCurrentLabel.textContent = `${Number(selectedMonth)}月`;
-      }
-
-      // 计算并更新左右翻月箭头状态
-      if (selectedMonth === 'all') {
-        btnNextMonth.disabled = true;
-        btnPrevMonth.disabled = (availablePairs.length === 0);
-      } else {
-        const currentKey = `${selectedYear}-${selectedMonth}`;
-        const idx = availablePairs.indexOf(currentKey);
-        if (idx !== -1) {
-          btnNextMonth.disabled = (idx === 0);
-          btnPrevMonth.disabled = (idx === availablePairs.length - 1);
-        } else {
-          const nextOlder = availablePairs.find(k => k < currentKey);
-          const nextNewer = [...availablePairs].reverse().find(k => k > currentKey);
-          btnPrevMonth.disabled = !nextOlder;
-          btnNextMonth.disabled = !nextNewer;
+    async function loadCalendarBounds() {
+      if (!currentUser || calendarBoundsUid === currentUser.uid) return;
+      const uid = currentUser.uid;
+      calendarBoundsUid = uid;
+      try {
+        const ref = db.collection('users').doc(uid).collection('notes');
+        const results = await Promise.all([ref.orderBy('createdAt').limit(1).get(), ref.orderBy('createdAt', 'desc').limit(1).get()]);
+        if (currentUser?.uid !== uid) return;
+        for (const result of results) for (const doc of result.docs) {
+          const date = getItemDate(doc.data());
+          if (date) { calendarMinYear = Math.min(calendarMinYear, date.getFullYear()); calendarMaxYear = Math.max(calendarMaxYear, date.getFullYear()); }
         }
-      }
+        updateMonthNavigator();
+      } catch (_) { calendarBoundsUid = ''; }
+    }
 
-      // 渲染年份下拉菜单（显示每年的总笔记数目）
-      let yearMenuHtml = `
-        <div class="nav-dropdown-item ${selectedYear === 'all' ? 'active' : ''}" data-year="all">
-          <span>全部年份</span>
-          <span class="nav-count-badge">${totalAll} 条</span>
-        </div>
-      `;
-      sortedYears.forEach(y => {
-        const yData = yearsMap.get(y);
-        yearMenuHtml += `
-          <div class="nav-dropdown-item ${selectedYear === y ? 'active' : ''}" data-year="${y}">
-            <span>${y} 年</span>
-            <span class="nav-count-badge">${yData.totalCount} 条</span>
-          </div>
-        `;
-      });
-      yearDropdownMenu.innerHTML = yearMenuHtml;
-
-      // 渲染月份下拉菜单（显示当月笔记数目）
-      let currentYearCount = totalAll;
-      let monthsForYear = [];
-      if (selectedYear !== 'all') {
-        const yData = yearsMap.get(selectedYear);
-        if (yData) {
-          currentYearCount = yData.totalCount;
-          monthsForYear = Array.from(yData.months.keys()).sort((a, b) => b.localeCompare(a));
-        }
-      } else {
-        const allMonthsSet = new Set();
-        yearsMap.forEach(yData => {
-          yData.months.forEach((cnt, m) => allMonthsSet.add(m));
-        });
-        monthsForYear = Array.from(allMonthsSet).sort((a, b) => b.localeCompare(a));
-      }
-
-      let monthMenuHtml = `
-        <div class="nav-dropdown-item ${selectedMonth === 'all' ? 'active' : ''}" data-month="all">
-          <span>全部月份</span>
-          <span class="nav-count-badge">${currentYearCount} 条</span>
-        </div>
-      `;
-      monthsForYear.forEach(m => {
-        let count = 0;
-        if (selectedYear !== 'all') {
-          count = yearsMap.get(selectedYear)?.months.get(m) || 0;
-        } else {
-          yearsMap.forEach(yData => {
-            count += (yData.months.get(m) || 0);
-          });
-        }
-        monthMenuHtml += `
-          <div class="nav-dropdown-item ${selectedMonth === m ? 'active' : ''}" data-month="${m}">
-            <span>${Number(m)} 月</span>
-            <span class="nav-count-badge">${count} 条</span>
-          </div>
-        `;
-      });
-      monthDropdownMenu.innerHTML = monthMenuHtml;
-
-      // 更新「本月」按钮状态（搜索状态下支持选中与反选切换，并显示高亮）
-      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
-      if (isSearching && isCurrentMonthSelected) {
-        btnToday.classList.add('active');
-        btnToday.setAttribute('title', '已筛选本月，再次点击显示所有月份');
-      } else {
-        btnToday.classList.remove('active');
-        btnToday.setAttribute('title', isSearching ? '仅显示本月搜索结果' : '回到本月');
-      }
+    function navigateToSelection() {
+      displayLimit = 50;
+      activateSelectedScope();
+      renderList();
+      updateNotesStatus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function selectYear(year) {
       selectedYear = year;
       yearDropdownMenu.classList.remove('show');
       if (yearSelectorWrap) yearSelectorWrap.classList.remove('open');
-
-      if (selectedYear !== 'all') {
-        const searchFiltered = getSearchFilteredNotes();
-        const { yearsMap } = getYearAndMonthStats(searchFiltered);
-        const yData = yearsMap.get(selectedYear);
-        if (yData && selectedMonth !== 'all' && !yData.months.has(selectedMonth)) {
-          const availMonths = Array.from(yData.months.keys()).sort((a, b) => b.localeCompare(a));
-          selectedMonth = availMonths[0] || 'all';
-        }
-      }
-      displayLimit = 50;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      navigateToSelection();
     }
 
-    function selectMonth(monthKey) {
-      selectedMonth = monthKey;
+    function selectMonth(month) {
+      selectedMonth = month;
       monthDropdownMenu.classList.remove('show');
       if (monthSelectorWrap) monthSelectorWrap.classList.remove('open');
-      displayLimit = 50;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      navigateToSelection();
     }
 
     function loadMoreNotes() {
@@ -4253,6 +4529,7 @@
 
       const searchFiltered = getSearchFilteredNotes();
       const kw = currentSearchKeyword.trim();
+      updateMonthNavigator();
 
       if (searchFiltered.length === 0) {
         if (searchBarContainer.classList.contains('show') && kw) {
@@ -4261,18 +4538,14 @@
         } else {
           searchCountBadge.style.display = 'none';
         }
-        monthNavBar.classList.remove('show');
         notesList.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">📭</div>
-            <p>${kw ? '未找到匹配的笔记' : '暂无相关笔记'}</p>
+            <p class="notes-empty-message">${notesScopeLoading ? '正在加载笔记…' : kw ? '未找到匹配的笔记' : '该月份暂无笔记'}</p>
           </div>
         `;
         return;
       }
-
-      // 更新月份导航栏
-      updateMonthNavigator();
 
       const targetNotes = getTargetNotes();
       const totalCount = targetNotes.length;
@@ -4292,7 +4565,7 @@
         notesList.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">📭</div>
-            <p>该月份暂无笔记</p>
+            <p class="notes-empty-message">${notesScopeLoading ? '正在加载笔记…' : '该月份暂无笔记'}</p>
           </div>
         `;
         return;
@@ -4572,84 +4845,25 @@
       selectMonth(item.dataset.month);
     });
 
-    // 翻到上一个月 (<)
-    btnPrevMonth.addEventListener('click', () => {
-      const searchFiltered = getSearchFilteredNotes();
-      const availablePairs = getAllAvailableMonthPairs(searchFiltered);
-      if (availablePairs.length === 0) return;
 
-      if (selectedMonth === 'all') {
-        const [y, m] = availablePairs[0].split('-');
-        selectedYear = y;
-        selectedMonth = m;
-      } else {
-        const currentKey = `${selectedYear}-${selectedMonth}`;
-        const idx = availablePairs.indexOf(currentKey);
-        if (idx !== -1 && idx < availablePairs.length - 1) {
-          const [y, m] = availablePairs[idx + 1].split('-');
-          selectedYear = y;
-          selectedMonth = m;
-        } else {
-          const nextOlder = availablePairs.find(k => k < currentKey);
-          if (nextOlder) {
-            const [y, m] = nextOlder.split('-');
-            selectedYear = y;
-            selectedMonth = m;
-          }
-        }
-      }
-      displayLimit = 50;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // 翻到下一个月 (>)
-    btnNextMonth.addEventListener('click', () => {
-      const searchFiltered = getSearchFilteredNotes();
-      const availablePairs = getAllAvailableMonthPairs(searchFiltered);
-      if (availablePairs.length === 0 || selectedMonth === 'all') return;
-
-      const currentKey = `${selectedYear}-${selectedMonth}`;
-      const idx = availablePairs.indexOf(currentKey);
-      if (idx > 0) {
-        const [y, m] = availablePairs[idx - 1].split('-');
-        selectedYear = y;
-        selectedMonth = m;
-      } else {
-        const nextNewer = [...availablePairs].reverse().find(k => k > currentKey);
-        if (nextNewer) {
-          const [y, m] = nextNewer.split('-');
-          selectedYear = y;
-          selectedMonth = m;
-        }
-      }
-      displayLimit = 50;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // 回到本月 / 搜索时本月筛选切换
-    btnToday.addEventListener('click', () => {
+    // 日历月份导航允许访问尚未加载或为空的月份。
+    function stepCalendarMonth(delta) {
       const now = new Date();
-      const nowYear = String(now.getFullYear());
-      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
-      const isSearching = !!currentSearchKeyword.trim();
-      const isCurrentMonthSelected = (selectedYear === nowYear && selectedMonth === nowMonth);
-
-      if (isSearching && isCurrentMonthSelected) {
-        // 搜索状态下再次点击本月：取消选中，变为显示所有月份的结果
-        selectedYear = 'all';
-        selectedMonth = 'all';
-      } else {
-        // 切换为本月
-        selectedYear = nowYear;
-        selectedMonth = nowMonth;
-      }
-
-      displayLimit = 50;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const year = selectedYear === 'all' ? now.getFullYear() : Number(selectedYear);
+      const month = selectedMonth === 'all' ? now.getMonth() : Number(selectedMonth) - 1;
+      const target = new Date(year, month + delta, 1);
+      selectedYear = String(target.getFullYear());
+      selectedMonth = String(target.getMonth() + 1).padStart(2, '0');
+      navigateToSelection();
+    }
+    btnPrevMonth.addEventListener('click', () => stepCalendarMonth(-1));
+    btnNextMonth.addEventListener('click', () => stepCalendarMonth(1));
+    btnToday.addEventListener('click', () => {
+      selectedYear = String(new Date().getFullYear());
+      selectedMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+      navigateToSelection();
     });
+    yearSelectorBtn.addEventListener('click', loadCalendarBounds);
 
     // 点击外部关闭下拉菜单
     document.addEventListener('click', (e) => {
@@ -4712,7 +4926,9 @@
 
       displayLimit = 50;
       inlineSearchInput.blur();
+      activateSelectedScope();
       renderList();
+      updateNotesStatus();
     }
 
     function toggleSearchBar() {
@@ -4766,7 +4982,9 @@
       }
 
       displayLimit = 50;
+      activateSelectedScope();
       renderList();
+      updateNotesStatus();
     });
 
     inlineSearchInput.addEventListener('keydown', (e) => {
@@ -4832,17 +5050,81 @@
     bindSafeBackdropClose(docModal, hideDocModal);
 
     // 回收站弹窗逻辑与渲染
-    function showTrashModal() {
+    function findKnownNote(id) {
+      const visible = notesData.find(note => note.id === id) || trashNotesData.find(note => note.id === id);
+      if (visible) return visible;
+      for (const state of scopeCaches.values()) {
+        const note = state.notes.find(item => item.id === id);
+        if (note) return note;
+      }
+      return null;
+    }
+
+    function updateCachedNotes(changes, uid) {
+      if (currentUser?.uid !== uid || notesCacheUid !== uid) return;
+      for (const state of scopeCaches.values()) {
+        const byId = new Map(state.notes.map(note => [note.id, note]));
+        let changed = false;
+        for (const { note, remove } of changes) {
+          if (remove) {
+            changed = byId.delete(note.id) || changed;
+            settledSharedIds.add(note.id);
+          } else if (noteInScope(note, state.scope)) {
+            const updated = serializeNoteForCache(note);
+            delete updated.serverCreateTime;
+            delete updated.serverUpdateTime;
+            byId.set(note.id, updated);
+            changed = true;
+          }
+        }
+        if (changed) {
+          state.notes = [...byId.values()];
+          persistScopeCache(uid, state);
+        }
+      }
+      const active = scopeCaches.get(activeNotesScope?.key);
+      if (active) applyNotesData(active.notes);
+    }
+
+    function loadTrashNotes() {
+      if (!currentUser) return;
+      if (unsubscribeTrash) unsubscribeTrash();
+      const uid = currentUser.uid, generation = ++trashGeneration;
+      trashLoading = true;
+      trashComplete = false;
+      trashError = '';
       renderTrashModal();
+      unsubscribeTrash = db.collection('users').doc(uid).collection('notes').where('isDeleted', '==', true)
+        .onSnapshot({ includeMetadataChanges: true }, snapshot => {
+          if (currentUser?.uid !== uid || generation !== trashGeneration) return;
+          if (snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) return;
+          trashNotesData = snapshot.docs.map(doc => serializeNoteForCache({ ...doc.data(), id: doc.id }));
+          trashComplete = !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites;
+          trashLoading = !trashComplete;
+          renderTrashModal();
+        }, error => {
+          if (currentUser?.uid !== uid || generation !== trashGeneration) return;
+          trashLoading = false;
+          trashComplete = false;
+          trashError = '回收站加载失败，请关闭后重试。';
+          renderTrashModal();
+        });
+    }
+
+    function showTrashModal() {
       trashModal.classList.add('show');
+      loadTrashNotes();
     }
 
     function hideTrashModal() {
       trashModal.classList.remove('show');
+      if (unsubscribeTrash) unsubscribeTrash();
+      unsubscribeTrash = null;
+      trashGeneration++;
     }
 
     function renderTrashModal() {
-      const trashNotes = notesData.filter(item => item.isDeleted === true);
+      const trashNotes = trashNotesData.filter(item => item.isDeleted === true);
       trashNotes.sort((a, b) => {
         const getT = (item) => {
           if (item.deletedAt?.toDate) return item.deletedAt.toDate().getTime();
@@ -4854,15 +5136,15 @@
         return getT(b) - getT(a);
       });
 
-      trashCountBadge.textContent = `${trashNotes.length} 条`;
-      btnClearTrash.disabled = (trashNotes.length === 0);
+      trashCountBadge.textContent = trashError ? '加载失败' : trashLoading || !trashComplete ? `加载中 · ${trashNotes.length} 条` : `${trashNotes.length} 条`;
+      btnClearTrash.disabled = trashNotes.length === 0 || trashLoading || trashClearing || !trashComplete || !!trashError;
 
       if (trashNotes.length === 0) {
         trashBody.innerHTML = `
           <div class="trash-empty">
             <div class="trash-empty-icon">📭</div>
-            <div class="trash-empty-title">回收站为空</div>
-            <div class="trash-empty-desc">删除的笔记会暂存在这里，可以随时还原或彻底清空</div>
+            <div class="trash-empty-title">${trashError || (trashLoading || !trashComplete ? '正在加载回收站…' : '回收站为空')}</div>
+            <div class="trash-empty-desc">${trashLoading || !trashComplete ? '正在检索全部月份的删除记录' : '删除的笔记会暂存在这里，可以随时还原或彻底清空'}</div>
           </div>
         `;
         return;
@@ -5137,7 +5419,7 @@
         const noteToSave = PageTraceNotes.normalizeSource(resolved.note);
 
         if (currentUser?.uid !== savingUid) throw new Error('账号已切换，请重新保存');
-        await db.collection('users').doc(savingUid).collection('notes').add({
+        const savedRef = await db.collection('users').doc(savingUid).collection('notes').add({
           title: resolved.title,
           url: resolved.url,
           note: noteToSave || '',
@@ -5145,6 +5427,12 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           source: window.PageTraceAndroid ? 'android_share' : 'web_dashboard'
         });
+        if (savedRef?.get && currentUser?.uid === savingUid) {
+          try {
+            const saved = await savedRef.get();
+            if (saved.exists) updateCachedNotes([{ note: { ...saved.data(), id: savedRef.id } }], savingUid);
+          } catch (error) { console.warn('[PageTrace] 笔记已保存，缓存将随云端同步补齐:', error); }
+        }
         createTitle.value = '';
         createUrl.value = '';
         createNoteInput.value = '';
@@ -5278,7 +5566,7 @@
 
     // 编辑弹窗交互
     window.openEditModal = function(id) {
-      const item = notesData.find(n => n.id === id);
+      const item = findKnownNote(id);
       if (!item) return;
       currentEditingId = id;
       editTitle.value = getOptionalTitle(item.title);
@@ -5304,6 +5592,8 @@
 
     async function handleSaveEdit() {
       if (!currentUser || !currentEditingId) return;
+      const uid = currentUser.uid, id = currentEditingId;
+      const previous = findKnownNote(id);
       const rawTitle = editTitle.value.trim();
       const rawUrl = editUrl.value.trim();
       const rawNote = editNote.value;
@@ -5325,12 +5615,25 @@
         const resolved = await resolveNoteFields(rawTitle, rawUrl, rawNote);
         const noteToSave = PageTraceNotes.normalizeSource(resolved.note);
 
-        await db.collection('users').doc(currentUser.uid).collection('notes').doc(currentEditingId).update({
+        if (currentUser?.uid !== uid || currentEditingId !== id) throw new Error('账号或笔记已切换，请重新保存');
+        const ref = db.collection('users').doc(uid).collection('notes').doc(id);
+        await ref.update({
           title: resolved.title,
           url: resolved.url,
           note: noteToSave,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        if (previous && currentUser?.uid === uid) {
+          try {
+            const saved = await ref.get();
+            if (saved.exists) updateCachedNotes([{ note: { ...saved.data(), id } }], uid);
+          } catch (error) {
+            const updated = { ...previous, title: resolved.title, url: resolved.url, note: noteToSave };
+            delete updated.updatedAt;
+            updateCachedNotes([{ note: updated }], uid);
+            console.warn('[PageTrace] 修改已保存，时间将随云端同步补齐:', error);
+          }
+        }
         editModal.classList.remove('show');
         currentEditingId = null;
       } catch (err) {
@@ -5372,14 +5675,16 @@
     // 移至回收站（软删除）
     async function moveToTrash(id) {
       if (!currentUser) return;
-      const targetItem = notesData.find(n => n.id === id);
+      const uid = currentUser.uid;
+      const targetItem = findKnownNote(id);
       if (!targetItem) return;
 
       try {
-        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).update({
+        await db.collection('users').doc(uid).collection('notes').doc(id).update({
           isDeleted: true,
           deletedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        updateCachedNotes([{ note: { ...targetItem, isDeleted: true } }], uid);
 
         // 弹出底部撤销 Toast
         showUndoToast('已移至回收站', async () => {
@@ -5396,11 +5701,17 @@
     // 从回收站还原
     async function restoreFromTrash(id) {
       if (!currentUser) return;
+      const uid = currentUser.uid, previous = findKnownNote(id);
       try {
-        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).update({
+        await db.collection('users').doc(uid).collection('notes').doc(id).update({
           isDeleted: false,
           deletedAt: firebase.firestore.FieldValue.delete()
         });
+        if (previous) {
+          const restored = { ...previous, isDeleted: false };
+          delete restored.deletedAt;
+          updateCachedNotes([{ note: restored }], uid);
+        }
         hideUndoToast();
       } catch (err) {
         console.error('还原失败:', err);
@@ -5415,9 +5726,12 @@
     // 彻底删除单条笔记
     async function permanentDeleteNote(id) {
       if (!currentUser) return;
+      const uid = currentUser.uid, previous = findKnownNote(id) || { id };
       if (!await askConfirm('确定彻底删除该条笔记吗？此操作将永久抹除，无法找回。')) return;
+      if (currentUser?.uid !== uid) return;
       try {
-        await db.collection('users').doc(currentUser.uid).collection('notes').doc(id).delete();
+        await db.collection('users').doc(uid).collection('notes').doc(id).delete();
+        updateCachedNotes([{ note: previous, remove: true }], uid);
       } catch (err) {
         console.error('彻底删除失败:', err);
         showUndoToast('彻底删除失败: ' + err.message, null, 4000, '⚠️');
@@ -5427,28 +5741,38 @@
 
     // 清空回收站
     async function clearAllTrash() {
-      if (!currentUser) return;
-      const trashNotes = notesData.filter(n => n.isDeleted === true);
+      if (!currentUser || trashLoading || trashClearing || !trashComplete || trashError) return;
+      const uid = currentUser.uid;
+      let trashNotes = trashNotesData.filter(n => n.isDeleted === true);
       if (trashNotes.length === 0) return;
       if (!await askConfirm(`确定彻底清空回收站中的 ${trashNotes.length} 条笔记吗？此操作无法撤销。`)) return;
 
+      trashClearing = true;
       try {
         btnClearTrash.disabled = true;
+        if (currentUser?.uid !== uid) return;
+        // 确认后重新取得完整回收站，不受所选月份或确认前的列表限制。
+        const snapshot = await db.collection('users').doc(uid).collection('notes').where('isDeleted', '==', true).get();
+        if (currentUser?.uid !== uid) return;
+        trashNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         const batchSize = 400;
         for (let i = 0; i < trashNotes.length; i += batchSize) {
+          if (currentUser?.uid !== uid) return;
           const chunk = trashNotes.slice(i, i + batchSize);
           const batch = db.batch();
           chunk.forEach(item => {
-            const ref = db.collection('users').doc(currentUser.uid).collection('notes').doc(item.id);
+            const ref = db.collection('users').doc(uid).collection('notes').doc(item.id);
             batch.delete(ref);
           });
           await batch.commit();
+          updateCachedNotes(chunk.map(note => ({ note, remove: true })), uid);
         }
       } catch (err) {
         console.error('清空回收站失败:', err);
         showUndoToast('清空失败: ' + err.message, null, 4000, '⚠️');
       } finally {
-        btnClearTrash.disabled = false;
+        if (currentUser?.uid === uid) trashClearing = false;
+        renderTrashModal();
       }
     }
     window.clearAllTrash = clearAllTrash;
@@ -5555,6 +5879,10 @@
     // 复制当前筛选出的所有笔记（两条笔记之间加一个空行分隔）
     async function handleCopyFilteredNotes(e) {
       if (e) e.stopPropagation();
+      if (notesScopeLoading || !hasCompleteNotesCache || notesScopeError) {
+        showUndoToast('笔记尚未加载完整，请稍后再复制全部结果', null, 4000, 'ℹ️');
+        return;
+      }
       const targetNotes = getTargetNotes();
       if (!targetNotes || targetNotes.length === 0) {
         showUndoToast('当前没有可复制的笔记', null, 4000, '⚠️');

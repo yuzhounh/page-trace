@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.11.2
+// @version      1.13.0
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -15,11 +15,14 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
+// @grant        GM_listValues
+// @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
 // @grant        GM_openInTab
 // @connect      firestore.googleapis.com
 // @connect      securetoken.googleapis.com
 // @connect      identitytoolkit.googleapis.com
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
@@ -254,6 +257,25 @@
       }
     }
     if (CONFIG.uid !== uid) throw new Error('登录账户已经改变，待提交记录已保留');
+    // 云端已确认的笔记独立存储，多个网页保存时不读写同一整份数组。
+    // 系统版本保留原始精度；缓存失败不改变已成功的云端保存结果。
+    try {
+      const savedNote = {
+        id: operation.id, title, url, note: content, status: 'inbox', source: 'userscript',
+        createdAt: result.fields?.createdAt?.timestampValue || operation.createdAt,
+        serverCreateTime: result.createTime || null,
+        serverUpdateTime: result.updateTime || null
+      };
+      const prefix = `pagetrace_saved_v1_${projectId}_${uid}_`;
+      GM_setValue(prefix + operation.id, savedNote);
+      const month = new Date(savedNote.createdAt).toISOString().slice(0, 7);
+      GM_setValue(`pagetrace_saved_month_v2_${projectId}_${uid}_${month}_${operation.id}`, true);
+      GM_setValue(`pagetrace_saved_signal_v1_${projectId}_${uid}`, {
+        id: operation.id, changedAt: Date.now()
+      });
+    } catch (error) {
+      console.warn('[PageTrace] 云端已保存，但共享缓存写入失败:', error);
+    }
     if (readPending()?.id === operation.id) {
       if (typeof GM_deleteValue === 'function') GM_deleteValue(pendingKey);
       else sessionStorage.removeItem(pendingKey);
@@ -272,11 +294,88 @@
     const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
     const origin = window.location.origin;
     let pingTimer = null;
+    const base = new URL(getTrustedAppBaseUrl());
+    const isDashboard = [base.pathname, `${base.pathname}index.html`].includes(window.location.pathname);
+    let cacheRequest = null;
+    let cacheListener = null;
+
+    function sendSharedCache(changedId = null) {
+      if (!cacheRequest) return;
+      const { uid, nonce: cacheNonce, start, end } = cacheRequest;
+      let records = null;
+      if (CONFIG.uid === uid && typeof GM_listValues === 'function') {
+        try {
+          const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
+          const indexPrefix = `pagetrace_saved_month_v2_${CONFIG.projectId}_${uid}_`;
+          const keys = GM_listValues();
+          const indexKeys = keys.filter(key => key.startsWith(indexPrefix));
+          const indexedIds = new Set(indexKeys.map(key => key.slice(-32)));
+          const newlyIndexed = new Map();
+          // 兼容旧记录和仍运行的旧脚本：只补索引缺失的 ID，不反复读取历史正文。
+          for (const key of keys.filter(key => key.startsWith(prefix))) {
+            const id = key.slice(prefix.length);
+            if (indexedIds.has(id)) continue;
+            const note = GM_getValue(key, null);
+            if (!note || !Number.isFinite(Date.parse(note.createdAt))) continue;
+            const month = new Date(note.createdAt).toISOString().slice(0, 7);
+            const indexKey = `${indexPrefix}${month}_${id}`;
+            GM_setValue(indexKey, true);
+            indexKeys.push(indexKey);
+            newlyIndexed.set(id, note);
+          }
+          const firstMonth = start === null ? null : new Date(start).toISOString().slice(0, 7);
+          const lastMonth = end === null ? null : new Date(end - 1).toISOString().slice(0, 7);
+          const candidateIds = [...new Set(indexKeys.filter(key => {
+            const month = key.slice(indexPrefix.length, indexPrefix.length + 7);
+            return firstMonth === null || (month >= firstMonth && month <= lastMonth);
+          }).map(key => key.slice(-32)))];
+          records = candidateIds.map(id => {
+            const key = prefix + id;
+            const record = newlyIndexed.get(id) || GM_getValue(key, null);
+            return record && key === prefix + record.id && /^[a-f0-9]{32}$/.test(record.id) &&
+              ['title', 'url', 'note', 'createdAt'].every(field => typeof record[field] === 'string') &&
+              (start === null || (Date.parse(record.createdAt) >= start && Date.parse(record.createdAt) < end))
+              ? record : null;
+          }).filter(Boolean);
+        } catch (error) {
+          console.warn('[PageTrace] 读取共享缓存失败:', error);
+        }
+      }
+      window.postMessage({ source: 'PAGETRACE_CACHE_RESULT', nonce: cacheNonce, uid,
+        records, changedId }, origin);
+    }
+
+    function watchSharedCache() {
+      if (cacheListener !== null && typeof GM_removeValueChangeListener === 'function') {
+        GM_removeValueChangeListener(cacheListener);
+      }
+      cacheListener = null;
+      if (cacheRequest && typeof GM_addValueChangeListener === 'function') {
+        const key = `pagetrace_saved_signal_v1_${CONFIG.projectId}_${cacheRequest.uid}`;
+        cacheListener = GM_addValueChangeListener(key, (_key, _old, value) => sendSharedCache(value?.id));
+      }
+    }
+    window.addEventListener('pagehide', () => {
+      cacheRequest = null;
+      watchSharedCache();
+    });
 
     window.addEventListener('message', (event) => {
       if (event.origin !== origin || event.source !== window) return;
       const data = event.data;
-      if (!data || typeof data !== 'object' || data.nonce !== nonce) return;
+      if (!data || typeof data !== 'object') return;
+      // 页面主动请求覆盖 document-start 的首次 Ping 早于页面监听器的情况。
+      // 缓存只交给准确的可信看板路径、当前窗口及本次请求的随机 nonce。
+      if (data.source === 'PAGETRACE_CACHE_REQUEST') {
+        if (!isDashboard || !/^[a-f0-9]{32}$/.test(data.nonce || '') || typeof data.uid !== 'string' || !data.uid) return;
+        const start = data.start ?? null, end = data.end ?? null;
+        if ((start !== null || end !== null) && (!Number.isFinite(start) || !Number.isFinite(end) || start >= end)) return;
+        cacheRequest = { uid: data.uid, nonce: data.nonce, start, end };
+        watchSharedCache();
+        sendSharedCache();
+        return;
+      }
+      if (data.nonce !== nonce) return;
 
       if (data.source === 'PAGETRACE_AUTH_SUCCESS') {
         const { idToken, refreshToken, uid, expiresIn, apiKey, projectId } = data.payload || {};
@@ -291,6 +390,7 @@
         GM_setValue('pt_refresh_token', refreshToken);
         GM_setValue('pt_token_expiry', Date.now() + lifetime * 1000);
         GM_setValue('pt_uid', uid);
+        sendSharedCache();
         clearInterval(pingTimer);
         // 只确认给当前可信页面，凭据不经过 opener 或普通网页。
         window.postMessage({ source: 'PAGETRACE_AUTH_CONFIRMED', nonce }, origin);
@@ -299,6 +399,7 @@
         GM_deleteValue('pt_refresh_token');
         GM_deleteValue('pt_uid');
         GM_deleteValue('pt_token_expiry');
+        sendSharedCache();
         clearInterval(pingTimer);
       }
     });
