@@ -284,6 +284,100 @@ test('missing userscript waits at most 250ms then loads cloud without flashing t
   assert.ok(p.frames.every(frame => !frame.includes(old.id)));
 });
 
+test('cloud wait includes delayed login and only server confirmation hides the cache notice without redrawing', async t => {
+  const old = makeNote('old');
+  const p = page(t, { store: signedStore(), cached: [old] });
+  await p.flush();
+  const status = p.w.document.getElementById('notesLoadStatus');
+  const node = p.w.document.querySelector('[data-id="old"]');
+  assert.match(status.textContent, /正在同步所选月份/);
+  assert.equal(p.subscriptions.length, 0);
+  await p.timeout(15000);
+  assert.equal(status.textContent, '云端连接暂不可用，当前显示本地缓存');
+  assert.equal(p.w.fixtureUI.state().loading, true);
+  assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, true);
+  await p.login();
+  await p.snapshot([old], { fromCache: true });
+  assert.equal(status.textContent, '云端连接暂不可用，当前显示本地缓存');
+  assert.equal(p.w.document.querySelector('[data-id="old"]'), node);
+  await p.snapshot([old]);
+  assert.equal(status.textContent, '');
+  assert.equal(status.style.display, 'none');
+  assert.equal(p.w.fixtureUI.state().loading, false);
+  assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, false);
+  assert.equal(p.w.document.querySelector('[data-id="old"]'), node);
+  await p.timeout(15000);
+  assert.equal(status.style.display, 'none');
+});
+
+test('a slow cloud connection falls back to the desktop cache then replaces it on recovery', async t => {
+  const old = makeNote('old'), fresh = makeNote('fresh');
+  const p = page(t, { userscript: false, cached: [old] });
+  await p.login(); await p.timeout(250);
+  assert.deepEqual(p.ids(), []);
+  await p.timeout(15000);
+  assert.deepEqual(p.ids(), [old.id]);
+  assert.equal(p.w.document.getElementById('notesLoadStatus').textContent,
+    '云端连接暂不可用，当前显示本地缓存');
+  await p.snapshot([fresh]);
+  assert.deepEqual(p.ids(), [fresh.id]);
+  assert.equal(p.w.document.getElementById('notesLoadStatus').style.display, 'none');
+});
+
+test('no-cache timeouts are honest and pending writes keep syncing until fully confirmed', async t => {
+  const p = page(t, { store: signedStore(), cached: null });
+  await p.login();
+  const status = p.w.document.getElementById('notesLoadStatus');
+  await p.timeout(15000);
+  assert.equal(status.textContent, '云端连接暂不可用，暂无本地缓存');
+  await p.snapshot([makeNote('pending')], { pending: true });
+  assert.match(status.textContent, /正在同步所选月份/);
+  assert.equal(p.w.fixtureUI.state().loading, true);
+  assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, true);
+  await p.snapshot([]);
+  assert.equal(status.style.display, 'none');
+  assert.match(p.w.document.querySelector('.notes-empty-message').textContent, /该月份暂无笔记/);
+});
+
+test('losing connectivity after sync shows a timed notice and global search stays incomplete until recovery', async t => {
+  const old = makeNote('old');
+  const p = page(t, { store: signedStore(), cached: [old], serverNotes: [old] });
+  await p.flush(); await p.login(); await p.reply();
+  const status = p.w.document.getElementById('notesLoadStatus');
+  const node = p.w.document.querySelector('[data-id="old"]');
+  assert.equal(status.style.display, 'none');
+  await p.snapshot([old], { fromCache: true });
+  await p.timeout(15000);
+  assert.equal(status.textContent, '云端连接暂不可用，当前显示本地缓存');
+  assert.equal(p.w.document.querySelector('[data-id="old"]'), node);
+  await p.reply();
+  assert.equal(status.style.display, 'none');
+  keyword(p, 'old'); await p.flush(); await p.timeout(15000);
+  assert.equal(status.textContent, '云端连接暂不可用，当前显示本地缓存');
+  assert.match(p.w.document.getElementById('searchCountBadge').textContent, /检索中/);
+  assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, true);
+  await p.reply();
+  assert.equal(status.style.display, 'none');
+  assert.equal(p.w.document.getElementById('searchCountBadge').textContent, '共 1 条');
+});
+
+test('month changes, account changes and logout cancel cloud wait notices from earlier scopes', async t => {
+  const p = page(t, { store: signedStore(), cached: [makeNote('old')] });
+  await p.flush(); await p.login();
+  const oldSubscription = p.subscriptions.at(-1);
+  const status = p.w.document.getElementById('notesLoadStatus');
+  p.w.fixtureUI.selectMonth(p.w.fixtureUI.state().scope.key.endsWith('-01') ? '02' : '01');
+  await p.flush(); await p.snapshot([]);
+  await p.snapshot([makeNote('late')], { fromCache: true, subscription: oldSubscription });
+  await p.timeout(15000);
+  assert.equal(status.style.display, 'none');
+  await p.login('bob'); await p.snapshot([]); await p.timeout(15000);
+  assert.equal(status.style.display, 'none');
+  await p.snapshot([], { fromCache: true });
+  await p.w.firebase.auth().signOut(); await p.timeout(15000);
+  assert.equal(status.style.display, 'none');
+});
+
 test('late userscript joins before cloud confirmation; foreign messages and old account callbacks are ignored', async t => {
   const store = signedStore(), fresh = makeNote('c'.repeat(32));
   store.set(prefix + fresh.id, fresh);
@@ -494,6 +588,7 @@ test('global load errors leave incomplete search results and copying disabled', 
   const p = page(t, { store: signedStore(), cached: null, serverNotes: [makeNote('current')] });
   await p.login(); await p.reply(); keyword(p, 'current'); await p.flush();
   p.subscriptions.at(-1).error(Error('fixture connection failed')); await p.flush();
+  await p.timeout(15000);
   assert.match(p.w.document.getElementById('notesLoadStatus').textContent, /加载失败/);
   assert.match(p.w.document.getElementById('searchCountBadge').textContent, /加载失败/);
   assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, true);

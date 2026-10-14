@@ -3481,6 +3481,9 @@
     let scopeCaches = new Map();
     let notesScopeLoading = false;
     let notesScopeError = '';
+    const NOTES_CLOUD_WAIT_MS = 15000;
+    let notesCloudWaitTimer = null;
+    let notesCloudUnavailable = false;
     let calendarMinYear = new Date().getFullYear() - 12;
     let calendarMaxYear = new Date().getFullYear();
     let calendarBoundsUid = '';
@@ -3708,6 +3711,7 @@
       notesSubscriptionUid = '';
       notesSubscriptionScope = '';
       notesListenerGeneration++;
+      clearNotesCloudWait();
       if (notesCacheUid !== uid) {
         scopeCaches = new Map();
         settledSharedIds = new Set();
@@ -3741,6 +3745,7 @@
         notesData = [...known.values()];
       } else notesData = [];
       notesList.innerHTML = getSkeletonHtml();
+      startNotesCloudWait();
       updateNotesStatus();
       updateMonthNavigator();
     }
@@ -3815,10 +3820,36 @@
       return state?.complete ? state.notes : null;
     }
 
+    function clearNotesCloudWait() {
+      clearTimeout(notesCloudWaitTimer);
+      notesCloudWaitTimer = null;
+      notesCloudUnavailable = false;
+    }
+
+    function startNotesCloudWait() {
+      if (notesCloudWaitTimer !== null || notesCloudUnavailable) return;
+      const uid = notesCacheUid, scopeKey = activeNotesScope?.key;
+      const timer = setTimeout(() => {
+        if (notesCloudWaitTimer !== timer) return;
+        notesCloudWaitTimer = null;
+        if (currentUser?.uid !== uid || activeNotesScope?.key !== scopeKey ||
+            !notesScopeLoading || notesScopeError) return;
+        notesCloudUnavailable = true;
+        if (hasCompleteNotesCache || notesData.length) applyNotesData(mergeSharedNotes(notesData));
+        else updateNotesStatus();
+      }, NOTES_CLOUD_WAIT_MS);
+      notesCloudWaitTimer = timer;
+    }
+
     function updateNotesStatus() {
       const status = document.getElementById('notesLoadStatus');
       const global = activeNotesScope?.key === 'all';
-      const message = notesScopeError || (notesScopeLoading ? (global ? '正在加载历史笔记，结果尚未完整…' : '正在同步所选月份…') : '');
+      let message = notesScopeError;
+      if (!message && notesScopeLoading) {
+        message = notesCloudUnavailable
+          ? `云端连接暂不可用，${hasCompleteNotesCache || notesData.length ? '当前显示本地缓存' : '暂无本地缓存'}`
+          : global ? '正在加载历史笔记，结果尚未完整…' : '正在同步所选月份…';
+      }
       if (status) { status.textContent = message; status.style.display = message ? 'block' : 'none'; }
       const copy = document.getElementById('btnCopyAllNotes');
       if (copy) copy.disabled = !currentUser || !!notesScopeError || notesScopeLoading || !hasCompleteNotesCache;
@@ -3927,6 +3958,7 @@
         notesSubscriptionScope = '';
         notesScopeLoading = false;
         notesScopeError = '';
+        clearNotesCloudWait();
         if (unsubscribeTrash) unsubscribeTrash();
         unsubscribeTrash = null;
         trashGeneration++;
@@ -4130,6 +4162,7 @@
       if (unsubscribeNotes) unsubscribeNotes();
       notesScopeLoading = true;
       notesScopeError = '';
+      startNotesCloudWait();
       updateNotesStatus();
       const generation = ++notesListenerGeneration;
       const scope = activeNotesScope;
@@ -4145,6 +4178,9 @@
       unsubscribeNotes = ref.onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
         if (generation !== notesListenerGeneration || currentUser?.uid !== uid) return;
         if (snapshot.metadata.fromCache) {
+          notesScopeLoading = true;
+          startNotesCloudWait();
+          updateNotesStatus();
           // SDK 的初始空/旧缓存不能覆盖完整首屏；本页待提交操作仍可显示。
           if (snapshot.metadata.hasPendingWrites) {
             const merged = new Map(notesData.map(note => [note.id, note]));
@@ -4159,6 +4195,7 @@
           }
           return;
         }
+        clearNotesCloudWait();
         const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         hasCompleteNotesCache = !snapshot.metadata.hasPendingWrites;
         hasServerNotesSnapshot = true;
@@ -4180,6 +4217,7 @@
         console.error('拉取笔记失败:', err);
         notesScopeLoading = false;
         notesScopeError = '加载失败，请切换月份或重新打开重试。';
+        clearNotesCloudWait();
         notesSubscriptionScope = '';
         updateNotesStatus();
         finishTopSync();
