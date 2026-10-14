@@ -35,7 +35,8 @@ test('lost success acknowledgement, reload and retry create one note; a new capt
   await client(storage, backend).save(note);
   assert.equal(documents.size, 1);
   assert.equal(ids[0], ids[1]);
-  assert.equal(storage.size, 0);
+  assert.equal([...storage.keys()].filter(key => key.startsWith('pagetrace_pending_save_')).length, 0);
+  assert.equal([...storage.keys()].filter(key => key.startsWith('pagetrace_saved_v1_')).length, 1);
   await client(storage, backend).save(note);
   assert.equal(documents.size, 2);
   assert.notEqual(ids[1], ids[2]);
