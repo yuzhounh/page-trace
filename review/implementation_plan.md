@@ -1,6 +1,6 @@
 # PageTrace 优化实施计划
 
-更新日期：2026-10-15。当前源码目标版本为 1.13.1（Android versionCode 12），正在执行用户授权的构建、发布、部署与手机覆盖安装；同步状态提示已优化，71 项自动测试通过。先前手机同步问题由用户确认是未开启 VPN，开启后已恢复。正文版本目录下载继续暂缓。
+更新日期：2026-10-15。1.13.1（Android versionCode 12）已完成构建、GitHub 发布、部署与手机覆盖安装，原应用数据保留；71 项自动测试通过，实机连接云端后同步提示已隐藏。先前手机同步问题由用户确认是未开启 VPN，开启后已恢复。正文版本目录下载继续暂缓。
 
 ## 1.13.1：同步状态提示
 
@@ -8,8 +8,13 @@
 - 保持原实时监听和加载完整性保护，连接恢复后自动同步；服务器确认完成即隐藏提示，相同正文仍保留列表 DOM。已同步后再次收到 SDK 缓存快照，也会重新计时并提示连接等待；服务器已响应但存在待提交写入时继续显示同步状态，不能误报完整。
 - 切换月份、切换账号、退出登录和明确加载错误会取消旧计时器，旧回调不会覆盖当前状态；超时提示不会掩盖明确错误。
 - 修改 `index.html` 与 `tests/cache-sync.test.cjs`，新增 5 项真实 DOM 回归，并增强已有错误分支断言；`TZ=Asia/Shanghai npm test` 共 71/71 通过。测试使用模拟账户、服务器快照和计时器，未修改真实笔记或手机网络设置。
-- 发布准备：网页、油猴元数据与 Android 版本统一为 1.13.1；油猴业务逻辑保持上一版。`assembleRelease lintRelease` 成功，lint 无错误、10 项警告；APK v2 签名与 1.13.0 相同，内嵌网页和 JS/CSS 与本次源码一致。
-- APK：`dist/PageTrace-1.13.1.apk`，3,685,421 字节，SHA-256 `f8149ad12eafbbc3989922567b641328d576d4ea85a3e2d78037f19703aaa831`。线上文件校验和设备安装结果将在本节记录。
+- 网页、油猴元数据与 Android 版本统一为 1.13.1；油猴业务逻辑保持上一版。`assembleRelease lintRelease` 成功，lint 无错误、10 项警告；APK v2 签名与 1.13.0 相同，内嵌网页和 JS/CSS 与本次源码一致。
+- APK：`dist/PageTrace-1.13.1.apk`，3,685,421 字节，SHA-256 `f8149ad12eafbbc3989922567b641328d576d4ea85a3e2d78037f19703aaa831`。
+- 发布源提交 `95dcebb30dbed26946525788c891563148d7be51` 已推送 `main` 并发布 [GitHub Release v1.13.1](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.1)，含 APK、油猴和校验清单。3 项服务器资产大小、SHA-256 与本地发布文件一致；发布油猴 SHA-256 `204e819087881c5cc5c9deda6e51b86d5268ee6d3305d05f054f473afbd98f4b`。
+- Cloudflare [1c841ba9.page-trace.pages.dev](https://1c841ba9.page-trace.pages.dev/) 部署完成，生产主域已更新；[GitHub Pages 部署](https://github.com/yuzhounh/page-trace/actions/runs/38601743994) 与 [CI](https://github.com/yuzhounh/page-trace/actions/runs/38601746477) 成功。两个网页入口各 11 项代表资源（共 22 项）的 SHA-256 与发布提交一致。
+- Firebase 仅发布 `page-trace-app` Hosting 的既有退役跳转配置；两个旧域的首页、授权页和保留认证路径共 6 项校验通过。没有发布 Firestore 规则或变更账号/笔记。Netlify 未调用，仍暂停至 2026-10-21 15:00 Asia/Shanghai；所有推送保留 `[skip netlify]`。Vercel 原名由他人占用，不部署。
+- REDMI K80 Pro / Android 16 已覆盖安装 1.13.1（code 12）。设备侧版本、原安装时间和用户 0 的 `ceDataInode` / `deDataInode` 均已核对，原数据目录保持一致。用户解锁并开启 VPN 后，实机恢复当前月笔记，服务器确认完成后的同步提示已隐藏；未操作真实笔记或修改手机网络设置。断线超时、恢复、旧计时器与完整性保护由上述回归测试覆盖。
+- 本地验证记录：`tmp/release-1.13.1-tests.log`、`tmp/release-1.13.1-gradle.log`、`tmp/release-apk-validation.json`、`tmp/release-site-validation.json` 和设备升级前后记录；不作为公开站点资源发布。
 
 ## 1.13.0 发布与设备验证
 
@@ -25,7 +30,7 @@
 - REDMI K80 Pro / Android 16 已安装 `com.pagetrace.app` 1.13.0、versionCode 11；设备侧 `dumpsys package` 确认版本，原 `firstInstallTime` 及用户 0 的 `ceDataInode` / `deDataInode` 保持一致。解锁后启动能恢复当前月份和既有笔记，未发现崩溃；当时仍显示“正在同步所选月份…”。后续用户确认手机未开启 VPN，开启后笔记同步已恢复；此恢复结论来自用户反馈。未执行真实笔记写入或删除。
 - 临时验证记录位于 `tmp/release-apk-validation.json`、`tmp/release-site-validation.json`、`tmp/site-release-manifest.json`；它们是本地证据，不作为公开站点资源发布。
 
-## 当前实施与验证：1.13.0
+## 按月加载实施与验证：1.13.0（历史记录）
 
 - 默认监听当前月 `createdAt >= 本地月初` 且 `< 下月月初` 的数据；切月关闭旧监听并读取新范围。全年/全部年份视图按用户显式选择加载，月份不会因未加载而被当作空月或自动跳走。
 - 缓存按账号、月份/年份和时区边界分区；持久化历史缓存最多 12 个范围并按容量淘汰，旧全量缓存一次性拆分。油猴保留每条成功保存记录与服务端版本，增加 UTC 月份轻量索引；桥接只读取和发送当前范围正文，兼容旧脚本新增与旧存储格式。
