@@ -1,13 +1,20 @@
 # PageTrace 优化实施计划
 
-更新日期：2026-10-14。当前源码、油猴与 Android 版本为 1.13.0（versionCode 11）；66 项自动测试通过，APK 构建与签名验证完成。正在执行用户授权的 GitHub 发布、平台部署和手机覆盖安装；最终发布与安装状态将在此记录。正文版本目录下载继续暂缓。
+更新日期：2026-10-15。当前源码、油猴与 Android 版本为 1.13.0（versionCode 11）；66 项自动测试通过，APK 已构建、发布并覆盖安装到实机。Cloudflare、GitHub Pages 和旧 Firebase 跳转入口已部署并验证；手机云端同步确认仍待完成。正文版本目录下载继续暂缓。
 
-## 1.13.0 发布准备
+## 1.13.0 发布与设备验证
 
 - `assembleRelease lintRelease` 成功；lint 无错误，有 10 项警告。
-- APK v2 签名验证通过，证书与上一版 1.11.1 一致；将使用覆盖安装，不卸载或清空应用数据。
+- APK v2 签名验证通过，证书与上一版 1.11.1 一致；已完成覆盖安装，未卸载或清空应用数据。
 - APK 内嵌 HTML、JS/CSS 与本次源码一致，HTML 仅使用项目既有的 Firebase SDK 本地地址替换；Firebase SDK 与 KaTeX 字体完整打包，不包含签名材料。
 - GitHub Pages 主分支根目录、Cloudflare `page-trace` 已确认；Firebase 仅发布已确认所有权的 `page-trace-app` 退役跳转配置。Vercel 原名属于他人，不部署。Netlify 继续暂停至 2026-10-21 15:00 Asia/Shanghai，推送保留 `[skip netlify]`。
+- 发布源提交为 `b54fa44e814f18c86718bb9cd0dca4a7d1a90747`，已推送 `main`；[GitHub Release v1.13.0](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.0) 已发布 APK、油猴脚本及 SHA-256 清单。GitHub 返回的资产大小和 SHA-256 与本地发布文件一致。
+- APK：`dist/PageTrace-1.13.0.apk`，3,685,141 字节，SHA-256 `9c1c7211109240651c7193e4431e5ca3dd3f4b8ab99f801533420ff73f479b08`。发布油猴 SHA-256 `350eebca2aa3acfe02cdde325f9cee2a072e2f7047bd32475759efe4b811dc65`，来自 Git 提交的规范化文件。
+- Cloudflare 部署 [5134d5ef.page-trace.pages.dev](https://5134d5ef.page-trace.pages.dev/) 完成，生产主域 [page-trace.pages.dev](https://page-trace.pages.dev/) 已更新。使用显式 78 文件公开包发布，排除本地配置、测试、签名材料和构建目录。
+- [GitHub Pages 发布任务](https://github.com/yuzhounh/page-trace/actions/runs/38593676583) 成功，Pages API 确认上述提交 `built`；[CI 测试任务](https://github.com/yuzhounh/page-trace/actions/runs/38593679944) 成功。两个站点各 11 项页面、油猴、版本、关键 JS/CSS 和 KaTeX 字体均返回 200，SHA-256 与发布提交一致；不是仅检查首页状态码。
+- 旧 Firebase `page-trace-app.web.app` / `page-trace-app.firebaseapp.com` 的首页和授权页均正确跳转到 Cloudflare；两个 `/__/auth/handler` 均保持原域并返回 200。仅部署 Hosting 跳转，未变更 Firestore 规则、认证用户或笔记数据。
+- REDMI K80 Pro / Android 16 已安装 `com.pagetrace.app` 1.13.0、versionCode 11；设备侧 `dumpsys package` 确认版本，原 `firstInstallTime` 及用户 0 的 `ceDataInode` / `deDataInode` 保持一致。解锁后启动能恢复当前月份和既有笔记，未发现崩溃；观察结束时仍显示“正在同步所选月份…”，不能将缓存列表视为服务器已确认或真实云端查询已验收。未执行真实笔记写入或删除。
+- 临时验证记录位于 `tmp/release-apk-validation.json`、`tmp/release-site-validation.json`、`tmp/site-release-manifest.json`；它们是本地证据，不作为公开站点资源发布。
 
 ## 当前实施与验证：1.13.0
 
@@ -18,7 +25,7 @@
 - 回收站打开时独立监听全部 `isDeleted == true` 的记录，加载未完成禁止清空；确认清空后重新查询完整回收站，按 400 条分批删除，清空期间防止重复操作。跨月编辑、恢复、删除、新建更新相关缓存，缓存补齐失败不把已确认的云端写入报告成失败。
 - “复制全部”等待当前范围加载完整，复制该范围全部结果而非仅显示的 50 条。保留相同内容不重建列表、保存重试幂等、账号切换与旧回调保护。
 - 最终执行 `$env:TZ='Asia/Shanghai'; npm test`：66/66 通过。新增范围流程测试执行完整网页脚本和真实 DOM，并使用记录查询条件的 Firebase/GM 适配器：12,000 条模拟库默认仅查询和桥接当月 300 条，历史全文搜索可命中最旧数据；同时验证快速切月、未加载/空月、月份边界、完整 300 条复制、跨月恢复/编辑、新建时正在看历史、405 条跨月回收站清空、旧缓存迁移、旧脚本兼容与确认期间切账号。
-- 这些是自动化模拟云端测试，不访问真实笔记或凭据，不证明线上已更新、用户设备首屏耗时或实际云端索引已验证。未部署、未重建 APK，也未再次尝试被拦截的后台本地服务器启动。
+- 上述 66 项测试使用模拟云端，不证明用户设备首屏耗时或真实云端索引已验证。线上发布与 APK 安装另有本文件顶部证据；手机服务器同步确认仍待验收。没有再次尝试前一阶段被拦截的后台本地服务器启动。
 
 ## 前一阶段实施与验证：1.12.0（历史记录）
 
