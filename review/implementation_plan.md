@@ -1,6 +1,13 @@
 # PageTrace 优化实施计划
 
-更新日期：2026-10-15。1.13.1（Android versionCode 12）已完成构建、GitHub 发布、部署与手机覆盖安装，原应用数据保留；71 项自动测试通过，实机连接云端后同步提示已隐藏。先前手机同步问题由用户确认是未开启 VPN，开启后已恢复。正文版本目录下载继续暂缓。
+更新日期：2026-10-15。当前 GitHub 油猴版本为 1.13.2，修复弹窗编辑事件隔离问题，77 项自动测试通过。本轮按用户要求仅提交并推送 GitHub；Android 保持 1.13.1（versionCode 12），既有部署与安装验证见下文。正文版本目录下载继续暂缓。
+
+## 1.13.2：油猴弹窗粘贴冲突（GitHub 分发）
+
+- 用户报告 Ctrl+V 和右键粘贴均无法输入。源码使用 closed Shadow DOM，但未阻止输入框的 composed 编辑事件传到宿主页面；宿主文档捕获处理器能取消键盘或粘贴默认动作。完整生产脚本加真实 DOM 测试已复现这两条路径的默认动作被取消。尚未取得截图原网站的处理器现场证据，不能据此声称已定位到该网站某个具体函数。
+- 输入框获焦且卡片打开时，在 window 捕获阶段隔离键盘、粘贴/复制/剪切、beforeinput/input 和输入法组合事件；保留浏览器默认编辑动作，并运行 PageTrace 自身的草稿保存、尺寸更新和提交/Escape 处理。输入法组合中的 Enter 不提交。普通网页输入框和悬浮按钮不受隔离影响，SPA 重挂载会移除旧编辑事件监听。
+- 新增 `tests/userscript-editor.test.cjs`，执行完整油猴脚本和 closed Shadow DOM，覆盖两种粘贴路径、光标位置、多行插入后的草稿、编辑快捷键默认动作、输入法组合、提交、Escape、普通页面编辑器及重挂载。合成剪贴板事件不触发系统剪贴板，测试显式模拟未取消的默认插入；未操作用户剪贴板或真实云端笔记。
+- `TZ=Asia/Shanghai npm test` 共 77/77 通过，记录为 `tmp/userscript-paste-tests.log`；本轮复用未变动代码的已通过结果。`pagetrace.user.js` 的版本与 `VERSION` 为 1.13.2；Android 不包含该油猴编辑器，不需要为此重建 APK。以 GitHub `main/pagetrace.user.js` 分发，更新油猴后需刷新原网页验证。推送使用 `[skip netlify]`，不手动部署 Cloudflare、Firebase 或 Netlify；不替用户更改油猴设置。
 
 ## 1.13.1：同步状态提示
 
