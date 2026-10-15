@@ -1,15 +1,19 @@
 # PageTrace 优化实施计划
 
-更新日期：2026-10-15。当前发布版本为 1.13.3，包含同步提示标题栏布局修正；77 项自动测试及 Android release 构建、lint 通过。Android 1.13.3（versionCode 14）已保留数据覆盖安装；网页发布与校验正在进行。正文版本目录下载继续暂缓。
+更新日期：2026-10-15。当前发布版本为 1.13.3，包含同步提示标题栏布局修正；77 项自动测试及 Android release 构建、lint 通过。Android 1.13.3（versionCode 14）已保留数据覆盖安装，网页发布与线上资源校验完成。正文版本目录下载继续暂缓。
 
 ## 1.13.3：同步提示移入标题栏
 
 - 将共享 `index.html` 的 `notesLoadStatus` 从日期导航上方的独立段落移至 PageTrace 标题右侧，普通范围加载文案改为“同步中…”。提示单行显示，长文字省略并保留完整 title；同步结束隐藏文字，不再增减导航上方的一整行。极窄屏也保留 PageTrace 标题。
 - 桌面网页、手机网页与 APK 使用同一页面。保留历史检索、缓存超时及失败提示的实际状态和原有同步逻辑。
-- `TZ=Asia/Shanghai npm test`：77/77 通过；`assembleRelease lintRelease --no-daemon --max-workers=2` 成功。`apksigner verify --verbose` 确认 v2 签名有效；APK 清单为 1.13.2 / code 13，内置 `assets/index.html` 与当前源码一致（仅 Gradle 既有 Firebase 本地 vendor 路径替换及行尾差异）。未进行浏览器或手机实机检查。
+- `TZ=Asia/Shanghai npm test`：77/77 通过；`assembleRelease lintRelease --no-daemon --max-workers=2` 成功。`apksigner verify --verbose` 确认 v2 签名有效，签名证书与原 1.13.1 相同；APK 清单为 1.13.3 / code 14，内置网页、共享 JS/CSS 与当前源码一致（仅 Gradle 既有 Firebase 本地 vendor 路径替换及行尾差异）。
 - 最终统一升级至 1.13.3 / code 14，并再次通过上述构建和验证；油猴仅更新版本元数据。安装包：`dist/PageTrace-1.13.3.apk`，3,685,477 字节；SHA-256：`0919edfeb735bd74135ba7481bef57f60fc7d7567e650f6077f0e755588cbc44`。校验清单：`dist/PageTrace-1.13.3-SHA256SUMS.txt`。
 - 手机 `1999ffe8` 已执行 `adb install -r` 并启动成功；设备侧确认 1.13.3 / code 14，原 `firstInstallTime=2026-10-07 18:17:51`、`ceDataInode=3347975`、`deDataInode=3726688` 及数据路径均保持不变。未清除应用数据或修改云端笔记。
-- 已获用户授权推送和部署网页；发布记录在完成后补充。Netlify 继续暂停至 2026-10-21 15:00 Asia/Shanghai。
+- 手机启动后的截图确认 2026 年 10 月共 198 条既有笔记正常显示，原独立同步提示行已移除；未进行笔记写入、删除或网络设置操作。
+- 发布源提交 `e2b592a4d62462b3bf48b3b0628693882734ad61` 已推送 `main`，并发布 [GitHub Release v1.13.3](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.3)，3 项服务器资产大小及 SHA-256 均匹配本地 APK、油猴和校验文件。
+- Cloudflare 生产部署为 [7061af72](https://7061af72.page-trace.pages.dev/)，主域已更新；[GitHub Pages](https://github.com/yuzhounh/page-trace/actions/runs/38738702796) 与 [CI](https://github.com/yuzhounh/page-trace/actions/runs/38738797972) 成功，Pages API 确认发布源提交已 built。两站共 22 项页面/关键资源 SHA-256 均匹配显式 78 文件发布包。
+- Firebase 只发布 `page-trace-app` 的既有退役跳转配置，两个旧域的首页、授权页及认证辅助路径共 6 项检查通过。未发布 Firestore 规则或修改用户/笔记。Netlify 未调用，继续暂停至 2026-10-21 15:00 Asia/Shanghai；Vercel 原名由他人占用，未部署。
+- 本地证据：`tmp/release-1.13.3-tests.log`、`tmp/release-1.13.3-gradle.log`、`tmp/release-1.13.3-sites.log`、`tmp/release-apk-validation.json`、`tmp/release-site-validation.json` 和 `tmp/device-before-1.13.3.txt` / `tmp/device-after-1.13.3.txt`。网页未使用浏览器自动化验证。
 
 ## 1.13.2：油猴弹窗粘贴冲突（GitHub 分发）
 
