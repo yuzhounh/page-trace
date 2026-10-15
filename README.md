@@ -27,7 +27,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前源码、油猴脚本与 Android 构建版本均为 **1.13.1**（Android versionCode 12），包含共享缓存、按月加载、按需全局搜索和云端连接超时提示。等待云端超过 15 秒时明确显示缓存状态，恢复连接并同步完成后自动隐藏提示。APK 通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.1) 分发。油猴可从 [Cloudflare 安装脚本](https://page-trace.pages.dev/pagetrace.user.js)，或使用 [GitHub 源码入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新；Greasy Fork 的版本需另行同步：
+当前 GitHub 油猴版本为 **1.13.2**，修复宿主网页拦截速记框粘贴/键盘事件的问题，可通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。Android 保持 **1.13.1**（versionCode 12），APK 通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.1) 分发。既有网页和 APK 支持共享缓存、按月加载、按需全局搜索和云端连接超时提示：等待云端超过 15 秒时明确显示缓存状态，恢复连接并同步完成后自动隐藏提示。本次仅推送 GitHub，[Cloudflare 安装脚本](https://page-trace.pages.dev/pagetrace.user.js) 和 Greasy Fork 的版本需另行同步：
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 

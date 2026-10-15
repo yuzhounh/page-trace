@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.13.1
+// @version      1.13.2
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -1379,11 +1379,12 @@
     closeBtn.addEventListener('click', () => toggleCard(false));
     saveBtn.addEventListener('click', submitNote);
 
-    textarea.addEventListener('input', () => {
+    function onNoteInput() {
       saveDraft(textarea.value);
       autoResizeTextarea(textarea, 75, 320);
-    });
-    textarea.addEventListener('keydown', (e) => {
+    }
+    function onNoteKeyDown(e) {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         submitNote();
@@ -1391,7 +1392,26 @@
         e.preventDefault();
         toggleCard(false);
       }
-    });
+    }
+    textarea.addEventListener('input', onNoteInput);
+    textarea.addEventListener('keydown', onNoteKeyDown);
+
+    // Shadow DOM isolates styles, but composed editing events still reach the
+    // host page with target=host. Guard before document capture handlers run;
+    // leave native clipboard/editing defaults intact and run our local handlers.
+    const editorEventTypes = ['keydown', 'keypress', 'keyup', 'paste', 'copy', 'cut',
+      'beforeinput', 'input', 'compositionstart', 'compositionupdate', 'compositionend'];
+    const isolateEditorEvent = (e) => {
+      if (!host.isConnected) {
+        editorEventTypes.forEach(type => window.removeEventListener(type, isolateEditorEvent, true));
+        return;
+      }
+      if (e.target !== host || shadow.activeElement !== textarea || !card.classList.contains('active')) return;
+      if (e.type === 'keydown') onNoteKeyDown(e);
+      else if (e.type === 'input') onNoteInput();
+      e.stopImmediatePropagation();
+    };
+    editorEventTypes.forEach(type => window.addEventListener(type, isolateEditorEvent, true));
 
     // 主题深浅色自适应与同步
     function updateTheme() {
