@@ -123,6 +123,27 @@
       padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
     }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      margin-right: 12px;
+    }
+    .header-brand .brand {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .notes-load-status {
+      min-width: 0;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 20px;
+    }
     .brand {
       display: flex;
       align-items: center;
@@ -2109,9 +2130,6 @@
 
     /* 极窄屏额外保护 (<= 360px) */
     @media (max-width: 360px) {
-      .brand span {
-        display: none;
-      }
       .header-actions {
         gap: 3px;
       }
@@ -2693,6 +2711,7 @@
   <div class="container">
     <!-- 顶部导航与用户头像下拉 -->
     <header>
+      <div class="header-brand">
       <a class="brand" href="./" title="返回首页" aria-label="PageTrace 首页">
         <svg width="24" height="24" viewBox="0 0 48 48" style="border-radius: 7px; overflow: hidden; display: block; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
           <defs>
@@ -2711,6 +2730,8 @@
         </svg>
         <span>PageTrace</span>
       </a>
+      <span id="notesLoadStatus" class="notes-load-status" role="status" style="display:none"></span>
+      </div>
       <!-- 顶部功能按钮组（搜索、记笔记、用户） -->
       <div class="header-actions">
         <button class="header-btn" id="openSearchBtn" title="搜索笔记">
@@ -2895,8 +2916,6 @@
         </div>
       </aside>
     </div>
-
-    <p id="notesLoadStatus" role="status" style="display:none;color:var(--text-muted);padding:8px 0;font-size:13px"></p>
 
     <!-- 顶部内联搜索栏（即输即见，实时过滤） -->
     <div class="search-bar-container" id="searchBarContainer">
@@ -3848,9 +3867,13 @@
       if (!message && notesScopeLoading) {
         message = notesCloudUnavailable
           ? `云端连接暂不可用，${hasCompleteNotesCache || notesData.length ? '当前显示本地缓存' : '暂无本地缓存'}`
-          : global ? '正在加载历史笔记，结果尚未完整…' : '正在同步所选月份…';
+          : global ? '正在加载历史笔记，结果尚未完整…' : '同步中…';
       }
-      if (status) { status.textContent = message; status.style.display = message ? 'block' : 'none'; }
+      if (status) {
+        status.textContent = message;
+        status.title = message;
+        status.style.display = message ? 'block' : 'none';
+      }
       const copy = document.getElementById('btnCopyAllNotes');
       if (copy) copy.disabled = !currentUser || !!notesScopeError || notesScopeLoading || !hasCompleteNotesCache;
       if (currentSearchKeyword.trim()) {
