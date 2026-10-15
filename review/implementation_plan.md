@@ -1,6 +1,15 @@
 # PageTrace 优化实施计划
 
-更新日期：2026-10-15。当前 GitHub 油猴版本为 1.13.2，修复弹窗编辑事件隔离问题，77 项自动测试通过。本轮按用户要求仅提交并推送 GitHub；Android 保持 1.13.1（versionCode 12），既有部署与安装验证见下文。正文版本目录下载继续暂缓。
+更新日期：2026-10-15。当前发布版本为 1.13.3，包含同步提示标题栏布局修正；77 项自动测试及 Android release 构建、lint 通过。Android 1.13.3（versionCode 14）已保留数据覆盖安装；网页发布与校验正在进行。正文版本目录下载继续暂缓。
+
+## 1.13.3：同步提示移入标题栏
+
+- 将共享 `index.html` 的 `notesLoadStatus` 从日期导航上方的独立段落移至 PageTrace 标题右侧，普通范围加载文案改为“同步中…”。提示单行显示，长文字省略并保留完整 title；同步结束隐藏文字，不再增减导航上方的一整行。极窄屏也保留 PageTrace 标题。
+- 桌面网页、手机网页与 APK 使用同一页面。保留历史检索、缓存超时及失败提示的实际状态和原有同步逻辑。
+- `TZ=Asia/Shanghai npm test`：77/77 通过；`assembleRelease lintRelease --no-daemon --max-workers=2` 成功。`apksigner verify --verbose` 确认 v2 签名有效；APK 清单为 1.13.2 / code 13，内置 `assets/index.html` 与当前源码一致（仅 Gradle 既有 Firebase 本地 vendor 路径替换及行尾差异）。未进行浏览器或手机实机检查。
+- 最终统一升级至 1.13.3 / code 14，并再次通过上述构建和验证；油猴仅更新版本元数据。安装包：`dist/PageTrace-1.13.3.apk`，3,685,477 字节；SHA-256：`0919edfeb735bd74135ba7481bef57f60fc7d7567e650f6077f0e755588cbc44`。校验清单：`dist/PageTrace-1.13.3-SHA256SUMS.txt`。
+- 手机 `1999ffe8` 已执行 `adb install -r` 并启动成功；设备侧确认 1.13.3 / code 14，原 `firstInstallTime=2026-10-07 18:17:51`、`ceDataInode=3347975`、`deDataInode=3726688` 及数据路径均保持不变。未清除应用数据或修改云端笔记。
+- 已获用户授权推送和部署网页；发布记录在完成后补充。Netlify 继续暂停至 2026-10-21 15:00 Asia/Shanghai。
 
 ## 1.13.2：油猴弹窗粘贴冲突（GitHub 分发）
 

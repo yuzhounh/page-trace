@@ -290,7 +290,7 @@ test('cloud wait includes delayed login and only server confirmation hides the c
   await p.flush();
   const status = p.w.document.getElementById('notesLoadStatus');
   const node = p.w.document.querySelector('[data-id="old"]');
-  assert.match(status.textContent, /正在同步所选月份/);
+  assert.equal(status.textContent, '同步中…');
   assert.equal(p.subscriptions.length, 0);
   await p.timeout(15000);
   assert.equal(status.textContent, '云端连接暂不可用，当前显示本地缓存');
@@ -331,7 +331,7 @@ test('no-cache timeouts are honest and pending writes keep syncing until fully c
   await p.timeout(15000);
   assert.equal(status.textContent, '云端连接暂不可用，暂无本地缓存');
   await p.snapshot([makeNote('pending')], { pending: true });
-  assert.match(status.textContent, /正在同步所选月份/);
+  assert.equal(status.textContent, '同步中…');
   assert.equal(p.w.fixtureUI.state().loading, true);
   assert.equal(p.w.document.getElementById('btnCopyAllNotes').disabled, true);
   await p.snapshot([]);
