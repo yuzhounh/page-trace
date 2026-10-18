@@ -163,6 +163,23 @@ test('trusted pages require exact origin, same window, session nonce, and valid 
   assert.equal(p.store.has('pt_project_id'), false);
 });
 
+test('Tampermonkey window wrapper accepts only the current document window', async () => {
+  const p = page();
+  const actualPageWindow = {};
+  p.context.document.defaultView = actualPageWindow;
+  p.loadUserscript();
+  p.emit(p.success(), undefined, p.window);
+  p.emit(p.success(), undefined, {});
+  p.emit(p.success(), 'https://evil.example', actualPageWindow);
+  p.emit({ ...p.success(), nonce: '0'.repeat(32) }, undefined, actualPageWindow);
+  await p.flush();
+  assert.equal(p.store.has('pt_id_token'), false, 'wrapper, other window, wrong origin and wrong nonce must be rejected');
+  p.emit(p.success(), undefined, actualPageWindow);
+  await p.flush();
+  assert.equal(p.store.get('pt_id_token'), 'id-alice');
+  assert.ok(p.sent.some(({ data }) => data.source === 'PAGETRACE_AUTH_CONFIRMED'));
+});
+
 test('existing login synchronizes after late userscript injection and closes only after storage confirmation', async () => {
   const p = page();
   p.loadAuth();
