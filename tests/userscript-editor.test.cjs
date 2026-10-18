@@ -5,9 +5,9 @@ const { join } = require('node:path');
 const { JSDOM } = require('jsdom');
 const script = readFileSync(join(__dirname, '..', 'pagetrace.user.js'), 'utf8');
 
-function editor(t) {
+function editor(t, url = 'https://example.test/article') {
   const dom = new JSDOM('<!doctype html><title>Fixture page</title><textarea id="site-editor"></textarea>',
-    { url: 'https://example.test/article', runScripts: 'outside-only' });
+    { url, runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window, roots = [], store = new Map([
     ['pt_uid', 'alice'], ['pt_id_token', 'fixture-token'], ['pt_token_expiry', Date.now() + 3600000]
@@ -73,6 +73,24 @@ function editor(t) {
   p.open();
   return p;
 }
+
+test('X uses the ordinary input and saves only manually entered notes', async t => {
+  for (const expected of ['', '我的备注', '自己复制的原文', '自己复制的原文\n\n我的备注']) {
+    const p = editor(t, 'https://x.com/author/status/123');
+    p.w.document.title = '作者 on X: "首句。后续正文" / X';
+    p.open();
+    assert.equal(p.root().querySelectorAll('.pt-input-actions button').length, 1);
+    p.textarea().value = expected;
+    assert.equal(p.textarea().value, expected);
+    p.key('Enter', { ctrlKey: true }); await p.flush();
+    const fields = JSON.parse(p.requests.at(-1).data).fields;
+    assert.equal(fields.title.stringValue, '首句。');
+    assert.equal(fields.note.stringValue, expected);
+    assert.equal(fields.sourceText, undefined);
+    assert.equal(fields.sourceAuthor, undefined);
+    assert.equal(fields.captureKind, undefined);
+  }
+});
 
 test('clipboard paste remains available with host capture handlers for keyboard and context-menu paths', async t => {
   for (const path of ['Ctrl+V', 'context menu']) await t.test(path, t => {
