@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.13.4
+// @version      1.14.3
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -65,11 +65,32 @@
   // 2. 标题清洗与剪贴板工具
   // ==========================================
   function processTitle(title) {
-    return (title || '')
+    const cleanedTitle = (title || '')
       .replace('- cnBeta.COM 移动版(WAP)', '- cnBeta')
       .replace(/\((\d+\+?)\s*封私信\s*\/\s*(\d+\+?)\s*条消息\)/g, '')
       .replace(/\((\d+\+?)\s*封私信\)/g, '')
       .trim();
+    if (/(^|\.)(x\.com|twitter\.com)$/i.test(window.location.hostname)) {
+      const post = cleanedTitle.match(/^(.+?) on (?:X|Twitter):\s*"([\s\S]+)"\s*\/\s*(?:X|Twitter)$/i)
+        || cleanedTitle.match(/^(.+?) on (?:X|Twitter):\s*“([\s\S]+)”\s*\/\s*(?:X|Twitter)$/i);
+      if (post) {
+        const text = post[2].trim();
+        const sentence = text.match(/^[\s\S]*?(?:[。！？!?][”’"']*|\.(?=\s|$)|\n|$)/)?.[0].trim() || text;
+        const chars = Array.from(sentence.replace(/\s+/g, ' '));
+        if (chars.length) return `${chars.slice(0, 60).join('')}${chars.length > 60 ? '…' : ''}`;
+      }
+    }
+    return cleanedTitle;
+  }
+
+  function getPageCapture() {
+    return { title: processTitle(document.title), url: window.location.href };
+  }
+
+  function formatCaptureForCopy(capture, note = '') {
+    const parts = [capture.title, capture.url];
+    if (note) parts.push(`笔记: ${note}`);
+    return parts.join('\n');
   }
 
   // 规范化笔记段落（两段之间始终保持一个空行）
@@ -1021,7 +1042,7 @@
     titlePreview.target = '_blank';
     titlePreview.rel = 'noopener noreferrer';
     titlePreview.title = document.title;
-    titlePreview.textContent = processTitle(document.title);
+    titlePreview.textContent = getPageCapture().title;
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'pt-close-btn';
@@ -1219,7 +1240,7 @@
       const targetState = show !== undefined ? show : !isCurrentlyOpen;
       hideTooltip();
       if (targetState) {
-        titlePreview.textContent = processTitle(document.title);
+        titlePreview.textContent = getPageCapture().title;
         titlePreview.href = window.location.href;
         titlePreview.title = document.title;
         restoreDraftIfPresent();
@@ -1237,8 +1258,6 @@
     }
 
     async function submitNote() {
-      const title = processTitle(document.title);
-      const url = window.location.href;
       const rawNote = textarea.value.trim();
       const note = formatNoteWithBlankLines(rawNote);
 
@@ -1252,9 +1271,10 @@
       saveBtn.style.opacity = '0.5';
 
       try {
-        await saveToFirestore({ title, url, note });
+        const capture = getPageCapture();
+        await saveToFirestore({ ...capture, note });
         clearDraft();
-        const copyPayload = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
+        const copyPayload = formatCaptureForCopy(capture, note);
         copyText(copyPayload).catch(() => {});
 
         showButtonStatus('success');
@@ -1263,6 +1283,7 @@
         toggleCard(false);
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
+        titlePreview.textContent = err.message;
         saveDraft(textarea.value);
         showButtonStatus('error');
       } finally {
@@ -1272,12 +1293,10 @@
     }
 
     async function handleCopyOnly() {
-      const title = processTitle(document.title);
-      const url = window.location.href;
       const rawNote = textarea.value.trim();
       const note = formatNoteWithBlankLines(rawNote);
-      const text = note ? `${title}\n${url}\n笔记: ${note}` : `${title}\n${url}`;
       try {
+        const text = formatCaptureForCopy(getPageCapture(), note);
         await copyText(text);
         showButtonStatus('success');
         if (textarea.value) {
@@ -1288,13 +1307,12 @@
         toggleCard(false);
       } catch (e) {
         console.error('[PageTrace] 复制失败:', e);
+        titlePreview.textContent = e.message;
         showButtonStatus('error');
       }
     }
 
     async function handleDirectSave() {
-      const title = processTitle(document.title);
-      const url = window.location.href;
 
       if (!CONFIG.uid || !CONFIG.apiKey || !CONFIG.projectId) {
         showButtonStatus('warning');
@@ -1303,12 +1321,15 @@
       }
 
       try {
-        await saveToFirestore({ title, url, note: '' });
-        const copyPayload = `${title}\n${url}`;
+        const capture = getPageCapture();
+        await saveToFirestore({ ...capture, note: '' });
+        const copyPayload = formatCaptureForCopy(capture);
         copyText(copyPayload).catch(() => {});
         showButtonStatus('success');
       } catch (err) {
         console.error('[PageTrace] 保存失败:', err);
+        toggleCard(true);
+        titlePreview.textContent = err.message;
         showButtonStatus('error');
       }
     }
