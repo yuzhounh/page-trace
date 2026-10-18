@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.13.3
+// @version      1.13.4
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -293,6 +293,8 @@
     crypto.getRandomValues(nonceBytes);
     const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
     const origin = window.location.origin;
+    // Tampermonkey wraps window; MessageEvent.source points to the document's actual window.
+    const pageWindow = document.defaultView || window;
     let pingTimer = null;
     const base = new URL(getTrustedAppBaseUrl());
     const isDashboard = [base.pathname, `${base.pathname}index.html`].includes(window.location.pathname);
@@ -361,7 +363,7 @@
     });
 
     window.addEventListener('message', (event) => {
-      if (event.origin !== origin || event.source !== window) return;
+      if (event.origin !== origin || event.source !== pageWindow) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
       // 页面主动请求覆盖 document-start 的首次 Ping 早于页面监听器的情况。
