@@ -12,9 +12,9 @@ test('X title rules use only the page title and leave notes and links alone', t 
   const w = dom.window;
   w.eval(code + '\nwindow.capture = getPageCapture;');
   for (const [title, expected] of [
-    ['Lonely on X: "🎉 牛逼！后续正文" / X', '🎉 牛逼！'],
-    ['作者 on X: “正文包含"内部引号"。后续” / X', '正文包含"内部引号"。'],
-    ['作者 on X: "' + '长'.repeat(90) + '" / X', '长'.repeat(60) + '…'],
+    ['Lonely on X: "🎉 牛逼！后续正文" / X', '🎉 牛逼！后续正文'],
+    ['作者 on X: “正文包含"内部引号"。后续” / X', '正文包含"内部引号"。后续'],
+    ['作者 on X: "' + '长'.repeat(90) + '" / X', '长'.repeat(90)],
     ['Home / X', 'Home / X']
   ]) {
     w.document.title = title;

@@ -84,7 +84,7 @@ test('X uses the ordinary input and saves only manually entered notes', async t 
     assert.equal(p.textarea().value, expected);
     p.key('Enter', { ctrlKey: true }); await p.flush();
     const fields = JSON.parse(p.requests.at(-1).data).fields;
-    assert.equal(fields.title.stringValue, '首句。');
+    assert.equal(fields.title.stringValue, '首句。后续正文');
     assert.equal(fields.note.stringValue, expected);
     assert.equal(fields.sourceText, undefined);
     assert.equal(fields.sourceAuthor, undefined);

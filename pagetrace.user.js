@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.14.3
+// @version      1.14.4
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -75,9 +75,7 @@
         || cleanedTitle.match(/^(.+?) on (?:X|Twitter):\s*“([\s\S]+)”\s*\/\s*(?:X|Twitter)$/i);
       if (post) {
         const text = post[2].trim();
-        const sentence = text.match(/^[\s\S]*?(?:[。！？!?][”’"']*|\.(?=\s|$)|\n|$)/)?.[0].trim() || text;
-        const chars = Array.from(sentence.replace(/\s+/g, ' '));
-        if (chars.length) return `${chars.slice(0, 60).join('')}${chars.length > 60 ? '…' : ''}`;
+        if (text) return text;
       }
     }
     return cleanedTitle;
