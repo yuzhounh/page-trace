@@ -27,7 +27,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前 GitHub 油猴版本为 **1.13.2**，修复宿主网页拦截速记框粘贴/键盘事件的问题，可通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。Android 保持 **1.13.1**（versionCode 12），APK 通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.13.1) 分发。既有网页和 APK 支持共享缓存、按月加载、按需全局搜索和云端连接超时提示：等待云端超过 15 秒时明确显示缓存状态，恢复连接并同步完成后自动隐藏提示。本次仅推送 GitHub，[Cloudflare 安装脚本](https://page-trace.pages.dev/pagetrace.user.js) 和 Greasy Fork 的版本需另行同步：
+当前版本为 **1.14.5**：油猴脚本支持提取 X 帖子标题作为捕获标题，并保留完整引用标题；Android APK 同步为 1.14.5（versionCode 15），通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.14.5) 分发，可通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新油猴脚本。既有网页和 APK 支持共享缓存、按月加载、按需全局搜索和云端连接超时提示。
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 
@@ -88,6 +88,10 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - `index.html`：云端速记看板单文件 SPA 源码（支持实时同步、搜索与明暗主题）。
 - `auth.html`：Google OAuth 登录与油猴脚本安全授权握手页。
 - `firestore.rules`：严格按 Google 账户 UID 隔离的 Firestore 云端安全规则。
+
+## 设计文档
+
+- [浏览、缓存与同步设计](docs/design-and-sync.md)：按月浏览、共享缓存、全局搜索、回收站与同步反馈；原始方案和发布证据保留在历史记录中。
 
 ## 相关项目
 
