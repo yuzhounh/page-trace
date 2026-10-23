@@ -2705,6 +2705,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.15.0" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -3052,7 +3053,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
-          <span>✍️ 新建速记</span>
+          <span>新建速记</span>
         </div>
         <button class="modal-close-x" id="closeCreateModal" aria-label="关闭速记窗口" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3205,7 +3206,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
-          <span>✏️ 编辑速记</span>
+          <span>编辑速记</span>
         </div>
         <button class="modal-close-x" id="closeEditModal" aria-label="关闭编辑窗口" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3492,6 +3493,13 @@
     let hasCompleteNotesCache = false;
     let hasServerNotesSnapshot = false;
     let lastNotesSignature = null;
+    let noteSignatures = new WeakMap();
+    let pendingNotesWork = null;
+    let notesWorkTimer = null;
+    let savedSettledSet = null;
+    let savedSettledCount = -1;
+    let savedSettledUid = '';
+    const failedCacheScopes = new Set();
     let settledSharedIds = new Set();
     let sharedSavedNotes = new Map();
     let sharedCacheRequest = null;
@@ -3592,6 +3600,7 @@
     }
 
     function noteContentSignature(note) {
+      if (noteSignatures.has(note)) return noteSignatures.get(note);
       const raw = serializeNoteForCache(note);
       delete raw.serverCreateTime;
       delete raw.serverUpdateTime;
@@ -3603,32 +3612,100 @@
           raw[field] = Number.isFinite(date.getTime()) ? date.toISOString() : String(raw[field]);
         }
       }
-      return JSON.stringify(Object.keys(raw).sort().map(key => [key, raw[key]]));
+      const signature = JSON.stringify(Object.keys(raw).sort().map(key => [key, raw[key]]));
+      // App-owned note records are replaced, not edited in place.
+      noteSignatures.set(note, signature);
+      return signature;
     }
 
-    function applyNotesData(list) {
+    function settledIdsNeedSave(uid) {
+      return uid && (savedSettledUid !== uid || savedSettledSet !== settledSharedIds || savedSettledCount !== settledSharedIds.size);
+    }
+
+    function persistSettledIds(uid) {
+      if (!settledIdsNeedSave(uid)) return;
+      try {
+        localStorage.setItem(`pagetrace_shared_settled_v3_${uid}`, JSON.stringify([...settledSharedIds]));
+        savedSettledUid = uid; savedSettledSet = settledSharedIds; savedSettledCount = settledSharedIds.size;
+      } catch (_) { /* Retry on the next update; never mark a failed write saved. */ }
+    }
+
+    function flushPendingNotesWork(render = true) {
+      clearTimeout(notesWorkTimer); notesWorkTimer = null;
+      const work = pendingNotesWork; pendingNotesWork = null;
+      if (!work || work.uid !== notesCacheUid || work.scope !== activeNotesScope?.key) return;
+      if (work.cache) saveNotesToCache(work.uid, notesData);
+      if (work.settled) persistSettledIds(work.uid);
+      if (!render) return;
+      if (document.hidden) {
+        if (work.render || work.navigation) pendingNotesWork = { ...work, cache: false, settled: false };
+        return;
+      }
+      if (work.navigation) updateMonthNavigator();
+      if (work.render) {
+        const scrollY = window.scrollY;
+        renderList();
+        if (Number.isFinite(scrollY) && scrollY > 0) window.scrollTo({ top: scrollY, behavior: 'instant' });
+        if (trashModal && trashModal.classList.contains('show')) renderTrashModal();
+      }
+      updateNotesStatus();
+    }
+
+    function queueNotesWork(cache, render, navigation, first) {
+      const uid = notesCacheUid, scope = activeNotesScope?.key;
+      if (!uid || !scope) return;
+      const settled = settledIdsNeedSave(uid);
+      if (!cache && !render && !navigation && !settled) return;
+      if (!pendingNotesWork || pendingNotesWork.uid !== uid || pendingNotesWork.scope !== scope) {
+        pendingNotesWork = { uid, scope, cache: false, render: false, navigation: false, settled: false };
+      }
+      pendingNotesWork.cache ||= cache; pendingNotesWork.render ||= render;
+      pendingNotesWork.navigation ||= navigation; pendingNotesWork.settled ||= settled;
+      if (first) flushPendingNotesWork();
+      else if (notesWorkTimer === null) notesWorkTimer = setTimeout(() => flushPendingNotesWork(), 60);
+    }
+    addEventListener('pagehide', () => flushPendingNotesWork());
+    document.addEventListener('visibilitychange', () => flushPendingNotesWork());
+
+    function applyNotesData(list, changedIds = null) {
+      const previousById = new Map(notesData.map(note => [note.id, note]));
       const known = new Map([...notesData, ...[...sharedSavedNotes.values()].filter(note => !settledSharedIds.has(note.id))].map(note => [note.id, note]));
-      notesData = list.map(note => {
+      const first = lastNotesSignature === null;
+      let contentChanged = first || list.length !== notesData.length;
+      let cacheChanged = list.length !== notesData.length;
+      const next = list.map(note => {
+        const old = previousById.get(note.id);
+        const previous = known.get(note.id);
+        if (old && previous === old && (note === old || (changedIds && !changedIds.has(note.id)))) return old;
         const raw = serializeNoteForCache(note);
-        const previous = known.get(raw.id);
+        const signature = noteContentSignature(raw);
+        const oldSignature = old ? noteContentSignature(old) : null;
         // Web SDK 不返回系统版本；只有正文仍匹配时才保留保存响应的版本。
-        if (previous && noteContentSignature(previous) === noteContentSignature(raw)) {
+        if (previous && noteContentSignature(previous) === signature) {
           raw.serverCreateTime = previous.serverCreateTime || raw.serverCreateTime || null;
           raw.serverUpdateTime = previous.serverUpdateTime || raw.serverUpdateTime || null;
         }
+        if (signature !== oldSignature) contentChanged = true;
+        const sameCache = old && signature === oldSignature
+          && (old.serverCreateTime || null) === (raw.serverCreateTime || null)
+          && (old.serverUpdateTime || null) === (raw.serverUpdateTime || null);
+        if (sameCache) return old;
+        cacheChanged = true;
         return raw;
-      }).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || a.id.localeCompare(b.id));
-      const signature = JSON.stringify(notesData.map(noteContentSignature));
-      saveNotesToCache(notesCacheUid, notesData);
+      });
+      if (contentChanged) notesData = next.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || a.id.localeCompare(b.id));
+      else {
+        const byId = new Map(next.map(note => [note.id, note]));
+        notesData = notesData.map(note => byId.get(note.id));
+      }
+      const cached = scopeCaches.get(activeNotesScope?.key);
+      cacheChanged ||= !cached || cached.complete !== hasCompleteNotesCache
+        || (!!activeNotesScope && failedCacheScopes.has(scopeStorageKey(notesCacheUid, activeNotesScope)));
+      // Keep the session cache current before deferred disk writes or a user edit.
+      stageNotesCache(notesCacheUid, notesData);
       updateNotesStatus();
-      updateMonthNavigator();
-      if (signature === lastNotesSignature) return;
-      const scrollY = window.scrollY;
-      lastNotesSignature = signature;
-      renderList();
-      updateNotesStatus();
-      if (Number.isFinite(scrollY) && scrollY > 0) window.scrollTo({ top: scrollY, behavior: 'instant' });
-      if (trashModal && trashModal.classList.contains('show')) renderTrashModal();
+      if (contentChanged) lastNotesSignature = (lastNotesSignature || 0) + 1;
+      queueNotesWork(cacheChanged, contentChanged, cacheChanged || contentChanged, first);
     }
 
     function mergeSharedNotes(list) {
@@ -3677,11 +3754,26 @@
         });
         localStorage.setItem(key, value);
         localStorage.setItem(indexKey, JSON.stringify(index));
+        failedCacheScopes.delete(key);
         return true;
       } catch (error) {
+        failedCacheScopes.add(scopeStorageKey(uid, state.scope));
         console.warn('[PageTrace] 写入月份缓存失败，仍保留当前会话数据:', error);
         return false;
       }
+    }
+
+    function touchScopeCache(uid, scope) {
+      if (scope.key === 'all') return;
+      try {
+        const key = scopeStorageKey(uid, scope), indexKey = `pagetrace_scope_index_v3_${uid}`;
+        const index = JSON.parse(localStorage.getItem(indexKey) || '[]');
+        const entry = index.find(item => item.key === key);
+        if (!entry) return;
+        entry.touched = Date.now();
+        index.sort((a, b) => Number(b.key === key) - Number(a.key === key) || b.touched - a.touched);
+        localStorage.setItem(indexKey, JSON.stringify(index));
+      } catch (_) { /* Cache recency is best effort; the body remains untouched. */ }
     }
 
     function readScopeCache(uid, scope) {
@@ -3725,6 +3817,8 @@
     function prepareNotesCache(uid) {
       const scope = selectedNotesScope();
       if (notesCacheUid === uid && activeNotesScope?.key === scope.key) return;
+      flushPendingNotesWork(false);
+      noteSignatures = new WeakMap(); // Only the active scope retains derived body signatures.
       if (unsubscribeNotes) unsubscribeNotes();
       unsubscribeNotes = null;
       notesSubscriptionUid = '';
@@ -3732,6 +3826,7 @@
       notesListenerGeneration++;
       clearNotesCloudWait();
       if (notesCacheUid !== uid) {
+        failedCacheScopes.clear();
         scopeCaches = new Map();
         settledSharedIds = new Set();
         try {
@@ -3756,6 +3851,7 @@
       lastNotesSignature = null;
       sharedSavedNotes = new Map();
       const state = scopeCaches.get(scope.key) || readScopeCache(uid, scope);
+      if (state) touchScopeCache(uid, scope);
       hasCompleteNotesCache = !!state?.complete;
       if (state) notesData = state.notes;
       else if (scope.key === 'all') {
@@ -3815,12 +3911,18 @@
       });
     }
 
-    function saveNotesToCache(uid, list) {
+    function stageNotesCache(uid, list) {
       if (!uid || !activeNotesScope || !Array.isArray(list)) return;
-      const state = { scope: activeNotesScope, complete: hasCompleteNotesCache, notes: list.map(serializeNoteForCache), touched: Date.now() };
+      const state = { scope: activeNotesScope, complete: hasCompleteNotesCache, notes: list, touched: Date.now() };
       scopeCaches.delete(state.scope.key);
       scopeCaches.set(state.scope.key, state);
       while (scopeCaches.size > 12) scopeCaches.delete(scopeCaches.keys().next().value);
+      return state;
+    }
+
+    function saveNotesToCache(uid, list) {
+      const state = stageNotesCache(uid, list);
+      if (!state) return;
       persistScopeCache(uid, state);
       if (state.scope.key === 'all' && state.complete) {
         for (const entry of scopeCaches.values()) {
@@ -3830,8 +3932,7 @@
           persistScopeCache(uid, entry);
         }
       }
-      try { localStorage.setItem(`pagetrace_shared_settled_v3_${uid}`, JSON.stringify([...settledSharedIds])); }
-      catch (_) {}
+      persistSettledIds(uid);
     }
 
     function loadNotesFromCache(uid) {
@@ -3940,6 +4041,7 @@
 
     // 监听 Google 登录状态及 Token 自动刷新
     auth.onIdTokenChanged(async (user) => {
+      flushPendingNotesWork(user?.uid === currentUser?.uid);
       authStateReady = true;
       currentUser = user;
       if (user) {
@@ -4190,6 +4292,8 @@
       const generation = ++notesListenerGeneration;
       const scope = activeNotesScope;
       const initialSharedIds = new Set(sharedSavedNotes.keys());
+      const liveNotes = new Map();
+      let liveInitialized = false;
       if (lastNotesSignature === null) {
         notesList.innerHTML = getSkeletonHtml();
       }
@@ -4200,26 +4304,53 @@
         .where('createdAt', '<', new Date(scope.end)).orderBy('createdAt', 'desc');
       unsubscribeNotes = ref.onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
         if (generation !== notesListenerGeneration || currentUser?.uid !== uid) return;
+        const changes = snapshot.docChanges();
+        const changedIds = new Set(changes.map(change => change.doc.id));
         if (snapshot.metadata.fromCache) {
+          if (!snapshot.metadata.hasPendingWrites) liveInitialized = false;
           notesScopeLoading = true;
           startNotesCloudWait();
           updateNotesStatus();
           // SDK 的初始空/旧缓存不能覆盖完整首屏；本页待提交操作仍可显示。
           if (snapshot.metadata.hasPendingWrites) {
             const merged = new Map(notesData.map(note => [note.id, note]));
-            for (const change of snapshot.docChanges()) {
+            for (const change of changes) {
               if (change.type === 'removed') {
                 merged.delete(change.doc.id);
                 settledSharedIds.add(change.doc.id);
+                if (liveInitialized) liveNotes.delete(change.doc.id);
               }
-              else merged.set(change.doc.id, { ...change.doc.data(), id: change.doc.id });
+              else {
+                const note = { ...change.doc.data(), id: change.doc.id };
+                merged.set(change.doc.id, note);
+                if (liveInitialized) liveNotes.set(change.doc.id, note);
+              }
             }
-            applyNotesData([...merged.values()]);
+            applyNotesData([...merged.values()], changedIds);
           }
           return;
         }
         clearNotesCloudWait();
-        const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        let appliedChanges = changedIds;
+        if (!liveInitialized) {
+          liveNotes.clear();
+          snapshot.docs.forEach(doc => liveNotes.set(doc.id, { ...doc.data(), id: doc.id }));
+          liveInitialized = true;
+          appliedChanges = null;
+        } else {
+          changes.forEach(change => {
+            if (change.type === 'removed') liveNotes.delete(change.doc.id);
+            else liveNotes.set(change.doc.id, { ...change.doc.data(), id: change.doc.id });
+          });
+          // Also tolerate incomplete change lists from older adapters after reconnect.
+          const expectedSize = typeof snapshot.size === 'number' ? snapshot.size : snapshot.docs.length;
+          if (liveNotes.size !== expectedSize) {
+            liveNotes.clear();
+            snapshot.docs.forEach(doc => liveNotes.set(doc.id, { ...doc.data(), id: doc.id }));
+            appliedChanges = null;
+          }
+        }
+        const list = [...liveNotes.values()];
         hasCompleteNotesCache = !snapshot.metadata.hasPendingWrites;
         hasServerNotesSnapshot = true;
         notesScopeLoading = snapshot.metadata.hasPendingWrites;
@@ -4229,11 +4360,11 @@
           // 监听期间刚保存的记录要保留，直到快照真正包含它。
           for (const id of initialSharedIds) settledSharedIds.add(id);
           for (const note of list) if (sharedSavedNotes.has(note.id)) settledSharedIds.add(note.id);
-          for (const change of snapshot.docChanges()) {
+          for (const change of changes) {
             if (change.type === 'removed') settledSharedIds.add(change.doc.id);
           }
         }
-        applyNotesData(mergeSharedNotes(list));
+        applyNotesData(mergeSharedNotes(list), appliedChanges);
         finishTopSync();
       }, (err) => {
         if (generation !== notesListenerGeneration || currentUser?.uid !== uid) return;
@@ -5123,6 +5254,7 @@
 
     function updateCachedNotes(changes, uid) {
       if (currentUser?.uid !== uid || notesCacheUid !== uid) return;
+      flushPendingNotesWork();
       for (const state of scopeCaches.values()) {
         const byId = new Map(state.notes.map(note => [note.id, note]));
         let changed = false;
@@ -6146,6 +6278,7 @@
 
   </script>
   <script src="android-bridge.js"></script>
-  <script src="touch-ui.js"></script>
+  <script src="touch-ui.js?v=1.15.0"></script>
+  <script src="mobile-ui.js?v=1.15.0"></script>
 </body>
 </html>

@@ -103,6 +103,6 @@ test('first visit on a touch phone hints at long press once', async () => {
   const { w, calls } = webSetup();
   w.document.getElementById('notesList').innerHTML = '<div class="note-item-row" data-id="x"></div>';
   await wait(50);
-  assert.deepEqual(calls.find(c => c[0] === 'toast'), ['toast', '长按笔记可编辑、复制、删除', '👆']);
+  assert.deepEqual(calls.find(c => c[0] === 'toast'), ['toast', '长按笔记可多选、复制、删除', '👆']);
   assert.equal(w.localStorage.getItem('pagetrace_longpress_hint'), '1');
 });

@@ -27,7 +27,11 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前版本为 **1.14.5**：油猴脚本支持提取 X 帖子标题作为捕获标题，并保留完整引用标题；Android APK 同步为 1.14.5（versionCode 15），通过 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.14.5) 分发，可通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新油猴脚本。既有网页和 APK 支持共享缓存、按月加载、按需全局搜索和云端连接超时提示。
+当前日常版本为 **1.15.0**，Android versionCode **16**。整合触屏标题/搜索、全屏菜单和多选操作，保留桌面布局、X标题捕获与标题/链接/备注三字段保存。日常脚本通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新；本地APK为`dist/PageTrace-1.15.0.apk`。公开 [GitHub Release](https://github.com/yuzhounh/page-trace/releases/tag/v1.14.5) 保持1.14.5，本轮不新增公开Release或提交GreasyFork版本。
+
+快照首读后按`docChanges`更新记录Map，状态快照不再反复解析/排序/序列化全部正文；重连后重新建立服务器完整视图。正文、服务器版本、缓存完整性和删除确认分别处理，真实变动的缓存写入/重绘在60ms内合并，首屏立即展示，切换账户/范围及离页前补写缓存。后台页面继续保存数据并延后列表重绘，回到前台展示最新数据；用户脚本隐藏时释放2秒兜底定时器，重新可见时补查。缓存键、v3格式和`users/{uid}/notes`保持，未新增数据迁移；多选与延后操作绑定原账户，防止换账户后误操作。
+
+测试包含1,000条记录下20次不变状态快照0次正文读取/缓存写入/重绘，单条修改仅读取对应文档，以及合并写入、后台恢复、SDK本地待确认修改、服务器版本和回收站恢复。它们是确定性夹具验证，不是实际手机耗电或在线延迟测量。差分语义参见 [Firestore QuerySnapshot文档](https://firebase.google.com/docs/reference/js/firestore.querysnapshot#querysnapshotdocchanges)。`npm run build`生成白名单网页包，`npm test`最多使用2个测试进程；下载和复制按工具正常完成记录，不追加传输完整性比较。
 
 🔗 **[PageTrace - Web Memo & Cloud Capture](https://greasyfork.org/en/scripts/594363-pagetrace-web-memo-cloud-capture)**
 

@@ -68,7 +68,8 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
   const firebaseAuth = () => p.auth;
   firebaseAuth.GoogleAuthProvider = function () {};
   const sandbox = { window: p.window, URL, crypto: webcrypto, console, Uint8Array,
-    document: { getElementById: element },
+    document: { getElementById: element, addEventListener() {}, hidden: false },
+    addEventListener: (...args) => p.window.addEventListener(...args),
     firebase: { apps: [{}], auth: firebaseAuth, initializeApp() {} },
     firebaseConfig, auth: p.auth, currentUser: null, notesData: [], unsubscribeNotes: null,
     bindFirestoreRealtime: (uid) => p.subscriptions.push(uid), renderList() {},

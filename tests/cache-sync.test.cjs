@@ -24,6 +24,14 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
   const dom = new JSDOM(html, { url, runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window, queue = [], timers = new Map(), subscriptions = [], frames = [], messages = [], gmReads = [];
+  const metrics = { docReads: 0, storageWrites: [] };
+  let hidden = false;
+  Object.defineProperty(w.document, 'hidden', { configurable: true, get: () => hidden });
+  const originalStore = w.Storage.prototype.setItem;
+  w.Storage.prototype.setItem = function (key, value) {
+    metrics.storageWrites.push(key);
+    return originalStore.call(this, key, value);
+  };
   let timerId = 0;
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   w.scrollTo = () => {};
@@ -42,6 +50,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
   const getCalls = [], writes = [], clipboard = [];
   const dataFor = account => { if (!backend.has(account)) backend.set(account, new Map()); return backend.get(account); };
   const docFor = note => ({ id: note.id, exists: true, data: () => {
+    metrics.docReads++;
     const { id, serverCreateTime, serverUpdateTime, ...fields } = note;
     return { ...fields, createdAt: note.createdAt ? { toDate: () => new Date(note.createdAt) } : null };
   } });
@@ -142,7 +151,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
     const id = Symbol(); listeners.set(id, { key, callback }); return id;
   };
   w.GM_removeValueChangeListener = id => listeners.delete(id);
-  const p = { dom, w, store, frames, subscriptions, messages, gmReads, getCalls, writes, clipboard, backend, fail: false };
+  const p = { dom, w, store, frames, subscriptions, messages, gmReads, getCalls, writes, clipboard, backend, metrics, fail: false };
   const serverTime = '2026-10-14T09:00:00.123456Z';
   w.GM_xmlhttpRequest = request => {
     if (p.fail) return request.ontimeout();
@@ -154,6 +163,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
     for (let i = 0; i < 20; i++) {
       while (queue.length) w.dispatchEvent(new w.MessageEvent('message', queue.shift()));
       await Promise.resolve();
+      w.fixtureUI?.flush();
     }
     assert.equal(queue.length, 0);
   };
@@ -170,13 +180,14 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
     await p.flush();
   };
   p.emit = (data, origin = w.location.origin, source = w) => queue.push({ data, origin, source });
-  p.snapshot = async (notes, { fromCache = false, pending = false, changes = null, subscription = subscriptions.at(-1) } = {}) => {
+  p.snapshot = async (notes, { fromCache = false, pending = false, changes = null, flush = true, subscription = subscriptions.at(-1) } = {}) => {
     if (!fromCache && !pending) for (const note of notes) dataFor(subscription.uid).set(note.id, structuredClone(note));
     const docs = subscription.select(notes).map(docFor);
-    subscription.next({ metadata: { fromCache, hasPendingWrites: pending }, docs,
-      docChanges: () => changes || docs.map(doc => ({ type: 'added', doc })) });
-    await p.flush();
+    subscription.next({ metadata: { fromCache, hasPendingWrites: pending }, docs, size: docs.length,
+      docChanges: () => typeof changes === 'function' ? changes(docs) : changes || docs.map(doc => ({ type: 'added', doc })) });
+    if (flush) await p.flush();
   };
+  p.setHidden = async value => { hidden = value; w.document.dispatchEvent(new w.Event('visibilitychange')); await p.flush(); };
   p.cached = () => ({ version: 2, complete: w.fixtureUI.state().complete,
     notes: JSON.parse(JSON.stringify(w.fixtureUI.state().notes)),
     settledIds: JSON.parse(w.localStorage.getItem(`pagetrace_shared_settled_v3_${uid}`) || '[]') });
@@ -189,7 +200,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
   };
   if (userscript) p.loadUserscript();
   if (dashboard) w.eval(dashboardCode + `\nwindow.fixtureUI = { selectMonth, selectYear, showTrashModal, hideTrashModal,
-    handleCopyFilteredNotes, hideSearchBar, state: () => ({ scope: activeNotesScope, loading: notesScopeLoading,
+    handleCopyFilteredNotes, hideSearchBar, flush: flushPendingNotesWork, state: () => ({ scope: activeNotesScope, loading: notesScopeLoading,
       complete: hasCompleteNotesCache, notes: notesData, trashComplete, trashLoading, trash: trashNotesData }) };`);
   return p;
 }
@@ -683,4 +694,106 @@ test('changing accounts while delete confirmation is open never deletes the prev
   await p.login('bob'); finish(true); await deleting; await p.flush();
   assert.equal(p.writes.length, 0);
   assert.ok(p.backend.get('alice').has(note.id));
+});
+
+test('1000-note metadata snapshots do no body reads, cache writes or row rebuilds; one delta reads one document', async t => {
+  const notes = Array.from({ length: 1000 }, (_, i) => ({ ...makeNote('perf-' + i, 'Note ' + i), note: 'body '.repeat(80) }));
+  const p = page(t, { store: signedStore(), serverNotes: notes });
+  await p.login(); await p.reply();
+  const node = p.w.document.querySelector('.note-item-row[data-id]');
+  const visibleId = node.dataset.id;
+  const frames = p.frames.length;
+  p.metrics.docReads = 0; p.metrics.storageWrites.length = 0;
+  for (let i = 0; i < 20; i++) await p.snapshot(notes, { changes: [] });
+  assert.equal(p.metrics.docReads, 0);
+  assert.equal(p.metrics.storageWrites.filter(key => key.startsWith('pagetrace_scope_v3_')).length, 0);
+  assert.equal(p.frames.length, frames);
+  assert.equal(p.w.document.querySelector(`[data-id="${visibleId}"]`), node);
+  const next = notes.map(note => note.id === visibleId ? { ...note, title: 'Changed once' } : note);
+  await p.snapshot(next, { changes: docs => [{ type: 'modified', doc: docs.find(doc => doc.id === visibleId) }] });
+  assert.equal(p.metrics.docReads, 1);
+  assert.equal(p.metrics.storageWrites.filter(key => key.startsWith('pagetrace_scope_v3_')).length, 1);
+  assert.equal(p.frames.length, frames + 1);
+  assert.match(p.w.document.getElementById('notesList').textContent, /Changed once/);
+});
+
+test('bursts coalesce to one cache write and render; hidden pages persist but render latest data only on return', async t => {
+  const first = makeNote('burst-a'), second = makeNote('burst-b');
+  const p = page(t, { store: signedStore(), serverNotes: [first, second] });
+  await p.login(); await p.reply();
+  const frames = p.frames.length;
+  p.metrics.storageWrites.length = 0;
+  const a = { ...first, title: 'Latest A' }, b = { ...second, title: 'Latest B' };
+  await p.snapshot([a, second], { flush: false, changes: docs => [{ type: 'modified', doc: docs.find(doc => doc.id === a.id) }] });
+  await p.snapshot([a, b], { flush: false, changes: docs => [{ type: 'modified', doc: docs.find(doc => doc.id === b.id) }] });
+  assert.equal(p.frames.length, frames);
+  await p.timeout(60);
+  assert.equal(p.frames.length, frames + 1);
+  assert.equal(p.metrics.storageWrites.filter(key => key.startsWith('pagetrace_scope_v3_')).length, 1);
+  await p.setHidden(true);
+  const hiddenFrames = p.frames.length;
+  const newest = { ...a, title: 'While hidden' };
+  await p.snapshot([newest, b], { changes: docs => [{ type: 'modified', doc: docs.find(doc => doc.id === a.id) }] });
+  assert.equal(p.frames.length, hiddenFrames);
+  const state = p.w.fixtureUI.state();
+  const cached = JSON.parse(p.w.localStorage.getItem(`pagetrace_scope_v3_alice_${state.scope.key}`));
+  assert.equal(cached.notes.find(note => note.id === a.id).title, 'While hidden');
+  await p.setHidden(false);
+  assert.equal(p.frames.length, hiddenFrames + 1);
+  assert.match(p.w.document.getElementById('notesList').textContent, /While hidden/);
+});
+
+test('cache-pending changes survive metadata-only acknowledgement and reconnect re-establishes authoritative content', async t => {
+  const note = makeNote('pending-delta', 'Before');
+  const p = page(t, { store: signedStore(), serverNotes: [note] });
+  await p.login(); await p.reply();
+  const updated = { ...note, title: 'Local pending edit' };
+  await p.snapshot([updated], { fromCache: true, pending: true, changes: docs => [{ type: 'modified', doc: docs[0] }] });
+  await p.snapshot([updated], { changes: [] });
+  assert.equal(p.cached().notes[0].title, updated.title);
+  const recovered = { ...updated, title: 'Recovered server content' };
+  await p.snapshot([recovered], { fromCache: true, changes: [] });
+  assert.equal(p.cached().notes[0].title, updated.title);
+  await p.snapshot([recovered], { changes: [] });
+  assert.equal(p.cached().notes[0].title, recovered.title);
+});
+
+test('a failed body-cache write retries on the next status snapshot and stops retrying after recovery', async t => {
+  const note = makeNote('retry-cache');
+  const p = page(t, { store: signedStore(), serverNotes: [note] });
+  await p.login(); await p.reply();
+  const original = p.w.Storage.prototype.setItem;
+  let failing = true;
+  p.w.Storage.prototype.setItem = function (key, value) {
+    if (failing && key.startsWith('pagetrace_scope_v3_')) throw Error('quota fixture');
+    return original.call(this, key, value);
+  };
+  const updated = { ...note, title: 'Needs durable cache' };
+  await p.snapshot([updated], { changes: docs => [{ type: 'modified', doc: docs[0] }] });
+  failing = false; p.metrics.storageWrites.length = 0;
+  await p.snapshot([updated], { changes: [] });
+  const key = `pagetrace_scope_v3_alice_${p.w.fixtureUI.state().scope.key}`;
+  assert.equal(JSON.parse(p.w.localStorage.getItem(key)).notes[0].title, updated.title);
+  assert.equal(p.metrics.storageWrites.filter(name => name === key).length, 1);
+  p.metrics.storageWrites.length = 0;
+  await p.snapshot([updated], { changes: [] });
+  assert.equal(p.metrics.storageWrites.filter(name => name === key).length, 0);
+});
+
+test('revisiting a cached month refreshes its LRU metadata without rewriting the body', async t => {
+  const now = new Date(), prior = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const current = makeNote('current-lru'), older = datedNote('older-lru', prior.getFullYear(), prior.getMonth() + 1);
+  const p = page(t, { store: signedStore(), serverNotes: [current, older] });
+  await p.login(); await p.reply();
+  const currentScope = p.w.fixtureUI.state().scope.key;
+  p.w.fixtureUI.selectYear(String(prior.getFullYear()));
+  p.w.fixtureUI.selectMonth(String(prior.getMonth() + 1).padStart(2, '0'));
+  await p.flush(); await p.reply();
+  p.metrics.storageWrites.length = 0;
+  p.w.fixtureUI.selectYear(String(now.getFullYear()));
+  p.w.fixtureUI.selectMonth(String(now.getMonth() + 1).padStart(2, '0'));
+  await p.flush();
+  const index = JSON.parse(p.w.localStorage.getItem('pagetrace_scope_index_v3_alice'));
+  assert.equal(index[0].key, `pagetrace_scope_v3_alice_${currentScope}`);
+  assert.equal(p.metrics.storageWrites.filter(key => key.startsWith('pagetrace_scope_v3_')).length, 0);
 });
