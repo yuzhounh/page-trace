@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.14.5
+// @version      1.15.0
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -1501,7 +1501,7 @@
     // 监听 DOM 树变动：防止 SPA (如 Google AI Studio) 在路由切换或组件销毁时误删宿主节点
     if (window.MutationObserver) {
       const observer = new MutationObserver(() => {
-        if (!document.getElementById(CONFIG.HOST_ID)) {
+        if (!document.hidden && !document.getElementById(CONFIG.HOST_ID)) {
           mount();
         }
       });
@@ -1510,12 +1510,25 @@
         subtree: false
       });
     }
-    // 兜底定时检查
-    setInterval(() => {
+    // 兜底定时检查：后台标签页不需要界面，隐藏时跳过，重新可见时立即补查一次
+    const ensureMounted = () => {
+      if (document.hidden) return;
       if (!document.getElementById(CONFIG.HOST_ID)) {
         mount();
       }
-    }, 2000);
+    };
+    let mountTimer = null;
+    const syncMountTimer = () => {
+      if (mountTimer !== null) clearInterval(mountTimer);
+      mountTimer = null;
+      if (document.hidden) return;
+      ensureMounted();
+      mountTimer = setInterval(ensureMounted, 2000);
+    };
+    document.addEventListener('visibilitychange', syncMountTimer);
+    window.addEventListener('pagehide', () => { if (mountTimer !== null) clearInterval(mountTimer); mountTimer = null; });
+    window.addEventListener('pageshow', syncMountTimer);
+    syncMountTimer();
   }
 
   if (document.readyState === 'loading') {

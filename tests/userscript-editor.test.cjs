@@ -12,6 +12,7 @@ function editor(t, url = 'https://example.test/article') {
   const w = dom.window, roots = [], store = new Map([
     ['pt_uid', 'alice'], ['pt_id_token', 'fixture-token'], ['pt_token_expiry', Date.now() + 3600000]
   ]), timers = new Map(), requests = [], hostEvents = [];
+  Object.defineProperty(w.document, 'hidden', { configurable: true, get: () => false });
   let timerId = 0;
   w.setTimeout = w.setInterval = (callback, delay) => {
     const id = ++timerId; timers.set(id, { callback, delay }); return id;
@@ -135,6 +136,27 @@ test('PageTrace submit and Escape still work while editor events stay out of the
   assert.equal(p.root().querySelector('.pt-card').classList.contains('active'), false);
   assert.equal(p.textarea().value, 'Preserved draft');
   assert.deepEqual(p.hostEvents, []);
+});
+
+test('hidden pages release the fallback timer and returning restores a missing host without duplicate timers', async t => {
+  const p = editor(t);
+  let hidden = false;
+  Object.defineProperty(p.w.document, 'hidden', { configurable: true, get: () => hidden });
+  await p.flush();
+  const timerCount = () => [...p.timers.values()].filter(timer => timer.delay === 2000).length;
+  assert.equal(timerCount(), 1);
+  hidden = true; p.w.document.dispatchEvent(new p.w.Event('visibilitychange'));
+  assert.equal(timerCount(), 0);
+  const host = p.root().host;
+  host.remove(); await p.flush();
+  assert.equal(host.isConnected, false);
+  hidden = false; p.w.document.dispatchEvent(new p.w.Event('visibilitychange'));
+  assert.equal(p.root().host.isConnected, true);
+  assert.equal(timerCount(), 1);
+  p.w.document.dispatchEvent(new p.w.Event('visibilitychange'));
+  assert.equal(timerCount(), 1);
+  p.w.dispatchEvent(new p.w.Event('pagehide'));
+  assert.equal(timerCount(), 0);
 });
 
 test('ordinary page editors and remounted widgets keep their own event behavior', t => {

@@ -2,8 +2,9 @@
   "name": "page-trace",
   "private": true,
   "scripts": {
+    "build": "node scripts/pack-web.cjs",
     "vendor": "node scripts/vendor.cjs",
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test --test-concurrency=2 tests/*.test.cjs"
   },
   "dependencies": {
     "dompurify": "3.4.16",
