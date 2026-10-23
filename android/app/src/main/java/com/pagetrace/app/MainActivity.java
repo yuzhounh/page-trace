@@ -66,6 +66,12 @@ public class MainActivity extends Activity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return loader.shouldInterceptRequest(request.getUrl());
             }
+            @Override public void onPageFinished(WebView view, String url) {
+                try {
+                    String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                    view.evaluateJavascript("window.PageTraceVersion=" + JSONObject.quote(version), null);
+                } catch (Exception ignored) { }
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 if (HOME.equals(uri.toString())) return false;

@@ -14,7 +14,8 @@
     copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
     share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+    logout: '<path d="M9 4H5v16h4M10 12h11M17 8l4 4-4 4"/>'
   };
   const icon = name => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`;
   const layers = [];
@@ -146,12 +147,12 @@
     showUndoToast(ok ? '已复制' : '复制失败', null, 1800, ok ? '✅' : '⚠️');
   }
   const canShare = native || typeof navigator.share === 'function';
-  function shareNote({ item }) {
-    const text = formatNoteTextForCopy(item);
+  function shareText(text) {
     if (!text) return;
     if (native) send('share:' + text);
     else navigator.share({ text }).catch(() => { /* cancelled */ });
   }
+  function shareNote({ item }) { shareText(formatNoteTextForCopy(item)); }
   const haptic = () => { if (native) send('haptic'); else if (navigator.vibrate) navigator.vibrate(12); };
   function openNoteSheet(target) {
     if (!target || !target.closest || target.closest('input, textarea, .modal-overlay, .pt-sheet-mask')) return false;
@@ -159,6 +160,8 @@
     if (!hit || !hit.item || hit.row.classList.contains('pt-selecting')) return false;
     if (document.querySelector('.pt-sheet-mask')) return true; // contextmenu and the timer can both fire for one press
     haptic();
+    // The phone layout (mobile-ui.js) turns a long press into multi-select; the sheet remains the fallback.
+    if (window.PageTraceMobile) { window.PageTraceMobile.select(hit.id); return true; }
     openSheet([
       { icon: 'edit', label: '编辑', handler: () => window.handleMenuEdit(noEvent, hit.id) },
       { icon: 'text', label: '选择文字', handler: () => selectText(hit) },
@@ -265,13 +268,16 @@
           if (!list.querySelector('.note-item-row[data-id]')) return;
           watcher.disconnect();
           localStorage.setItem('pagetrace_longpress_hint', '1');
-          if (typeof showUndoToast === 'function') showUndoToast('长按笔记可编辑、复制、删除', null, 4500, '👆');
+          if (typeof showUndoToast === 'function') showUndoToast('长按笔记可多选、复制、删除', null, 4500, '👆');
         });
         watcher.observe(list, { childList: true, subtree: true });
       }
     } catch (_) { /* storage unavailable: skip the hint */ }
   }
 
-  window.PageTraceTouchUI = { back, openSheet, confirm: confirmPanel, layers };
+  window.PageTraceTouchUI = {
+    back, openSheet, confirm: confirmPanel, layers,
+    rowItem, selectText, showDetails, shareText, copyNote, canShare
+  };
   if (window.PageTraceAndroid) window.PageTraceAndroid.confirm = confirmPanel;
 })();
