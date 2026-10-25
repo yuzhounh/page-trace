@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.15.3
+// @version      1.15.4
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -304,10 +304,32 @@
     return result;
   }
 
-  // 云端已确认的副本只为看板首屏补位。油猴会把全部脚本存储载入每个网页，副本不能随笔记总数增长：
-  // 只保留本月和上月（UTC），按月份索引删除旧副本，不读取正文。在看板请求和每次保存后运行。
+  // 兼容旧记录和仍运行的旧脚本：只补当前账户缺少的月份索引，不反复读取已索引的正文。
+  function indexSharedCopies(uid, keys) {
+    const newlyIndexed = new Map();
+    if (CONFIG.uid !== uid) return newlyIndexed;
+    const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
+    const indexPrefix = `pagetrace_saved_month_v2_${CONFIG.projectId}_${uid}_`;
+    const indexedIds = new Set(keys.filter(key => key.startsWith(indexPrefix)).map(key => key.slice(-32)));
+    for (const key of keys.filter(key => key.startsWith(prefix))) {
+      const id = key.slice(prefix.length);
+      if (indexedIds.has(id) || !/^[a-f0-9]{32}$/.test(id)) continue;
+      const note = GM_getValue(key, null);
+      if (!note || note.id !== id || !Number.isFinite(Date.parse(note.createdAt))) continue;
+      const month = new Date(note.createdAt).toISOString().slice(0, 7);
+      const indexKey = `${indexPrefix}${month}_${id}`;
+      GM_setValue(indexKey, true);
+      keys.push(indexKey);
+      newlyIndexed.set(id, note);
+    }
+    return newlyIndexed;
+  }
+
+  // 云端已确认的副本只为看板首屏补位。只保留本月和上月（UTC）：
+  // 升级后的首次保存也补齐旧副本索引，再按月份删除；不访问待提交草稿或云端笔记。
   function pruneSharedCopies(uid, keys) {
-    if (typeof GM_deleteValue !== 'function') return;
+    if (CONFIG.uid !== uid || typeof GM_deleteValue !== 'function') return;
+    indexSharedCopies(uid, keys);
     const now = new Date();
     const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
     const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
@@ -346,21 +368,8 @@
           const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
           const indexPrefix = `pagetrace_saved_month_v2_${CONFIG.projectId}_${uid}_`;
           keys = GM_listValues();
+          const newlyIndexed = indexSharedCopies(uid, keys);
           const indexKeys = keys.filter(key => key.startsWith(indexPrefix));
-          const indexedIds = new Set(indexKeys.map(key => key.slice(-32)));
-          const newlyIndexed = new Map();
-          // 兼容旧记录和仍运行的旧脚本：只补索引缺失的 ID，不反复读取历史正文。
-          for (const key of keys.filter(key => key.startsWith(prefix))) {
-            const id = key.slice(prefix.length);
-            if (indexedIds.has(id)) continue;
-            const note = GM_getValue(key, null);
-            if (!note || !Number.isFinite(Date.parse(note.createdAt))) continue;
-            const month = new Date(note.createdAt).toISOString().slice(0, 7);
-            const indexKey = `${indexPrefix}${month}_${id}`;
-            GM_setValue(indexKey, true);
-            indexKeys.push(indexKey);
-            newlyIndexed.set(id, note);
-          }
           const firstMonth = start === null ? null : new Date(start).toISOString().slice(0, 7);
           const lastMonth = end === null ? null : new Date(end - 1).toISOString().slice(0, 7);
           const candidateIds = [...new Set(indexKeys.filter(key => {

@@ -1,8 +1,10 @@
-# PageTrace Android 1.15.1
+# PageTrace Android 1.15.4
+
+当前源码为1.15.4/code20，交付路径统一为 `../dist/PageTrace-1.15.4-code20.apk`；网页、脚本与Android版本一致，实际构建、手机安装及网页上线结果记录在维护中心 `PROJECT_RELEASES.md`。沿用原签名和包名覆盖更新，保留账户、缓存与草稿。以下为历史安装记录，不代表当前安装状态。
 
 2026-10-25 13:03追加：按用户要求将展开阅读和编辑的标题、普通正文分别改为15px、14px，与列表一致。复用刚通过构建的code19修订包覆盖安装到1999ffe8，安装与启动成功，原数据目录及首次安装时间保持；下文18px／16px为此前安装记录。
 
-本地包：`../dist/PageTrace-1.15.1-code19.apk`，versionCode 19。最低Android 8.0；Google登录需要可用的Google Play服务和网络。沿用原签名、包名和本地assets源，覆盖更新保留账户、缓存和草稿，无需卸载。Web、Android与用户脚本统一为1.15.1；当前构建、发布与实际手机安装状态分别记录在维护中心PROJECT_RELEASES.md。
+历史包：`../dist/PageTrace-1.15.1-code19.apk`，versionCode 19。最低Android 8.0；Google登录需要可用的Google Play服务和网络。沿用原签名、包名和本地assets源，覆盖更新保留账户、缓存和草稿，无需卸载。当时Web、Android与用户脚本统一为1.15.1。
 
 2026-10-25 字号统一：列表标题15px、摘要14px；展开阅读标题18px、正文16px，编辑标题18px、正文16px。WebView文字倍率跟随系统fontScale，禁止网页自动文字膨胀；当前手机系统倍率1.25保持。assembleRelease和签名检查通过，code19已覆盖安装至1999ffe8，版本与启动正常，数据目录和首次安装时间保持。本轮未提交、推送或部署，线上仍为此前交付版本；内容自带的标题和富文本字号保留。
 
