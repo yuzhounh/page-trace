@@ -1,6 +1,8 @@
 # PageTrace Android 1.15.1
 
-本地包：`../dist/PageTrace-1.15.1.apk`，versionCode 17。最低Android 8.0；Google登录需要可用的Google Play服务和网络。沿用原签名、包名和本地assets源，覆盖更新保留账户、缓存和草稿，无需卸载。Web、Android与用户脚本统一为1.15.1；当前构建、发布与实际手机安装状态分别记录在维护中心PROJECT_RELEASES.md。
+本地包：`../dist/PageTrace-1.15.1-code18.apk`，versionCode 18。最低Android 8.0；Google登录需要可用的Google Play服务和网络。沿用原签名、包名和本地assets源，覆盖更新保留账户、缓存和草稿，无需卸载。Web、Android与用户脚本统一为1.15.1；当前构建、发布与实际手机安装状态分别记录在维护中心PROJECT_RELEASES.md。
+
+2026-10-25：去掉备注外层竖线，手机列表时间移到标题右侧，浅色域名标签放在第二行摘要右侧。保留此前设置和说明页修订。网页构建、92项测试、assembleRelease/lintRelease及签名检查通过；code18已覆盖安装至1999ffe8，版本和启动正常，原数据目录与首次安装时间保持。源码b0a25ce已推送，GitHub Pages和Cloudflare ca2f9880已更新并检查新列表资源；Firebase旧入口继续跳转至Cloudflare。Netlify保持旧版，全团队暂停至2026-10-29 11:14北京时间，之后仍需授权；未创建GitHub Release或更新Windows程序。
 
 1.15.1 补全菜单“使用文档”里的手机登录、新建和分享、搜索筛选、长按多选、同步及回收站说明。保留下文1.15.0触屏界面、快照差分处理和缓存/重绘合并；切账户、多选及撤销有原账户保护。隐藏时暂停列表重绘，缓存更新继续，前台恢复后展示最新数据。以下旧版本段落保留为历史记录。
 
