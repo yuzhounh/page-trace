@@ -53,6 +53,37 @@ test('menu lists views with counts; choosing one navigates and closes the menu',
   assert.equal(w.PageTraceTouchUI.layers.length, 0);
 });
 
+test('settings restores its scroll after closing and keeps non-navigation actions in place', () => {
+  const { w, calls } = setup();
+  w.PageTraceMobile.openMenu();
+  const menu = w.document.getElementById('ptMenu');
+  const body = menu.querySelector('.pt-menu-body');
+  let offset = 140;
+  Object.defineProperty(body, 'scrollTop', {
+    get: () => menu.classList.contains('show') ? offset : 0,
+    set: value => { offset = value; }
+  });
+  w.PageTraceMobile.closeMenu();
+  w.PageTraceMobile.openMenu();
+  assert.equal(menu.querySelector('.pt-menu-body').scrollTop, 140);
+  const action = name => menu.querySelector(`[data-action="${name}"]`).click();
+  w.handleCopyFilteredNotes = () => calls.push(['copyAll']);
+  w.menuDocBtn = { click: () => calls.push(['doc']) };
+  w.loginBtn = { click: () => calls.push(['login']) };
+  w.dropdownLogout = { click: () => calls.push(['logout']) };
+  for (const name of ['trash', 'doc', 'copy-all', 'logout']) {
+    action(name);
+    assert.ok(menu.classList.contains('show'), name);
+    assert.equal(menu.querySelector('.pt-menu-body').scrollTop, 140);
+  }
+  w.eval('currentUser = null');
+  w.PageTraceMobile.closeMenu();
+  w.PageTraceMobile.openMenu();
+  action('login');
+  assert.ok(menu.classList.contains('show'));
+  assert.ok(calls.some(call => call[0] === 'login'));
+});
+
 test('selection cannot delete a colliding ID after an account switch or survive a view change', async () => {
   const { w, calls } = setup();
   w.PageTraceMobile.select('n1');
