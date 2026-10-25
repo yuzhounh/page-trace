@@ -850,3 +850,24 @@ test('a userscript save prunes old shared copies even when no dashboard is open'
   const fresh = [...p.store.keys()].filter(key => key.startsWith(prefix));
   assert.equal(fresh.length, 1, 'the new copy stays');
 });
+
+test('the first save after upgrading prunes unindexed legacy copies without touching other accounts or drafts', async t => {
+  const old = datedNote('9'.repeat(32), new Date().getFullYear() - 2, 6, 'Legacy capture');
+  const recent = makeNote('a'.repeat(32), 'Recent legacy capture');
+  const otherKey = 'pagetrace_saved_v1_page-trace-app_bob_' + old.id;
+  const draftKey = 'pagetrace_pending_save_page-trace-app_alice_https%3A%2F%2Fother.test';
+  const store = signedStore();
+  store.set(prefix + old.id, old);
+  store.set(prefix + recent.id, recent);
+  store.set(otherKey, old);
+  store.set(draftKey, old);
+  const p = page(t, { store, cached: null, url: 'https://example.test/article', dashboard: false });
+  const result = await p.save('Fresh capture');
+  assert.ok(result);
+  assert.equal(p.store.has(prefix + old.id), false);
+  assert.equal(p.store.has(`pagetrace_saved_month_v2_page-trace-app_alice_${old.createdAt.slice(0, 7)}_${old.id}`), false);
+  assert.deepEqual(p.store.get(prefix + recent.id), recent);
+  assert.ok(p.store.has(`pagetrace_saved_month_v2_page-trace-app_alice_${recent.createdAt.slice(0, 7)}_${recent.id}`));
+  assert.deepEqual(p.store.get(otherKey), old);
+  assert.deepEqual(p.store.get(draftKey), old);
+});
