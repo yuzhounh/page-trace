@@ -1,5 +1,6 @@
 /* Android-app-only styling: active when touch-ui.js marks the page with .is-android. Shared touch styles are in touch-ui.css. */
 .is-android * { -webkit-tap-highlight-color: transparent; }
+html.is-android { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .is-android .skeleton-actions { display: none; }
 .is-android :is(.auth-btn, .avatar-btn, .header-btn, .nav-arrow-btn, .modal-close-x, .search-bar-clear-btn,
   .toast-close-btn, .input-send-btn) { min-width: 44px; min-height: 44px; }
@@ -17,5 +18,6 @@
 .is-android .modal-overlay { padding: 8px; }
 .is-android .modal-card { max-height: 100%; }
 .is-android :is(#createModal, #editModal) .form-input { font-size: 14px; }
+.is-android :is(#createTitle, #editTitle) { font-size: 15px !important; }
 .is-android :is(#createModal, #editModal) .form-label { font-size: 13px; }
 .is-android :is(#createModal, #editModal) .modal-title { font-size: 16px; }

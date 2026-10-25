@@ -797,3 +797,42 @@ test('revisiting a cached month refreshes its LRU metadata without rewriting the
   assert.equal(index[0].key, `pagetrace_scope_v3_alice_${currentScope}`);
   assert.equal(p.metrics.storageWrites.filter(key => key.startsWith('pagetrace_scope_v3_')).length, 0);
 });
+
+test('userscript keeps only current and previous month copies and prunes after replying without reading old bodies', async t => {
+  const now = new Date(), prior = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const recent = datedNote('1'.repeat(32), now.getFullYear(), now.getMonth() + 1, 'Recent capture');
+  const previous = datedNote('2'.repeat(32), prior.getFullYear(), prior.getMonth() + 1, 'Previous month capture');
+  const old = datedNote('3'.repeat(32), now.getFullYear() - 2, 3, 'Old capture');
+  const index = note => `pagetrace_saved_month_v2_page-trace-app_alice_${note.createdAt.slice(0, 7)}_${note.id}`;
+  const store = signedStore();
+  for (const note of [recent, previous, old]) { store.set(prefix + note.id, note); store.set(index(note), true); }
+  const p = page(t, { store, cached: null, serverNotes: [recent, previous, old] });
+  await p.login(); await p.reply();
+  assert.deepEqual(p.ids(), [recent.id]);
+  for (const note of [recent, previous]) assert.ok(p.store.has(prefix + note.id) && p.store.has(index(note)));
+  assert.equal(p.store.has(prefix + old.id), false);
+  assert.equal(p.store.has(index(old)), false);
+  assert.equal(p.gmReads.includes(prefix + old.id), false, 'old bodies are pruned by month index only');
+  const later = datedNote('4'.repeat(32), now.getFullYear() - 2, 4, 'Late old capture');
+  p.w.GM_setValue(prefix + later.id, later); p.w.GM_setValue(index(later), true);
+  p.w.GM_setValue('pagetrace_saved_signal_v1_page-trace-app_alice', { id: recent.id });
+  await p.flush();
+  assert.equal(p.store.has(prefix + later.id), false, 'the next reply prunes copies that became old');
+  assert.ok(p.store.has(prefix + recent.id));
+});
+
+test('a full-scope cache reply forgets settled IDs whose shared copies no longer exist', async t => {
+  const now = new Date();
+  const kept = datedNote('5'.repeat(32), now.getFullYear(), now.getMonth() + 1, 'Kept capture');
+  const store = signedStore();
+  store.set(prefix + kept.id, kept);
+  store.set(`pagetrace_saved_month_v2_page-trace-app_alice_${kept.createdAt.slice(0, 7)}_${kept.id}`, true);
+  const p = page(t, { store, cached: null, serverNotes: [kept] });
+  p.w.localStorage.setItem('pagetrace_shared_settled_v3_alice', JSON.stringify(['6'.repeat(32), '7'.repeat(32)]));
+  await p.login(); await p.reply();
+  assert.deepEqual(p.cached().settledIds.sort(), ['5'.repeat(32), '6'.repeat(32), '7'.repeat(32)],
+    'a month reply cannot tell whether other copies still exist');
+  keyword(p, 'Kept'); await p.flush(); await p.reply();
+  assert.deepEqual(p.cached().settledIds, [kept.id]);
+  assert.deepEqual(p.ids(), [kept.id]);
+});

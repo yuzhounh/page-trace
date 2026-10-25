@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PageTrace - Web Memo & Cloud Capture
 // @namespace    https://pagetrace.web.app/
-// @version      1.15.1
+// @version      1.15.2
 // @description  优雅捕获网页标题、网址与速记笔记，并无缝同步到 Firebase Cloud Firestore。支持快捷键与本地认证桥接。
 // @author       Jing Wang
 // @license      GPL-3.0
@@ -320,15 +320,30 @@
     let cacheRequest = null;
     let cacheListener = null;
 
+    // 云端已确认的副本只为看板首屏补位。油猴会把全部脚本存储载入每个网页，副本不能随笔记总数增长：
+    // 只保留本月和上月（UTC），按月份索引删除旧副本，不读取正文。只在看板请求时运行，此时本来就遍历全部键。
+    function pruneSharedCopies(uid, keys) {
+      if (typeof GM_deleteValue !== 'function') return;
+      const now = new Date();
+      const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+      const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
+      const indexPrefix = `pagetrace_saved_month_v2_${CONFIG.projectId}_${uid}_`;
+      for (const key of keys) {
+        if (!key.startsWith(indexPrefix) || key.slice(indexPrefix.length, indexPrefix.length + 7) >= cutoff) continue;
+        GM_deleteValue(prefix + key.slice(-32));
+        GM_deleteValue(key);
+      }
+    }
+
     function sendSharedCache(changedId = null) {
       if (!cacheRequest) return;
       const { uid, nonce: cacheNonce, start, end } = cacheRequest;
-      let records = null;
+      let records = null, keys = null;
       if (CONFIG.uid === uid && typeof GM_listValues === 'function') {
         try {
           const prefix = `pagetrace_saved_v1_${CONFIG.projectId}_${uid}_`;
           const indexPrefix = `pagetrace_saved_month_v2_${CONFIG.projectId}_${uid}_`;
-          const keys = GM_listValues();
+          keys = GM_listValues();
           const indexKeys = keys.filter(key => key.startsWith(indexPrefix));
           const indexedIds = new Set(indexKeys.map(key => key.slice(-32)));
           const newlyIndexed = new Map();
@@ -364,6 +379,11 @@
       }
       window.postMessage({ source: 'PAGETRACE_CACHE_RESULT', nonce: cacheNonce, uid,
         records, changedId }, origin);
+      // 先回复看板再清理，看板的等待时间不受影响；本次已发出的旧副本仍由看板在内存中使用。
+      if (records) {
+        try { pruneSharedCopies(uid, keys); }
+        catch (error) { console.warn('[PageTrace] 清理共享缓存失败:', error); }
+      }
     }
 
     function watchSharedCache() {
