@@ -146,6 +146,7 @@
     `<button type="button" class="pt-row${on ? ' on' : ''}" data-action="${action}" ${data}>${svg(icon)}<span class="pt-row-label">${label}</span>` +
     `${count ? `<span class="pt-row-count">${count}</span>` : ''}</button>`;
   let versionText = '';
+  let menuScrollTop = 0;
   let pickData = { year: [], month: [] };
   function renderMenu() {
     const s = state();
@@ -183,7 +184,7 @@
     const dark = root.getAttribute('data-theme') === 'dark';
     html += `<div class="pt-group">` +
       (s.user ? rowHtml('copy-all', 'copy', '复制笔记') : '') +
-      rowHtml('doc', 'book', '使用文档') +
+      rowHtml('doc', 'book', '使用说明') +
       rowHtml('theme', dark ? 'sun' : 'moon', dark ? '浅色模式' : '深色模式') + `</div>`;
     if (s.user) {
       const name = s.user.displayName || s.user.email || 'Google 用户';
@@ -193,7 +194,8 @@
       html += `<div class="pt-group">${rowHtml('login', 'login', '登录')}</div>`;
     }
     html += `</div><div class="pt-footer">${LOGO}<div class="pt-footer-text">PageTrace${versionText ? ' ' + versionText : ''}</div></div>`;
-    const keepScroll = menu.querySelector('.pt-menu-body')?.scrollTop || 0;
+    const keepScroll = menu.classList.contains('show') ? menu.querySelector('.pt-menu-body')?.scrollTop || 0 : menuScrollTop;
+    menuScrollTop = keepScroll;
     menu.innerHTML = html;
     menu.querySelector('.pt-menu-body').scrollTop = keepScroll;
     if (s.user) {
@@ -215,6 +217,7 @@
     if (menu.classList.contains('show')) return;
     renderMenu();
     menu.classList.add('show');
+    menu.querySelector('.pt-menu-body').scrollTop = menuScrollTop;
     root.classList.add('pt-menu-open');
     menuLayer = () => closeMenu();
     touchUI.layers.push(menuLayer);
@@ -222,6 +225,7 @@
     loadVersion().then(() => { if (menu.classList.contains('show')) renderMenu(); });
   }
   function closeMenu() {
+    if (menu.classList.contains('show')) menuScrollTop = menu.querySelector('.pt-menu-body')?.scrollTop || 0;
     menu.classList.remove('show');
     root.classList.remove('pt-menu-open');
     const i = touchUI.layers.indexOf(menuLayer);
@@ -267,11 +271,11 @@
     else if (action === 'all-notes') go('all', 'all');
     else if (action === 'month') go(state().year === 'all' ? String(cur.getFullYear()) : state().year, el.dataset.month);
     else if (action === 'year') { leaveSearch(); selectedYear = el.dataset.year; navigateToSelection(); renderMenu(); }
-    else if (action === 'trash') { closeMenu(); showTrashModal(); }
-    else if (action === 'doc') { closeMenu(); if (typeof menuDocBtn !== 'undefined') menuDocBtn.click(); }
-    else if (action === 'copy-all') { closeMenu(); handleCopyFilteredNotes(); }
+    else if (action === 'trash') { showTrashModal(); }
+    else if (action === 'doc') { if (typeof menuDocBtn !== 'undefined') menuDocBtn.click(); }
+    else if (action === 'copy-all') { handleCopyFilteredNotes(); }
     else if (action === 'theme') { toggleTheme(); renderMenu(); }
-    else if (action === 'login') { closeMenu(); if (typeof loginBtn !== 'undefined') loginBtn.click(); }
+    else if (action === 'login') { if (typeof loginBtn !== 'undefined') loginBtn.click(); }
     else if (action === 'pick-set') {
       const st = state(), c = now();
       const year = el.dataset.pick === 'year' ? el.dataset.value : (st.year === 'all' ? String(c.getFullYear()) : st.year);
@@ -279,7 +283,7 @@
       if (el.dataset.pick === 'year') { leaveSearch(); selectedYear = year; selectedMonth = month; navigateToSelection(); renderMenu(); }
       else go(year, month);
     }
-    else if (action === 'logout') { closeMenu(); dropdownLogout.click(); }
+    else if (action === 'logout') { dropdownLogout.click(); }
   });
   // ---- Multi-select ----
   const bar = document.createElement('div');

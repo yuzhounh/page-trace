@@ -960,8 +960,7 @@
       width: 100%;
       box-sizing: border-box;
       margin-top: 6px;
-      padding-left: 10px;
-      border-left: 2px solid var(--border);
+      padding-left: 0;
       font-size: 13px;
       font-weight: 400;
       color: var(--text-muted);
@@ -1018,6 +1017,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .note-header-time, .note-preview-domain-spacer, .note-preview-domain { display: none; }
     .note-meta time {
       flex-shrink: 0;
       margin-left: auto;
@@ -2000,7 +2000,7 @@
         max-width: 100% !important;
         box-sizing: border-box !important;
         margin-top: 5px;
-        padding-left: 8px;
+        padding-left: 0;
         padding-right: 0 !important;
         margin-right: 0 !important;
         font-size: 13px;
@@ -2701,11 +2701,19 @@
       width: 100%;
       transition: width 0.2s ease;
     }
+    #docModal { display: none; position: fixed; inset: 0; z-index: 1100; box-sizing: border-box; overflow: hidden; background: var(--bg); padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+    #docModal.show { display: flex; }
+    #docModal .doc-page { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
+    #docModal .doc-page-header { display: flex; align-items: center; justify-content: space-between; flex: none; min-height: 60px; box-sizing: border-box; padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); gap: 12px; }
+    #docModal .doc-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px max(20px, env(safe-area-inset-right)) 24px max(20px, env(safe-area-inset-left)); overflow-wrap: anywhere; }
+    #docModal .doc-content p { font-size: 14px; line-height: 1.7; }
+    #docModal .doc-section { margin-bottom: 20px; }
+    #closeDocModal { flex: none; }
   </style>
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.15.0" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.15.1" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -2799,12 +2807,12 @@
                 <span class="kbd-hint"><span>T</span></span>
               </button>
 
-              <button class="dropdown-item-btn" id="menuDocBtn" title="使用说明与快捷键 (?)">
+              <button class="dropdown-item-btn" id="menuDocBtn" title="使用说明 (?)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
-                <span>使用文档</span>
+                <span>使用说明</span>
                 <span class="kbd-hint"><span>?</span></span>
               </button>
             </div>
@@ -2883,7 +2891,7 @@
               </button>
               <button type="button" class="mobile-nav-item" id="mobileDrawerDoc">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                <span>使用文档</span>
+                <span>使用说明</span>
               </button>
             </nav>
           </div>
@@ -3084,21 +3092,39 @@
     </div>
   </div>
 
-  <!-- 弹窗 4：帮助与功能文档弹窗 -->
-  <div class="modal-overlay" id="docModal">
-    <div class="modal-card doc-card">
-      <div class="modal-header">
+  <!-- Full-screen usage page; the header stays above its independently scrolling body. -->
+  <section id="docModal" role="region" aria-labelledby="docPageTitle">
+    <div class="doc-page">
+      <div class="doc-page-header">
         <div class="modal-title">
-          <span>📖 PageTrace 功能与快捷键指南</span>
+          <span id="docPageTitle">使用说明</span>
         </div>
-        <button class="modal-close-x" id="closeDocModal" aria-label="关闭使用指南" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <button class="modal-close-x" id="closeDocModal" aria-label="关闭使用说明" title="关闭"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg></button>
       </div>
 
+      <div class="doc-content">
       <div class="doc-section">
-        <div class="doc-section-title">✨ 一、油猴脚本浮动按钮（任意网页右下角）</div>
+        <div class="doc-section-title">手机上开始使用</div>
+        <p>从菜单登录 Google 账号，与电脑看板和浏览器脚本使用同一账号即可同步笔记。新建速记时点右下角的新增按钮，填写标题、链接和备注后保存；其他应用中的网页链接或文字也可通过系统“分享”发送到 PageTrace。</p>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">浏览、搜索与操作笔记</div>
+        <p>菜单可选择“本月”“全部笔记”，也可用年份和月份筛选。顶部搜索框搜索全部笔记的标题、链接和正文；历史内容加载时请留意顶部状态。清空搜索后返回原来的浏览范围。</p>
+        <p>点笔记展开正文，点链接打开网页。长按笔记可进入多选，底部工具栏提供复制、删除和更多操作；只选一条时还可编辑、分享或选择文字。退出多选可使用左上角关闭按钮或系统返回键。</p>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">备注格式、同步与回收站</div>
+        <p>备注支持 Markdown 标题、列表、加粗、代码块和数学公式，编辑时保留原始文本。联网并登录后，笔记会自动同步；离线或尚未加载的月份不代表没有笔记，可联网后重新查看。</p>
+        <p>删除的笔记先进入菜单中的“回收站”，可还原或永久删除。清空回收站会永久删除其中的笔记。切换账号前请确认当前内容已同步。</p>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">电脑端：油猴脚本浮动按钮（网页右下角）</div>
         <table class="doc-table">
           <thead>
             <tr>
@@ -3136,7 +3162,7 @@
       </div>
 
       <div class="doc-section">
-        <div class="doc-section-title">⌨️ 二、速记输入框操作逻辑（插件与看板一致）</div>
+        <div class="doc-section-title">电脑端：速记输入框快捷键</div>
         <table class="doc-table">
           <thead>
             <tr>
@@ -3162,7 +3188,7 @@
       </div>
 
       <div class="doc-section" style="margin-bottom: 0;">
-        <div class="doc-section-title">🖥️ 三、云端速记看板页面快捷键</div>
+        <div class="doc-section-title">电脑端：看板快捷键</div>
         <table class="doc-table">
           <thead>
             <tr>
@@ -3189,7 +3215,7 @@
             </tr>
             <tr>
               <td><span class="doc-kbd">?</span></td>
-              <td>快速打开<strong>使用文档与快捷键</strong>说明</td>
+              <td>快速打开<strong>使用说明</strong></td>
             </tr>
             <tr>
               <td><span class="doc-kbd">Esc</span></td>
@@ -3198,8 +3224,9 @@
           </tbody>
         </table>
       </div>
+      </div>
     </div>
-  </div>
+  </section>
 
   <!-- 弹窗 3：编辑笔记弹窗 -->
   <div class="modal-overlay" id="editModal">
@@ -3520,6 +3547,7 @@
     let trashComplete = false;
     let trashError = '';
     let unsubscribeTrash = null;
+    let trashBackLayer = null;
     let trashGeneration = 0;
 
     // 仅在本页油猴脚本完成握手后同步凭据。
@@ -3840,7 +3868,7 @@
         trashComplete = false;
         trashLoading = false;
         trashClearing = false;
-        trashModal.classList.remove('show');
+        hideTrashModal();
       }
       notesCacheUid = uid;
       if (activeNotesScope?.key === 'all' && scope.key !== 'all') scopeCaches.delete('all');
@@ -4206,7 +4234,6 @@
 
     if (menuDocBtn) {
       menuDocBtn.addEventListener('click', () => {
-        userDropdown.classList.remove('show');
         showDocModal();
       });
     }
@@ -4699,7 +4726,7 @@
                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <span>查看使用指南与油猴脚本</span>
+                <span>使用说明</span>
               </button>
             </div>
           </div>
@@ -4850,6 +4877,7 @@
                             ${escapeHtml(titleParts.main)}${titleParts.brand ? `<span class="note-title-brand"> - ${escapeHtml(titleParts.brand)}</span>` : ''}
                           </div>
                         `) : ''}
+                        ${createdTimeStr ? `<time class="note-header-time" datetime="${createdD.toISOString()}">${escapeHtml(createdTimeStr)}</time>` : ''}
                         <div class="note-side-col">
                           <button class="note-action-btn note-copy-btn" onclick="handleMenuCopy(event, '${item.id}')" title="复制" aria-label="复制">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4901,7 +4929,7 @@
                         </div>
                       </div>
                       ${hasNoteBody ? `
-                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}"><div class="note-preview">${escapeHtml(PageTraceNotes.preview(item.note))}</div><div class="note-full">${PageTraceNotes.render(item.note)}</div></div>
+                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}"><div class="note-preview">${domain ? `<span class="note-preview-domain-spacer" aria-hidden="true">&nbsp;</span><span class="note-preview-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}${escapeHtml(PageTraceNotes.preview(item.note))}</div><div class="note-full">${PageTraceNotes.render(item.note)}</div></div>
                       ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
                       ${canExpand ? `
                         <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
@@ -5223,13 +5251,32 @@
       createModal.classList.remove('show');
     }
 
-    // 文档弹窗逻辑
+    // Usage page: keep the settings menu underneath and close this page first on Android back.
+    let docBackLayer = null;
+    let docPreviousOverflow = '';
     function showDocModal() {
+      if (docModal.classList.contains('show')) return;
+      docPreviousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
       docModal.classList.add('show');
+      docModal.querySelector('.doc-content').scrollTop = 0;
+      closeDocModal.focus({ preventScroll: true });
+      if (window.PageTraceTouchUI) {
+        docBackLayer = hideDocModal;
+        window.PageTraceTouchUI.layers.push(docBackLayer);
+      }
     }
 
     function hideDocModal() {
+      if (!docModal.classList.contains('show')) return;
       docModal.classList.remove('show');
+      document.body.style.overflow = docPreviousOverflow;
+      if (docBackLayer && window.PageTraceTouchUI) {
+        const layers = window.PageTraceTouchUI.layers;
+        const index = layers.indexOf(docBackLayer);
+        if (index >= 0) layers.splice(index, 1);
+      }
+      docBackLayer = null;
     }
 
     openCreateBtn.addEventListener('click', showCreateModal);
@@ -5239,7 +5286,6 @@
 
     if (openDocBtn) openDocBtn.addEventListener('click', showDocModal);
     closeDocModal.addEventListener('click', hideDocModal);
-    bindSafeBackdropClose(docModal, hideDocModal);
 
     // 回收站弹窗逻辑与渲染
     function findKnownNote(id) {
@@ -5305,12 +5351,23 @@
     }
 
     function showTrashModal() {
+      if (trashModal.classList.contains('show')) return;
       trashModal.classList.add('show');
+      if (window.PageTraceTouchUI) {
+        trashBackLayer = hideTrashModal;
+        window.PageTraceTouchUI.layers.push(trashBackLayer);
+      }
       loadTrashNotes();
     }
 
     function hideTrashModal() {
       trashModal.classList.remove('show');
+      if (trashBackLayer && window.PageTraceTouchUI) {
+        const layers = window.PageTraceTouchUI.layers;
+        const index = layers.indexOf(trashBackLayer);
+        if (index >= 0) layers.splice(index, 1);
+      }
+      trashBackLayer = null;
       if (unsubscribeTrash) unsubscribeTrash();
       unsubscribeTrash = null;
       trashGeneration++;
@@ -6278,7 +6335,7 @@
 
   </script>
   <script src="android-bridge.js"></script>
-  <script src="touch-ui.js?v=1.15.0"></script>
-  <script src="mobile-ui.js?v=1.15.0"></script>
+  <script src="touch-ui.js?v=1.15.1"></script>
+  <script src="mobile-ui.js?v=1.15.1"></script>
 </body>
 </html>
