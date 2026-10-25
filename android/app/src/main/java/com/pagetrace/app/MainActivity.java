@@ -56,7 +56,7 @@ public class MainActivity extends Activity {
         ViewCompat.requestApplyInsets(content);
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
-        web.getSettings().setTextZoom(100);
+        web.getSettings().setTextZoom(Math.round(100 * getResources().getConfiguration().fontScale));
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
