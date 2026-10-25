@@ -836,3 +836,17 @@ test('a full-scope cache reply forgets settled IDs whose shared copies no longer
   assert.deepEqual(p.cached().settledIds, [kept.id]);
   assert.deepEqual(p.ids(), [kept.id]);
 });
+
+test('a userscript save prunes old shared copies even when no dashboard is open', async t => {
+  const old = datedNote('8'.repeat(32), new Date().getFullYear() - 2, 6, 'Old capture');
+  const oldIndex = `pagetrace_saved_month_v2_page-trace-app_alice_${old.createdAt.slice(0, 7)}_${old.id}`;
+  const store = signedStore();
+  store.set(prefix + old.id, old); store.set(oldIndex, true);
+  const p = page(t, { store, cached: null, url: 'https://example.test/article', dashboard: false });
+  const result = await p.save('Fresh capture');
+  assert.ok(result);
+  assert.equal(p.store.has(prefix + old.id), false);
+  assert.equal(p.store.has(oldIndex), false);
+  const fresh = [...p.store.keys()].filter(key => key.startsWith(prefix));
+  assert.equal(fresh.length, 1, 'the new copy stays');
+});
