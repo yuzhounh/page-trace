@@ -78,19 +78,24 @@ html.is-touch .note-header { align-items: center; min-height: 21px; }
 html.is-touch .note-header.no-title { position: static; width: 100%; }
 html.is-touch .note-header-time { display: block; flex-shrink: 0; margin-left: auto; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 html.is-touch :is(.note-quote, .note-plain-content) { font-size: 14px; line-height: 1.55 !important; }
-html.is-touch .note-body .note-preview { -webkit-line-clamp: 2; line-clamp: 2; min-height: 3.1em; line-height: 1.55; }
-html.is-touch .note-preview-domain-spacer { display: block; float: right; width: 0; overflow: hidden; }
+html.is-touch .note-body .note-preview { -webkit-line-clamp: 2; line-clamp: 2; min-height: 0; line-height: 1.55; }
+html.is-touch .note-preview-domain-spacer { display: none; float: right; width: 0; overflow: hidden; height: var(--pt-note-line, 1.55em); }
+html.is-touch .note-preview.domain-second { min-height: calc(2 * var(--pt-note-line, 1.55em)); }
+html.is-touch .note-preview.domain-second .note-preview-domain-spacer { display: block; }
 html.is-touch :is(.note-preview-domain, .note-meta-domain) {
   display: block; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 0; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 400; line-height: 1.4;
 }
-html.is-touch .note-preview-domain { float: right; clear: right; margin-left: 8px; }
+html.is-touch .note-preview-domain { display: flex; align-items: center; float: right; clear: right; margin-left: 8px; height: var(--pt-note-line, 21.7px); }
+html.is-touch .note-preview-domain-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.is-touch .domain-is-title { display: none; }
 html.is-touch .note-meta { font-size: 12px; color: var(--text-muted); }
 html.is-touch .note-meta { justify-content: flex-end; opacity: 1; }
 html.is-touch .note-meta time { display: none; }
 html.is-touch .note-item-row:has(.note-body.is-collapsed) .note-meta,
 html.is-touch .note-meta:not(:has(.note-meta-domain)) { display: none; }
-html.is-touch .note-item-row:not(:has(.note-body)) .note-meta { margin-top: calc(1.55 * 14px + 6px); }
+html.is-touch .note-item-row:not(:has(.note-body)) .note-meta { margin-top: 6px; }
+html.is-touch .note-meta:has(.domain-is-title) { display: none; }
 html.is-touch .welcome-card { border: 0; border-radius: 24px; background: var(--pt-panel); box-shadow: none; margin-top: 8px; }
 html.is-touch .welcome-feature-item { background: var(--pt-tint); border: 0; border-radius: 16px; }
 html.is-touch .welcome-login-btn { height: 48px; border-radius: 18px; box-shadow: none; }
