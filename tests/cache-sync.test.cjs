@@ -489,9 +489,36 @@ test('saved calendar counts appear before history bodies load and remain isolate
   await p.login();
   assert.equal(p.w.document.querySelector('#yearDropdownMenu [data-year="2015"] .nav-count-badge').textContent, '31 条');
   assert.equal(p.getCalls.length, 0, 'opening menus does not query history');
+  p.w.document.getElementById('yearSelectorBtn').click();
+  p.w.document.getElementById('monthSelectorBtn').click();
+  await p.flush();
+  assert.equal(p.getCalls.length, 0, 'year and month clicks only show preloaded values');
   assert.equal(p.w.fixtureUI.state().scope.key.startsWith('month:'), true);
   await p.login('bob');
   assert.equal(p.w.document.querySelector('#yearDropdownMenu [data-year="2015"] .nav-count-badge').textContent, '未加载');
+});
+
+test('usage help selects one surface and remains a fixed dialog with working close', async t => {
+  for (const [kind, width, height, coarse, native] of [
+    ['desktop', 1440, 900, false, false], ['phone', 390, 844, true, false],
+    ['tablet', 1024, 768, true, false], ['android', 390, 844, true, true]
+  ]) await t.test(kind, async t => {
+    const p = page(t, { cached: null });
+    p.w.innerWidth = width; p.w.innerHeight = height;
+    p.w.matchMedia = () => ({ matches: coarse });
+    if (native) p.w.PageTraceNative = { postMessage() {} };
+    const doc = p.w.document.getElementById('docModal');
+    assert.equal(p.w.getComputedStyle(doc).display, 'none');
+    p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: '?', bubbles: true }));
+    assert.equal(doc.dataset.docKind, kind);
+    assert.equal(p.w.getComputedStyle(doc).position, 'fixed');
+    const visible = [...doc.querySelectorAll('.doc-section')].filter(s => !s.hidden).map(s => s.textContent).join(' ');
+    assert.equal(visible.includes('油猴脚本浮动按钮'), kind === 'desktop');
+    assert.equal(visible.includes('系统“分享”发送到 PageTrace'), kind === 'android');
+    p.w.document.getElementById('closeDocModal').click();
+    assert.equal(p.w.getComputedStyle(doc).display, 'none');
+    assert.equal(p.w.document.body.style.overflow, '');
+  });
 });
 
 test('calendar leaves unloaded months unknown and can switch through empty months without losing navigation', async t => {

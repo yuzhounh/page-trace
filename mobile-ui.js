@@ -6,6 +6,35 @@
   const touchUI = window.PageTraceTouchUI;
   if (!root.classList.contains('is-touch') || !touchUI) return;
   const $ = id => document.getElementById(id);
+  const measuredPreviews = new WeakMap();
+  let textMeasure = null;
+  function layoutPreviewDomains() {
+    for (const preview of document.querySelectorAll('.note-body.is-collapsed .note-preview')) {
+      const domain = preview.querySelector('.note-preview-domain');
+      const text = preview.querySelector('.note-preview-text');
+      if (!domain || !text || !domain.getBoundingClientRect().width) continue;
+      const style = getComputedStyle(preview), width = preview.clientWidth;
+      const font = style.font || `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const domainWidth = domain.getBoundingClientRect().width;
+      const previous = measuredPreviews.get(preview);
+      if (previous?.width === width && previous.font === font && previous.domainWidth === domainWidth) continue;
+      if (!textMeasure) {
+        textMeasure = document.createElement('span');
+        textMeasure.setAttribute('aria-hidden', 'true');
+        textMeasure.style.cssText = 'position:fixed;left:-100000px;top:0;visibility:hidden;white-space:pre;pointer-events:none;';
+        document.body.append(textMeasure);
+      }
+      textMeasure.style.font = font;
+      textMeasure.style.letterSpacing = style.letterSpacing;
+      textMeasure.textContent = text.textContent;
+      const gap = parseFloat(getComputedStyle(domain).marginLeft) || 0;
+      const second = textMeasure.getBoundingClientRect().width + domainWidth + gap > width + 0.5;
+      preview.style.setProperty('--pt-note-line', style.lineHeight);
+      preview.classList.toggle('domain-second', second);
+      measuredPreviews.set(preview, { width, font, domainWidth });
+    }
+    if (textMeasure) textMeasure.textContent = '';
+  }
 
   const ICONS = {
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
@@ -107,6 +136,7 @@
       top.classList.toggle('has-text', !!ptSearch.value);
       root.classList.toggle('pt-signed-out', !state().user);
       markRows();
+      layoutPreviewDomains();
       if (menu.classList.contains('show')) renderMenu();
     });
   }
@@ -221,7 +251,6 @@
     root.classList.add('pt-menu-open');
     menuLayer = () => closeMenu();
     touchUI.layers.push(menuLayer);
-    if (typeof loadCalendarBounds === 'function') { try { loadCalendarBounds(); } catch (_) { /* optional */ } }
     loadVersion().then(() => { if (menu.classList.contains('show')) renderMenu(); });
   }
   function closeMenu() {
@@ -432,5 +461,7 @@
   watch($('yearDropdownMenu'), { childList: true, subtree: true });
   watch($('mobileAccountContainer'), { childList: true, subtree: true });
   watch(root, { attributes: true, attributeFilter: ['data-theme'] });
+  window.addEventListener('resize', refresh);
+  document.fonts?.ready.then(refresh);
   refresh();
 })();
