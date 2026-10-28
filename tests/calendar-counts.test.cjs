@@ -150,10 +150,11 @@ test('cold login preloads the whole summary before any body or aggregation query
 
 test('a failed background refresh preserves saved counts and never changes unknown to zero', async () => {
   const f = fixture(); await f.manager.connect(f.user);
+  const savedYearCount = f.manager.known('2013', 'all');
   const before = f.calls.length;
   f.failAfter(before);
   f.manager.invalidate(['2013-05']);
-  assert.equal(f.manager.known('2013', 'all'), 1);
+  assert.equal(f.manager.known('2013', 'all'), savedYearCount);
   await f.manager.refresh(['2013-05']);
   assert.equal(f.manager.known('2013', '05'), 1);
   assert.equal(f.manager.known('2099', '01'), null);
