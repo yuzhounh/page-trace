@@ -2718,7 +2718,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.15.5" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.16.0" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -3309,6 +3309,7 @@
     </svg>
   </button>
 
+  <script src="calendar-counts.js?v=1.16.0"></script>
   <script>
     // Firebase 配置
     const firebaseConfig = {
@@ -3555,6 +3556,24 @@
     let trashBackLayer = null;
     let trashGeneration = 0;
 
+    const calendarCounts = window.PageTraceCalendar?.create({
+      projectId: firebaseConfig.projectId, storage: localStorage,
+      getUser: () => auth.currentUser || currentUser, getDb: () => db,
+      onChange(summary) {
+        if (summary.from) calendarMinYear = Math.min(calendarMinYear, Number(summary.from.slice(0, 4)));
+        if (summary.through) calendarMaxYear = Math.max(calendarMaxYear, Number(summary.through.slice(0, 4)));
+        updateMonthNavigator();
+      }
+    });
+    let calendarLastRefresh = 0;
+    function refreshCalendarCounts() {
+      if (document.hidden || !auth.currentUser || Date.now() - calendarLastRefresh < 60000) return;
+      calendarLastRefresh = Date.now();
+      void calendarCounts?.refresh();
+    }
+    document.addEventListener('visibilitychange', refreshCalendarCounts);
+    window.addEventListener('online', refreshCalendarCounts);
+
     // 仅在本页油猴脚本完成握手后同步凭据。
     async function syncAuthToUserscript(user) {
       if (!user || !authBridgeNonce) return;
@@ -3736,6 +3755,7 @@
         || (!!activeNotesScope && failedCacheScopes.has(scopeStorageKey(notesCacheUid, activeNotesScope)));
       // Keep the session cache current before deferred disk writes or a user edit.
       stageNotesCache(notesCacheUid, notesData);
+      if (hasServerNotesSnapshot && !notesScopeLoading) calendarCounts?.reconcile(activeNotesScope, notesData);
       updateNotesStatus();
       if (contentChanged) lastNotesSignature = (lastNotesSignature || 0) + 1;
       queueNotesWork(cacheChanged, contentChanged, cacheChanged || contentChanged, first);
@@ -4049,6 +4069,7 @@
       if (!cachedUser) return;
 
       currentUser = cachedUser;
+      void calendarCounts?.connect(cachedUser);
       loginBtn.style.display = 'none';
       avatarBtn.style.display = 'inline-flex';
 
@@ -4077,6 +4098,8 @@
       flushPendingNotesWork(user?.uid === currentUser?.uid);
       authStateReady = true;
       currentUser = user;
+      if (user) { calendarLastRefresh = Date.now(); void calendarCounts?.connect(user); }
+      else calendarCounts?.disconnect();
       if (user) {
         saveUserToCache(user);
         loginBtn.style.display = 'none';
@@ -4164,6 +4187,7 @@
                 !Number.isFinite(Date.parse(note.createdAt)) || !noteInScope(note, activeNotesScope)) continue;
             // 晚到的初始桥接不能恢复服务器快照已删除的笔记。
             if (!hasServerNotesSnapshot || currentIds.has(note.id) || data.changedId === note.id) {
+              if (data.changedId === note.id) calendarCounts?.changed(findKnownNote(note.id), note);
               sharedSavedNotes.set(note.id, note);
             }
           }
@@ -4540,6 +4564,8 @@
             (month === 'all' || String(date.getMonth() + 1).padStart(2, '0') === month);
         }).length;
       }
+      const savedCount = calendarCounts?.known(year, month);
+      if (savedCount !== null && savedCount !== undefined) return savedCount;
       for (const state of [...scopeCaches.values()].reverse()) {
         if (!state.complete) continue;
         const covers = state.scope.key === 'all' || (year !== 'all' &&
@@ -4595,7 +4621,8 @@
         if (entry.complete) addStats(getYearAndMonthStats(entry.notes.filter(note => !note.isDeleted)), entry.scope);
       }
       const badge = (year, month) => {
-        const count = counts.get(`${year}/${month}`) ?? (allKnown ? 0 : null);
+        const savedCount = !searched ? calendarCounts?.known(year, month) : null;
+        const count = savedCount ?? counts.get(`${year}/${month}`) ?? (allKnown ? 0 : null);
         return `<span class="nav-count-badge">${count === null ? '未加载' : count + ' 条'}</span>`;
       };
       let years = `<div class="nav-dropdown-item ${selectedYear === 'all' ? 'active' : ''}" data-year="all"><span>全部年份</span>${badge('all', 'all')}</div>`;
@@ -5690,7 +5717,11 @@
         if (savedRef?.get && currentUser?.uid === savingUid) {
           try {
             const saved = await savedRef.get();
-            if (saved.exists) updateCachedNotes([{ note: { ...saved.data(), id: savedRef.id } }], savingUid);
+            if (saved.exists) {
+              const note = { ...saved.data(), id: savedRef.id };
+              calendarCounts?.changed(null, note);
+              updateCachedNotes([{ note }], savingUid);
+            }
           } catch (error) { console.warn('[PageTrace] 笔记已保存，缓存将随云端同步补齐:', error); }
         }
         createTitle.value = '';
@@ -5944,6 +5975,7 @@
           isDeleted: true,
           deletedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        if (currentUser?.uid === uid) calendarCounts?.changed(targetItem, { ...targetItem, isDeleted: true });
         updateCachedNotes([{ note: { ...targetItem, isDeleted: true } }], uid);
 
         // 弹出底部撤销 Toast
@@ -5969,6 +6001,7 @@
         });
         if (previous) {
           const restored = { ...previous, isDeleted: false };
+          if (currentUser?.uid === uid) calendarCounts?.changed(previous, restored);
           delete restored.deletedAt;
           updateCachedNotes([{ note: restored }], uid);
         }
@@ -6345,7 +6378,7 @@
 
   </script>
   <script src="android-bridge.js"></script>
-  <script src="touch-ui.js?v=1.15.5"></script>
-  <script src="mobile-ui.js?v=1.15.5"></script>
+  <script src="touch-ui.js?v=1.16.0"></script>
+  <script src="mobile-ui.js?v=1.16.0"></script>
 </body>
 </html>

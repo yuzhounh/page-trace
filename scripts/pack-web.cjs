@@ -11,7 +11,7 @@ const output = path.join(root, 'dist', `web-${version}`);
 fs.mkdirSync(output, { recursive: true });
 for (const name of ['index.html', 'auth.html', 'VERSION', 'pagetrace.user.js', 'logo.svg',
   'android-bridge.js', 'touch-ui.js', 'touch-ui.css', 'android-ui.css', 'mobile-ui.js', 'mobile-ui.css',
-  'note-renderer.js', 'note-renderer.css', 'vendor', 'README.md']) {
+  'note-renderer.js', 'note-renderer.css', 'calendar-counts.js', 'vendor', 'README.md']) {
   fs.cpSync(path.join(root, name), path.join(output, name), { recursive: true });
 }
 console.log(`Public assets copied normally to ${output}`);
