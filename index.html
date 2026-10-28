@@ -956,7 +956,7 @@
       font-weight: 400;
       color: var(--text-muted);
     }
-    .note-quote {
+    .note-quote, .note-plain-content {
       width: 100%;
       box-sizing: border-box;
       margin-top: 6px;
@@ -982,17 +982,6 @@
     }
     .note-expand-btn:hover {
       text-decoration: underline;
-    }
-    .note-plain-content {
-      width: 100%;
-      box-sizing: border-box;
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text);
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin-top: 6px;
     }
     .note-item-row:has(.note-header.no-title) .note-plain-content:first-of-type,
     .note-item-row:has(.note-header.no-title) .note-quote:first-of-type {
@@ -2718,7 +2707,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.16.1" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.16.2" />
 </head>
 <body>
   <div id="topSyncBar"></div>
@@ -3309,7 +3298,7 @@
     </svg>
   </button>
 
-  <script src="calendar-counts.js?v=1.16.1"></script>
+  <script src="calendar-counts.js?v=1.16.2"></script>
   <script>
     // Firebase 配置
     const firebaseConfig = {
@@ -4485,6 +4474,14 @@
       return title === '无标题页面' ? '' : title;
     }
 
+    function getVisibleNote(item) {
+      const note = item.note || '';
+      const origin = item.originalPublishing;
+      if (item.source !== 'fanfou_import' || origin?.platform !== 'fanfou' || !origin.messageUrl) return note;
+      const footer = `> 原发布：饭否 · ${origin.clientName || '来源未提供'} · [原消息](${origin.messageUrl})`;
+      return note.split(/\r?\n/).filter(line => line !== footer).join('\n').trimEnd();
+    }
+
     function getMonthKey(date) {
       if (!date) return 'unknown';
       const y = date.getFullYear();
@@ -4886,7 +4883,8 @@
                   const storedTitle = getOptionalTitle(item.title);
                   const displayTitle = storedTitle || (safeUrl ? domain : '');
                   const titleParts = splitTitleBrand(displayTitle);
-                  const hasNoteBody = !!(item.note || '').trim();
+                  const visibleNote = getVisibleNote(item);
+                  const hasNoteBody = !!visibleNote.trim();
                   const canExpand = hasNoteBody;
                   const isExpanded = expandedNoteIds.has(item.id);
 
@@ -4966,7 +4964,7 @@
                         </div>
                       </div>
                       ${hasNoteBody ? `
-                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}"><div class="note-preview">${domain ? `<span class="note-preview-domain-spacer" aria-hidden="true">&nbsp;</span><span class="note-preview-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}${escapeHtml(PageTraceNotes.preview(item.note))}</div><div class="note-full">${PageTraceNotes.render(item.note)}</div></div>
+                        <div class="${safeUrl ? 'note-quote' : 'note-plain-content'} note-body ${isExpanded ? 'is-expanded' : 'is-collapsed'}" id="noteBody-${item.id}"><div class="note-preview">${domain ? `<span class="note-preview-domain-spacer" aria-hidden="true">&nbsp;</span><span class="note-preview-domain" title="${escapeHtml(domain)}">${escapeHtml(domain)}</span>` : ''}${escapeHtml(PageTraceNotes.preview(visibleNote))}</div><div class="note-full">${PageTraceNotes.render(visibleNote)}</div></div>
                       ` : (!displayTitle ? '<div class="note-plain-content">空白速记</div>' : '')}
                       ${canExpand ? `
                         <button class="note-expand-btn" type="button" onclick="toggleNoteExpanded(event, '${item.id}')" aria-controls="noteBody-${item.id}" aria-expanded="${isExpanded}">
@@ -6378,7 +6376,7 @@
 
   </script>
   <script src="android-bridge.js"></script>
-  <script src="touch-ui.js?v=1.16.1"></script>
-  <script src="mobile-ui.js?v=1.16.1"></script>
+  <script src="touch-ui.js?v=1.16.2"></script>
+  <script src="mobile-ui.js?v=1.16.2"></script>
 </body>
 </html>
