@@ -24,6 +24,7 @@
     const zone = options.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const fetcher = options.fetch || root.fetch?.bind(root);
     let uid = '', generation = 0, data = null, unsubscribe = null, active = null, connected = false;
+    let summaryPending = false, connectionTask = null;
     let pending = new Set(), queued = null, invalidated = new Map(), revision = 0;
     const key = () => `pagetrace_calendar_v1_${uid}_${zoneKey(zone)}`;
     const current = id => uid === id && options.getUser()?.uid === id;
@@ -54,7 +55,7 @@
       }
       result.from = [base.from, other.from].filter(Boolean).sort()[0] || null;
       result.through = [base.through, other.through].filter(Boolean).sort().at(-1) || null;
-      result.complete = !!(base.complete || other.complete) && !Object.keys(result.dirtyMonths).length &&
+      result.complete = !!(base.complete || other.complete) &&
         sequence(result.from, result.through).every(m => Number.isSafeInteger(result.months[m]?.count));
       return { ...result, ...totals(result.months) };
     }
@@ -90,6 +91,24 @@
       return result;
     }
     const baseQuery = () => ({ from: [{ collectionId: 'notes' }] });
+    function decode(field) {
+      if (field.mapValue) return Object.fromEntries(Object.entries(field.mapValue.fields || {}).map(([k, v]) => [k, decode(v)]));
+      if (field.arrayValue) return (field.arrayValue.values || []).map(decode);
+      if (field.integerValue !== undefined) return Number(field.integerValue);
+      if (field.doubleValue !== undefined) return field.doubleValue;
+      return field.stringValue ?? field.booleanValue ?? field.timestampValue ?? null;
+    }
+    async function preloadSummary(id) {
+      const token = await options.getUser().getIdToken();
+      if (!current(id)) throw Error('统计账号已切换');
+      const response = await fetcher(`https://firestore.googleapis.com/v1/projects/${options.projectId}/databases/(default)/documents/users/${encodeURIComponent(id)}/calendarCounts/${encodeURIComponent(zoneKey(zone))}`, {
+        method: 'GET', headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.status === 404) return null;
+      const result = await response.json();
+      if (!response.ok) throw Error(result.error?.message || '年月统计预加载失败');
+      return decode({ mapValue: { fields: result.fields || {} } });
+    }
     async function count(id, query, readTime) {
       const rows = await request(id, 'runAggregationQuery', query, readTime);
       const row = rows.find(row => row.result?.aggregateFields?.n);
@@ -135,16 +154,19 @@
     }
     async function refresh(months = null) {
       if (!uid || !fetcher || !options.getDb()?.runTransaction || !options.getUser()?.getIdToken) return;
+      if (summaryPending) return;
       if (data?.blockedQuotaDay === quotaDay()) return;
       if (active) { if (months) months.forEach(m => pending.add(m)); return active; }
       const id = uid, run = generation;
       active = (async () => {
         try {
           const full = !data?.complete;
+          const requested = [...new Set([...(months || [monthKey(new Date())]), ...pending])];
+          pending.clear();
           let coverage = data?.from && data?.through ? { from: data.from, through: data.through } : await bounds(id);
           const nowMonth = monthKey(new Date());
-          coverage.from = [coverage.from, nowMonth, ...(months || [])].sort()[0].slice(0, 4) + '-01';
-          coverage.through = [coverage.through, nowMonth, ...(months || [])].sort().at(-1).slice(0, 4) + '-12';
+          coverage.from = [coverage.from, nowMonth, ...requested].sort()[0].slice(0, 4) + '-01';
+          coverage.through = [coverage.through, nowMonth, ...requested].sort().at(-1).slice(0, 4) + '-12';
           const all = await count(id, baseQuery());
           const snapshotTime = all.readTime;
           const trash = await deleted(id, snapshotTime);
@@ -152,7 +174,7 @@
           if (!data) data = { version, uid: id, timeZone: zone, months: {}, complete: false };
           Object.assign(data, coverage);
           const keys = [...new Set([...sequence(coverage.from, coverage.through).filter(m => data.months[m]?.count == null),
-            ...Object.keys(data.dirtyMonths || {}), ...(months || [nowMonth])])];
+            ...Object.keys(data.dirtyMonths || {}), ...requested])];
           let unpersisted = {};
           for (const m of keys) {
             const beforeRevision = invalidated.get(m);
@@ -200,11 +222,10 @@
       return active;
     }
     function invalidate(months) {
-      if (!uid || !data) return;
+      if (!uid) return;
       for (const m of months.filter(Boolean)) {
         invalidated.set(m, ++revision);
-        (data.dirtyMonths ||= {})[m] = new Date().toISOString();
-        if (data.months[m]) data.months[m] = { ...data.months[m], count: null };
+        if (data) (data.dirtyMonths ||= {})[m] = new Date().toISOString();
         pending.add(m);
       }
       publish();
@@ -216,9 +237,10 @@
       generation++; unsubscribe?.(); unsubscribe = null;
       if (queued) clearTimeout(queued); queued = null;
       uid = ''; data = null; pending.clear(); invalidated.clear(); active = null; connected = false;
+      summaryPending = false; connectionTask = null;
     }
-    async function connect(user) {
-      if (uid === user?.uid && data && connected) return;
+    function connect(user) {
+      if (uid === user?.uid && connected) return connectionTask;
       disconnect();
       if (!user?.uid) return;
       const id = uid = user.uid, run = generation;
@@ -227,11 +249,12 @@
       publish();
       if (!fetcher || !options.getDb()?.runTransaction || !user.getIdToken) return;
       connected = true;
+      summaryPending = true;
+      connectionTask = (async () => {
       try {
-        const doc = ref(id), snapshot = await doc.get({ source: 'server' });
+        const doc = ref(id), remote = await preloadSummary(id);
         if (run !== generation || !current(id)) return;
-        if (snapshot.exists) {
-          const remote = snapshot.data();
+        if (remote) {
           if (!valid(remote, id)) throw Error('云端统计格式或账号不匹配');
           data = merge(data, remote); publish();
         }
@@ -239,19 +262,23 @@
           if (run !== generation || !current(id) || !snapshot.exists) return;
           const remote = snapshot.data(); if (valid(remote, id)) { data = merge(data, remote); publish(); }
         }, error => { if (run === generation && data) { data.error = error.message; publish(); } });
+        summaryPending = false;
         await refresh();
       } catch (error) { if (run === generation && current(id)) { data ||= { version, uid: id, timeZone: zone, months: {}, complete: false }; data.error = error.message; publish(); } }
+      finally { if (run === generation) summaryPending = false; }
+      })();
+      return connectionTask;
     }
     function known(year, month) {
       if (!data || data.uid !== uid || !current(uid)) return null;
       const keys = data.from && data.through ? sequence(data.from, data.through) : [];
-      if (year !== 'all' && month !== 'all') return invalidated.has(`${year}-${month}`) ? null : data.months[`${year}-${month}`]?.count ??
+      if (year !== 'all' && month !== 'all') return data.months[`${year}-${month}`]?.count ??
         (data.complete && `${year}-${month}` < data.from ? 0 : null);
       const selected = keys.filter(k => (year === 'all' || k.startsWith(year + '-')) && (month === 'all' || k.endsWith('-' + month)));
       if (!selected.length) return data.complete && year !== 'all' && year < data.from.slice(0, 4) ? 0 : null;
       if (year === 'all' && !data.complete) return null;
       if (year !== 'all' && month === 'all' && selected.length !== 12) return null;
-      return selected.every(k => !invalidated.has(k) && Number.isSafeInteger(data.months[k]?.count)) ? selected.reduce((n, k) => n + data.months[k].count, 0) : null;
+      return selected.every(k => Number.isSafeInteger(data.months[k]?.count)) ? selected.reduce((n, k) => n + data.months[k].count, 0) : null;
     }
     return { connect, disconnect, refresh, invalidate, known, state: () => data,
       reconcile(scope, notes) {

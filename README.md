@@ -27,7 +27,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前网页、脚本与 Android 源码版本为 **1.16.2**：纯备注与其他备注统一使用灰色文字及相同字号、字重、行高；主列表的备注预览和展开内容隐藏饭否导入的重复来源尾注，原始备注与结构化来源信息仍保留。沿用云端年月统计、本地缓存、按月加载、搜索与回收站。网页包为 `dist/web-1.16.2`。本轮仅发布网页与脚本元数据，Android源码预备为code24，未构建或安装新APK；已发行安装包仍为 `dist/PageTrace-1.16.1-code23.apk`，见 [GitHub Release v1.16.1](https://github.com/yuzhounh/page-trace/releases/tag/v1.16.1)。日常脚本通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。
+当前网页、脚本与 Android 版本为 **1.16.3**（Android code24）：手机备注与域名按实际宽度排布，短备注可同排，长备注最多两行并省略，去掉空白占位并统一行内对齐。年月汇总在登录后预加载，缓存先显示，打开菜单不再查询年份范围，后台刷新保留已知数字。使用说明按电脑网页、手机网页、平板网页及 Android App 分别显示，电脑端恢复紧凑的居中窗口。保留灰色备注、来源尾注隐藏、云端笔记及既有搜索/回收站。网页包为 `dist/web-1.16.3`，APK 为 `dist/PageTrace-1.16.3-code24.apk`，见 [GitHub Release v1.16.3](https://github.com/yuzhounh/page-trace/releases/tag/v1.16.3)。日常脚本通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。
 
 快照首读后按`docChanges`更新记录Map，状态快照不再反复解析/排序/序列化全部正文；重连后重新建立服务器完整视图。正文、服务器版本、缓存完整性和删除确认分别处理，真实变动的缓存写入/重绘在60ms内合并，首屏立即展示，切换账户/范围及离页前补写缓存。后台页面继续保存数据并延后列表重绘，回到前台展示最新数据；用户脚本隐藏时释放2秒兜底定时器，重新可见时补查。缓存键、v3格式和`users/{uid}/notes`保持，未新增数据迁移；多选与延后操作绑定原账户，防止换账户后误操作。
 
