@@ -20,7 +20,7 @@ const sharedListeners = new WeakMap();
 // Execute the complete production dashboard (including its real list renderer)
 // with fixture Firebase/GM adapters. No real notes, credentials or network are used.
 function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = true,
-  url = 'https://page-trace.pages.dev/', dashboard = true, serverNotes = [] } = {}) {
+  url = 'https://page-trace.pages.dev/', dashboard = true, serverNotes = [], calendarSummary = null } = {}) {
   const dom = new JSDOM(html, { url, runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window, queue = [], timers = new Map(), subscriptions = [], frames = [], messages = [], gmReads = [];
@@ -127,7 +127,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
     w.localStorage.setItem('pagetrace_notes_cache_' + uid, JSON.stringify(cached));
   }
   for (const file of ['vendor/marked/marked.umd.js', 'vendor/dompurify/purify.min.js',
-    'vendor/katex/katex.min.js', 'note-renderer.js']) w.eval(read(file));
+    'vendor/katex/katex.min.js', 'note-renderer.js', 'calendar-counts.js']) w.eval(read(file));
   const list = w.document.getElementById('notesList');
   const innerHTML = Object.getOwnPropertyDescriptor(w.Element.prototype, 'innerHTML');
   Object.defineProperty(list, 'innerHTML', {
@@ -198,6 +198,7 @@ function page(t, { store = new Map(), cached = [], uid = 'alice', userscript = t
     await p.flush();
     return result;
   };
+  if (calendarSummary) w.localStorage.setItem(`pagetrace_calendar_v1_${uid}_${calendarSummary.timeZone.replace(/\//g, '__')}`, JSON.stringify(calendarSummary));
   if (userscript) p.loadUserscript();
   if (dashboard) w.eval(dashboardCode + `\nwindow.fixtureUI = { selectMonth, selectYear, showTrashModal, hideTrashModal,
     handleCopyFilteredNotes, hideSearchBar, flush: flushPendingNotesWork, state: () => ({ scope: activeNotesScope, loading: notesScopeLoading,
@@ -478,6 +479,19 @@ test('12,000-note library starts with a month query and shared cache reads only 
   assert.equal(p.w.fixtureUI.state().notes.length, 12000);
   assert.deepEqual(p.ids(), [notes.at(-1).id]);
   assert.equal(p.w.document.getElementById('searchCountBadge').textContent, '共 1 条');
+});
+
+test('saved calendar counts appear before history bodies load and remain isolated on account change', async t => {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const months = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`2015-${String(i + 1).padStart(2, '0')}`, { count: i === 1 ? 31 : 0, readTime: '2026-10-28T08:00:00Z' }]));
+  const summary = { version: 1, uid: 'alice', timeZone, from: '2015-01', through: '2015-12', months, complete: true };
+  const p = page(t, { cached: null, calendarSummary: summary });
+  await p.login();
+  assert.equal(p.w.document.querySelector('#yearDropdownMenu [data-year="2015"] .nav-count-badge').textContent, '31 条');
+  assert.equal(p.getCalls.length, 0, 'opening menus does not query history');
+  assert.equal(p.w.fixtureUI.state().scope.key.startsWith('month:'), true);
+  await p.login('bob');
+  assert.equal(p.w.document.querySelector('#yearDropdownMenu [data-year="2015"] .nav-count-badge').textContent, '未加载');
 });
 
 test('calendar leaves unloaded months unknown and can switch through empty months without losing navigation', async t => {

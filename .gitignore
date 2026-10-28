@@ -11,3 +11,6 @@ dist/
 firebase-debug.log
 node_modules/
 tmp/
+
+# Private, one-time Fanfou migration exports and status logs.
+results/fanfou_migration_20261026/

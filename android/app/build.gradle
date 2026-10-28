@@ -16,8 +16,8 @@ android {
         applicationId 'com.pagetrace.app'
         minSdk 26
         targetSdk 35
-        versionCode 21
-        versionName '1.15.5'
+        versionCode 22
+        versionName '1.16.0'
     }
     signingConfigs {
         release {
@@ -35,7 +35,7 @@ android {
 tasks.register('bundleDashboard', Copy) {
     from('../..') {
         include 'index.html', 'logo.svg', 'android-bridge.js', 'touch-ui.js', 'touch-ui.css', 'android-ui.css', 'mobile-ui.js', 'mobile-ui.css',
-                'note-renderer.js', 'note-renderer.css'
+                'note-renderer.js', 'note-renderer.css', 'calendar-counts.js'
         filter { line -> line.replace('https://www.gstatic.com/firebasejs/10.12.0/', 'vendor/') }
     }
     from('src/main/vendor') { into 'vendor' }
