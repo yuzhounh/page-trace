@@ -53,6 +53,27 @@ test('menu lists views with counts; choosing one navigates and closes the menu',
   assert.equal(w.PageTraceTouchUI.layers.length, 0);
 });
 
+test('year and month pickers display saved counts and keep unknown distinct from zero', async () => {
+  const { w } = setup();
+  w.document.getElementById('yearDropdownMenu').insertAdjacentHTML('beforeend', '<div class="nav-dropdown-item" data-year="2019"><span class="nav-count-badge">未加载</span></div>');
+  w.document.getElementById('monthDropdownMenu').insertAdjacentHTML('beforeend', '<div class="nav-dropdown-item" data-month="11"><span class="nav-count-badge">0 条</span></div>');
+  w.eval("selectedMonth = '11'");
+  w.PageTraceMobile.openMenu();
+  const menu = w.document.getElementById('ptMenu');
+  const year = menu.querySelector('[data-action="pick"][data-pick="year"]');
+  year.click();
+  assert.equal(menu.querySelector('[data-value="2026"] .pt-row-count').textContent, '3');
+  assert.equal(menu.querySelector('[data-value="2019"] .pt-row-count').textContent, '未加载');
+  year.click();
+  menu.querySelector('[data-action="pick"][data-pick="month"]').click();
+  assert.equal(menu.querySelector('[data-value="all"] .pt-row-count').textContent, '3');
+  assert.equal(menu.querySelector('[data-value="10"] .pt-row-count').textContent, '2');
+  assert.equal(menu.querySelector('[data-value="11"] .pt-row-count').textContent, '0');
+  w.PageTraceMobile.closeMenu();
+  await frame(w);
+  w.close();
+});
+
 test('settings restores its scroll after closing and keeps non-navigation actions in place', () => {
   const { w, calls } = setup();
   w.PageTraceMobile.openMenu();
