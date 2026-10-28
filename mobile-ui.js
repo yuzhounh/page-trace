@@ -144,7 +144,7 @@
   };
   const rowHtml = (action, icon, label, { on = false, count = null, data = '' } = {}) =>
     `<button type="button" class="pt-row${on ? ' on' : ''}" data-action="${action}" ${data}>${svg(icon)}<span class="pt-row-label">${label}</span>` +
-    `${count ? `<span class="pt-row-count">${count}</span>` : ''}</button>`;
+    `${count !== null ? `<span class="pt-row-count">${count}</span>` : ''}</button>`;
   let versionText = '';
   let menuScrollTop = 0;
   let pickData = { year: [], month: [] };
@@ -166,8 +166,8 @@
       yearsAll.sort((x, y) => y - x);
       const monthSelect = s.year === 'all' ? 'all' : s.month;
       pickData = {
-        year: yearsAll.map(y => ({ value: String(y), label: `${y} 年`, on: y === pickYear })),
-        month: [{ value: 'all', label: '全年', on: monthSelect === 'all' }].concat(
+        year: yearsAll.map(y => ({ value: String(y), label: `${y} 年`, n: countOf(yearItems.find(el => el.dataset.year === String(y))), on: y === pickYear })),
+        month: [{ value: 'all', label: '全年', n: countOf(yearItems.find(el => el.dataset.year === String(pickYear))), on: monthSelect === 'all' }].concat(
           Array.from({ length: 12 }, (_, i) => i + 1).map(m => ({ value: monthKey(m), n: monthCount(monthKey(m)) }))
             .filter(o => o.n !== 0 || o.value === monthSelect)
             .map(o => ({ value: o.value, label: `${Number(o.value)} 月`, n: o.n, on: o.value === monthSelect })))
@@ -255,7 +255,7 @@
         const box = document.createElement('div');
         box.className = 'pt-pop ' + kind;
         box.setAttribute('role', 'listbox');
-        box.innerHTML = pickData[kind].map(o => `<button type="button" role="option" class="pt-pop-item${o.on ? ' on' : ''}" data-action="pick-set" data-pick="${kind}" data-value="${o.value}"><span>${o.label}</span>${o.n ? `<span class="pt-row-count">${o.n}</span>` : ''}</button>`).join('');
+        box.innerHTML = pickData[kind].map(o => `<button type="button" role="option" class="pt-pop-item${o.on ? ' on' : ''}" data-action="pick-set" data-pick="${kind}" data-value="${o.value}"><span>${o.label}</span><span class="pt-row-count">${o.n === null || o.n === undefined ? '未加载' : o.n}</span></button>`).join('');
         pickBtn.classList.add('open');
         pickBtn.parentElement.append(box);
       }
