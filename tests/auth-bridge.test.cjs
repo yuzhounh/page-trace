@@ -27,8 +27,13 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
   let timerId = 0;
   const p = { store, sent: [], openerMessages: [], requests: [], subscriptions: [], closed: false };
   const element = (id) => {
-    if (!elements.has(id)) elements.set(id, { style: {}, textContent: '', className: '',
+    if (!elements.has(id)) elements.set(id, { style: {}, textContent: '', className: '', attributes: new Set(),
       handlers: {}, classList: { remove() {}, contains() { return false; } },
+      toggleAttribute(name, force) {
+        const enabled = force === undefined ? !this.attributes.has(name) : !!force;
+        if (enabled) this.attributes.add(name); else this.attributes.delete(name);
+        return enabled;
+      },
       addEventListener(type, callback) { this.handlers[type] = callback; } });
     return elements.get(id);
   };
