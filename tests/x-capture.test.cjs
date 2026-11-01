@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { JSDOM } = require('jsdom');
 const script = readFileSync(join(__dirname, '..', 'pagetrace.user.js'), 'utf8');
-const code = script.slice(script.indexOf('function processTitle('), script.indexOf('// 规范化笔记段落'));
+const code = script.slice(script.indexOf('function processTitle('), script.indexOf('function formatNoteWithBlankLines('));
 
 test('X title rules use only the page title and leave notes and links alone', t => {
   const dom = new JSDOM('', { url: 'https://x.com/author/status/123', runScripts: 'outside-only' });

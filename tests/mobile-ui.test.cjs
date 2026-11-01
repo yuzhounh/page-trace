@@ -13,6 +13,12 @@ function setup() {
     <div id="monthDropdownMenu"><div class="nav-dropdown-item" data-month="10"><span class="nav-count-badge">2 条</span></div></div>`,
     { runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
+  const NativeDate = w.Date;
+  const fixtureTime = Date.UTC(2026, 9, 15, 12);
+  w.Date = class extends NativeDate {
+    constructor(...args) { super(...(args.length ? args : [fixtureTime])); }
+    static now() { return fixtureTime; }
+  };
   const calls = [];
   w.PageTraceNative = { postMessage() {} };
   w.CSS = { escape: s => s };

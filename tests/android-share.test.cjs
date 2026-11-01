@@ -108,6 +108,25 @@ test('failed cloud write preserves editable draft and never shows saved confirma
   assert.equal(ctx.saved, undefined);
   assert.match(ctx.error, /保存失败/);
 });
+test('saving a shared note normalizes empty lines before the cloud write', async () => {
+  const ctx = savingFixture();
+  ctx.createNoteInput.value = '\n\n第一行\n\n \t\n第二行\n第三行\n\n';
+  await ctx.handleCreateSubmit();
+  assert.equal(ctx.writes[0].note, '第一行\n\n第二行\n\n第三行');
+});
+test('saving removes dividers and rejects a note that becomes empty', async () => {
+  const ctx = savingFixture();
+  ctx.createNoteInput.value = '上段\n\n---\n\n下段';
+  await ctx.handleCreateSubmit();
+  assert.equal(ctx.writes[0].note, '上段\n\n下段');
+  ctx.createTitle.value = '';
+  ctx.createUrl.value = '';
+  ctx.createNoteInput.value = '---\n\n***';
+  await ctx.handleCreateSubmit();
+  assert.equal(ctx.writes.length, 1);
+  assert.match(ctx.error, /不能同时为空/);
+  assert.equal(ctx.btnSubmitCreate.disabled, false);
+});
 test('offline and account-switching saves do not write into the wrong account', async () => {
   const ctx = savingFixture();
   ctx.navigator.onLine = false;

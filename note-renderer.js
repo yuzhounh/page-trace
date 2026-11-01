@@ -4,6 +4,19 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[ch]));
   const normalizeSource = text => (text || '').replace(/\r\n?/g, '\n').replace(/^(?:[ \t]*\n)+|\n[ \t]*$/g, '');
+  function normalizeForSave(text) {
+    if (!text) return '';
+    let fence = null;
+    return text.replace(/\r\n?/g, '\n').split('\n').filter(line => {
+      const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length && !marker[2].trim()) fence = null;
+        return true;
+      }
+      return fence || !/^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/.test(line);
+    }).map(line => line.trimEnd()).filter(line => line.trim() !== '').join('\n\n');
+  }
   let parser;
   function getParser() {
     if (parser) return parser;
@@ -45,11 +58,37 @@
     });
     return parser;
   }
+  function repairSpacedTables(source) {
+    if (!/\n[ \t]*\n[ \t]*\|/.test(source)) return source;
+    const markdown = getParser();
+    const tokens = markdown.lexer(source);
+    const isRows = token => ['paragraph', 'table'].includes(token?.type) &&
+      token.raw.trim().split('\n').every(line => /^\s*\|/.test(line));
+    const parts = [];
+    for (let i = 0; i < tokens.length; i++) {
+      let raw = tokens[i].raw;
+      if (isRows(tokens[i])) {
+        while (isRows(tokens[i + 1]) ||
+          (tokens[i + 1]?.type === 'space' && isRows(tokens[i + 2]))) {
+          raw += tokens[++i].raw;
+        }
+        const joined = raw.replace(/\n(?:[ \t]*\n)+(?=[ \t]*\|)/g, '\n');
+        if (joined !== raw) {
+          const checked = markdown.lexer(joined);
+          if (checked[0]?.type === 'table' && checked.every(token => ['table', 'space'].includes(token.type))) {
+            raw = joined;
+          }
+        }
+      }
+      parts.push(raw);
+    }
+    return parts.join('');
+  }
   function render(text) {
     const source = normalizeSource(text);
     if (!window.marked || !window.DOMPurify) return escape(source).replace(/\n/g, '<br>');
     try {
-      const fragment = window.DOMPurify.sanitize(getParser().parse(source), {
+      const fragment = window.DOMPurify.sanitize(getParser().parse(repairSpacedTables(source)), {
         RETURN_DOM_FRAGMENT: true, ADD_TAGS: ['annotation'], ADD_ATTR: ['encoding']
       });
       fragment.querySelectorAll('a').forEach(link => {
@@ -81,5 +120,5 @@
       return collapse(source);
     }
   }
-  window.PageTraceNotes = { render, preview, normalizeSource };
+  window.PageTraceNotes = { render, preview, normalizeSource, normalizeForSave };
 })();

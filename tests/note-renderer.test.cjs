@@ -34,6 +34,30 @@ $$`);
   assert.equal(root.querySelectorAll('.katex-display').length, 1);
   assert.match(root.querySelector('annotation').textContent, /rightarrow/);
 });
+test('tables with blank lines between rows render with columns, inline formatting and safe links', () => {
+  const { dom, render } = setup();
+  const source = '| 维度 | Browser Use | WebMCP |\n\n| --- | --- | --- |\n\n| **交互对象** | DOM | 工具 |\n\n| 操作 | `<input>` | [接口](https://example.com) |';
+  for (const text of [source, dom.window.PageTraceNotes.normalizeForSave(source)]) {
+    const root = render(text);
+    assert.equal(root.querySelectorAll('table').length, 1);
+    assert.equal(root.querySelectorAll('th').length, 3);
+    assert.equal(root.querySelectorAll('tbody tr').length, 2);
+    assert.equal(root.querySelector('td strong').textContent, '交互对象');
+    assert.equal(root.querySelector('td code').textContent, '<input>');
+    assert.equal(root.querySelector('a').rel, 'noopener noreferrer');
+  }
+  assert.equal(render('| A | B |\n| --- | --- |\n\n| 1 | 2 |').querySelectorAll('td').length, 2);
+});
+test('table recovery preserves fenced code, surrounding prose and ordinary pipe-separated text', () => {
+  const { render } = setup();
+  const table = '| A | B |\n\n| --- | --- |\n\n| 1 | 2 |';
+  const root = render('开头\n\n```text\n' + table + '\n```\n\n' + table + '\n\n结尾');
+  assert.equal(root.querySelector('pre code').textContent, table + '\n');
+  assert.equal(root.querySelectorAll('table').length, 1);
+  assert.equal(root.querySelector('p').textContent, '开头');
+  assert.equal(root.lastElementChild.textContent, '结尾');
+  assert.equal(render('| 普通文字 |\n\n| 另一段 |').querySelector('table'), null);
+});
 test('invalid formulas and unavailable libraries fall back to readable safe text', () => {
   const { dom, render } = setup();
   assert.match(render(String.raw`$\notARealCommand$`).textContent, /notARealCommand/);
@@ -80,6 +104,30 @@ test('expand and collapse retain formatted DOM', () => {
   dom.window.toggleNoteExpanded(event, 'test');
   assert.equal(root.querySelector('.note-body').innerHTML, formatted);
   assert.equal(event.currentTarget.getAttribute('aria-expanded'), 'false');
+});
+test('save spacing matches the userscript without reformatting existing notes on display', () => {
+  const { dom } = setup();
+  const script = read('pagetrace.user.js');
+  const start = script.indexOf('  function formatNoteWithBlankLines(');
+  const end = script.indexOf('  function fallbackCopy(', start);
+  dom.window.eval(script.slice(start, end));
+  for (const source of ['', '\n \t\n', '\n第一行\n第二行\n\n\n第三行\n\n', '\r\n第一行\r\n \t\r\n第二行\r\n',
+    '甲\n\n---\n\n乙\n***\n___\n- - -\n丙',
+    '```text\n---\n***\n___\n```\n\n---\n\n正文',
+    '~~~text\n---\n~~~\n\n---\n\n正文',
+    '    ---\n    代码缩进', '| A | B |\n| --- | --- |\n| 1 | 2 |']) {
+    const saved = dom.window.PageTraceNotes.normalizeForSave(source);
+    assert.equal(saved, dom.window.formatNoteWithBlankLines(source));
+    assert.equal(dom.window.PageTraceNotes.normalizeForSave(saved), saved);
+  }
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('\n甲\n\n\n乙\n丙\n'), '甲\n\n乙\n\n丙');
+  assert.equal(dom.window.PageTraceNotes.normalizeSource('甲\n\n\n乙'), '甲\n\n\n乙');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('甲\n---\n***\n___\n- - -\n乙'), '甲\n\n乙');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('---\n\n***\n___'), '');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('正文中的 --- 保留'), '正文中的 --- 保留');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('```text\n---\n```\n---'), '```text\n\n---\n\n```');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('    ---'), '    ---');
+  assert.equal(dom.window.PageTraceNotes.normalizeForSave('| A | B |\n| --- | --- |'), '| A | B |\n\n| --- | --- |');
 });
 test('page inline scripts compile', () => {
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);

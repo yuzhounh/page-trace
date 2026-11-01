@@ -91,12 +91,19 @@
     return parts.join('\n');
   }
 
-  // 规范化笔记段落（两段之间始终保持一个空行）
+  // 段落间保留一个空行，移除分隔线，保留代码块与表格内容。
   function formatNoteWithBlankLines(text) {
     if (!text) return '';
-    const lines = text.trim().split(/\r?\n/);
-    const nonEmptyLines = lines.map(l => l.trimEnd()).filter(l => l.trim() !== '');
-    return nonEmptyLines.join('\n\n');
+    let fence = null;
+    return text.replace(/\r\n?/g, '\n').split('\n').filter(line => {
+      const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length && !marker[2].trim()) fence = null;
+        return true;
+      }
+      return fence || !/^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/.test(line);
+    }).map(line => line.trimEnd()).filter(line => line.trim() !== '').join('\n\n');
   }
 
   function fallbackCopy(text) {
