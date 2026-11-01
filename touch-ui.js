@@ -118,6 +118,7 @@
       const selection = window.getSelection();
       if (!selection.rangeCount || !event.clipboardData) return;
       const holder = document.createElement('div');
+      holder.setAttribute('data-i18n-ignore', '');
       holder.append(selection.getRangeAt(0).cloneContents());
       holder.querySelectorAll('.katex-mathml').forEach(el => el.remove());
       holder.style.cssText = 'position:fixed;left:-9999px;white-space:pre-wrap';

@@ -20,6 +20,7 @@
       if (previous?.width === width && previous.font === font && previous.domainWidth === domainWidth) continue;
       if (!textMeasure) {
         textMeasure = document.createElement('span');
+        textMeasure.setAttribute('data-i18n-ignore', '');
         textMeasure.setAttribute('aria-hidden', 'true');
         textMeasure.style.cssText = 'position:fixed;left:-100000px;top:0;visibility:hidden;white-space:pre;pointer-events:none;';
         document.body.append(textMeasure);
@@ -46,6 +47,7 @@
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
     copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
     book: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/>',
+    language: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a17 17 0 0 1 0 18 17 17 0 0 1 0-18"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
@@ -107,7 +109,8 @@
   function countText() {
     if (!singleMonth()) return '';
     const el = document.querySelector('.month-date-count');
-    return el ? el.textContent.trim() : '';
+    const count = el?.textContent.match(/\d+/)?.[0];
+    return count === undefined ? '' : `共 ${count} 条`;
   }
   function statusText() {
     if (sel.on) return '';
@@ -215,6 +218,7 @@
     html += `<div class="pt-group">` +
       (s.user ? rowHtml('copy-all', 'copy', '复制笔记') : '') +
       rowHtml('doc', 'book', '使用说明') +
+      rowHtml('language', 'language', window.I18N?.isEn() ? '简体中文' : 'English') +
       rowHtml('theme', dark ? 'sun' : 'moon', dark ? '浅色模式' : '深色模式') + `</div>`;
     if (s.user) {
       const name = s.user.displayName || s.user.email || 'Google 用户';
@@ -230,6 +234,7 @@
     menu.querySelector('.pt-menu-body').scrollTop = keepScroll;
     if (s.user) {
       const name = s.user.displayName || s.user.email || 'Google 用户';
+      $('ptAccName').toggleAttribute('data-i18n-fallback', !s.user.displayName && !s.user.email);
       $('ptAccName').textContent = name;
       $('ptAccMail').textContent = s.user.displayName && s.user.email ? s.user.email : '';
     }
@@ -304,6 +309,7 @@
     else if (action === 'doc') { if (typeof menuDocBtn !== 'undefined') menuDocBtn.click(); }
     else if (action === 'copy-all') { handleCopyFilteredNotes(); }
     else if (action === 'theme') { toggleTheme(); renderMenu(); }
+    else if (action === 'language') { window.I18N?.toggleLang(); renderMenu(); }
     else if (action === 'login') { if (typeof loginBtn !== 'undefined') loginBtn.click(); }
     else if (action === 'pick-set') {
       const st = state(), c = now();
@@ -462,6 +468,7 @@
   watch($('mobileAccountContainer'), { childList: true, subtree: true });
   watch(root, { attributes: true, attributeFilter: ['data-theme'] });
   window.addEventListener('resize', refresh);
+  document.addEventListener('i18n:change', refresh);
   document.fonts?.ready.then(refresh);
   refresh();
 })();

@@ -4,6 +4,8 @@
 
 <h1 align="center">PageTrace</h1>
 
+<p align="center">简体中文 · <a href="README.en.md">English</a></p>
+
 <p align="center"><strong>网页速记与云端剪藏，多端实时同步。</strong></p>
 
 <p align="center">
@@ -27,7 +29,7 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 
 ### 第一步：安装脚本
 
-当前网页、脚本与 Android 版本为 **1.16.3**（Android code24）：手机备注与域名按实际宽度排布，短备注可同排，长备注最多两行并省略，去掉空白占位并统一行内对齐。年月汇总在登录后预加载，缓存先显示，打开菜单不再查询年份范围，后台刷新保留已知数字。使用说明按电脑网页、手机网页、平板网页及 Android App 分别显示，电脑端恢复紧凑的居中窗口。保留灰色备注、来源尾注隐藏、云端笔记及既有搜索/回收站。网页包为 `dist/web-1.16.3`，APK 为 `dist/PageTrace-1.16.3-code24.apk`，见 [GitHub Release v1.16.3](https://github.com/yuzhounh/page-trace/releases/tag/v1.16.3)。日常脚本通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。
+最近发布的网页、脚本与 Android 版本为 **1.16.3**（Android code24）：手机备注与域名按实际宽度排布，短备注可同排，长备注最多两行并省略，去掉空白占位并统一行内对齐。年月汇总在登录后预加载，缓存先显示，打开菜单不再查询年份范围，后台刷新保留已知数字。使用说明按电脑网页、手机网页、平板网页及 Android App 分别显示，电脑端恢复紧凑的居中窗口。该发布保留灰色备注、来源尾注隐藏、云端笔记及既有搜索/回收站。网页包为 `dist/web-1.16.3`，APK 为 `dist/PageTrace-1.16.3-code24.apk`，见 [GitHub Release v1.16.3](https://github.com/yuzhounh/page-trace/releases/tag/v1.16.3)。日常脚本通过 [GitHub 脚本入口](https://raw.githubusercontent.com/yuzhounh/page-trace/main/pagetrace.user.js) 更新。
 
 快照首读后按`docChanges`更新记录Map，状态快照不再反复解析/排序/序列化全部正文；重连后重新建立服务器完整视图。正文、服务器版本、缓存完整性和删除确认分别处理，真实变动的缓存写入/重绘在60ms内合并，首屏立即展示，切换账户/范围及离页前补写缓存。后台页面继续保存数据并延后列表重绘，回到前台展示最新数据；用户脚本隐藏时释放2秒兜底定时器，重新可见时补查。缓存键、v3格式和`users/{uid}/notes`保持，未新增数据迁移；多选与延后操作绑定原账户，防止换账户后误操作。
 
@@ -59,6 +61,21 @@ PageTrace 是一个轻量优雅的网页速记与云端捕获工具。它由**�
 - `page-trace-app.web.app` 和 `page-trace-app.firebaseapp.com` 属于同一个 Hosting 站点。旧 `/auth.html`、`/auth` 跳转到 Cloudflare 的 `/auth`，旧 `/`、`/index.html` 跳转到主站；其余已移除的业务路径返回 404。
 - Firebase 只部署 `firebase-retired/` 中不含认证脚本的迁移提示页及跳转配置；`/__/auth/*` 等 Firebase 保留路径继续提供 Google 登录辅助服务。Authentication、Firestore 和现有笔记继续使用原项目。
 - 维护命令：`firebase deploy --only hosting --project page-trace-app`。不要将 Hosting 的 `public` 改回根目录，以免再次发布旧业务入口。
+
+## 界面语言与本地预览
+
+当前源码支持简体中文和英文，语言选择保存在当前浏览器。电脑端点击头像，在右对齐的卡片中点击语言按钮，或在输入框外按 `L` 切换；手机和平板在菜单中切换。日期、数量、悬停提示、加载状态、回收站和使用说明等界面文字会随语言切换，后续生成的文案也使用当前语言。笔记标题、正文、网址、账号名称及输入值保持原文，复制内容保持原始 Markdown。
+
+备注在折叠时保持灰色，展开后使用正文颜色，兼容深色模式；更多菜单不再显示字数统计。这些是当前源码中的修改，不代表公开发布版本或已安装 APK 已更新。
+
+安装依赖后，在项目根目录运行：
+
+```sh
+npm run build
+node scripts/serve-web.cjs
+```
+
+打开 [本地 PageTrace](http://localhost:3000/)。服务读取 `dist/web-<VERSION>`；修改源码后重新构建即可刷新查看。
 
 ## 备注格式
 

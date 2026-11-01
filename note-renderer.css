@@ -33,6 +33,7 @@
 .input-action-row .input-send-btn { margin-left: auto; flex: none; }
 
 .note-body.is-collapsed .note-full, .note-body.is-expanded .note-preview { display: none; }
+.note-body.is-expanded { color: var(--text); }
 .note-body .note-preview {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   overflow: hidden; line-height: 1.5; white-space: normal; word-break: break-word;

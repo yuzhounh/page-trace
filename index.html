@@ -161,6 +161,7 @@
 
     /* 用户信息与头像弹窗 */
     .user-panel {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -221,7 +222,7 @@
     .user-dropdown {
       position: absolute;
       top: calc(100% + 10px);
-      left: 0;
+      right: 0;
       width: 240px;
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -2731,8 +2732,6 @@
   <link rel="stylesheet" href="android-ui.css" />
   <link rel="stylesheet" href="mobile-ui.css?v=1.16.3" />
   <style>
-    .lang-select{width:auto;min-width:auto;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:center;}
-    .lang-select:hover{border-color:var(--accent,#0ea5e9);color:var(--accent,#0ea5e9);}
     .lang-select-drawer{font:inherit;font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text);cursor:pointer;}
     .lang-select-drawer:hover{border-color:var(--accent,#0ea5e9);color:var(--accent,#0ea5e9);}
   </style>
@@ -2765,10 +2764,6 @@
       </div>
       <!-- 顶部功能按钮组（搜索、记笔记、用户） -->
       <div class="header-actions">
-        <select id="lang-select" class="header-btn lang-select" aria-label="语言 / Language" title="语言 / Language">
-          <option value="zh">中文</option>
-          <option value="en">EN</option>
-        </select>
         <button class="header-btn" id="openSearchBtn" title="搜索笔记">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
             <circle cx="11" cy="11" r="8"></circle>
@@ -2799,12 +2794,19 @@
             <div class="dropdown-profile">
               <img src="" alt="avatar" class="dropdown-avatar" id="dropdownAvatar" />
               <div class="dropdown-info">
-                <div class="dropdown-name" id="dropdownName">未登录</div>
+                <div class="dropdown-name" id="dropdownName" data-i18n-fallback>未登录</div>
                 <div class="dropdown-email" id="dropdownEmail">-</div>
               </div>
             </div>
             <!-- 功能菜单项：深色/浅色切换、回收站、文档 -->
             <div class="dropdown-actions-group" id="dropdownActionsGroup">
+              <button class="dropdown-item-btn" id="menuLanguageBtn" type="button" title="切换中英文 (L)" aria-keyshortcuts="L">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m5 8 6 6m-7 0 6-6 2-5H2m5-2v2m7 18 5-11 5 11m-8-4h6"></path>
+                </svg>
+                <span id="menuLanguageLabel">English</span>
+                <span class="kbd-hint"><span>L</span></span>
+              </button>
               <button class="dropdown-item-btn" id="menuThemeBtn" title="切换深色/浅色模式 (D)">
                 <svg id="menuThemeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="5"></circle>
@@ -3226,6 +3228,7 @@
           <tbody>
             <tr><td><span class="doc-kbd">/</span> / <span class="doc-kbd">N</span></td><td>搜索全部笔记 / 新建速记</td></tr>
             <tr><td><span class="doc-kbd">T</span> / <span class="doc-kbd">D</span></td><td>回收站 / 切换明暗主题</td></tr>
+            <tr><td><span class="doc-kbd">L</span></td><td>切换中英文</td></tr>
             <tr><td><span class="doc-kbd">?</span> / <span class="doc-kbd">Esc</span></td><td>使用说明 / 关闭当前窗口或搜索</td></tr>
           </tbody>
         </table>
@@ -4091,6 +4094,7 @@
         dropdownAvatar.style.display = 'none';
       }
 
+      dropdownName.toggleAttribute('data-i18n-fallback', !cachedUser.displayName);
       dropdownName.textContent = cachedUser.displayName || '未设置昵称';
       dropdownEmail.textContent = cachedUser.email || '';
 
@@ -4123,6 +4127,7 @@
           dropdownAvatar.style.display = 'none';
         }
 
+        dropdownName.toggleAttribute('data-i18n-fallback', !user.displayName);
         dropdownName.textContent = user.displayName || '未设置昵称';
         dropdownEmail.textContent = user.email || '';
 
@@ -4875,7 +4880,6 @@
             <div class="month-card">
               <div class="month-notes-container">
                 ${group.items.map(item => {
-                  const charCount = (item.title || '').length + (item.note || '').length;
                   const createdD = getItemDate(item);
                   const createdTimeStr = createdD ? formatShortTime(createdD) : '';
                   const safeUrl = getSafeHttpUrl(item.url);
@@ -4956,7 +4960,6 @@
                               <span>删除</span>
                             </button>
                             <div class="note-menu-meta">
-                              <div>字数统计 : ${charCount}</div>
                               ${createdTimeStr ? `<div>创建于 ${createdTimeStr}</div>` : ''}
                               ${isModified ? `<div>编辑于 ${updatedTimeStr}</div>` : ''}
                             </div>
@@ -5461,7 +5464,7 @@
         return `
           <div class="trash-item" data-id="${item.id}">
             <div class="trash-item-main">
-              <div class="trash-item-title">${title}</div>
+              <div class="trash-item-title" ${item.title ? '' : 'data-i18n-fallback'}>${title}</div>
               ${url ? `<div class="trash-item-url" title="${url}">${url}</div>` : ''}
               ${note ? `<div class="trash-item-note">${note}</div>` : ''}
               <div class="trash-item-meta">
@@ -5840,6 +5843,11 @@
       } else if ((e.key === 'd' || e.key === 'D') && !isInputActive) {
         e.preventDefault();
         toggleTheme();
+      } else if ((e.key === 'l' || e.key === 'L') && !isInputActive &&
+          !document.activeElement?.isContentEditable && document.activeElement?.tagName !== 'SELECT' &&
+          !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing && !e.repeat) {
+        e.preventDefault();
+        window.I18N.toggleLang();
       } else if (e.key === '?' && !isInputActive) {
         e.preventDefault();
         showDocModal();
@@ -6029,7 +6037,8 @@
     window.restoreFromTrash = restoreFromTrash;
 
     // 手机 APK 使用应用内圆角确认面板，网页沿用浏览器确认框
-    const askConfirm = message => window.PageTraceTouchUI ? window.PageTraceTouchUI.confirm(message) : Promise.resolve(confirm(message));
+    const askConfirm = message => window.PageTraceTouchUI ? window.PageTraceTouchUI.confirm(message) :
+      Promise.resolve(confirm(window.I18N?.tLabel(message) || message));
 
     // 彻底删除单条笔记
     async function permanentDeleteNote(id) {
@@ -6339,6 +6348,7 @@
           </div>
         `;
         const nameEl = container.querySelector('.mobile-user-name');
+        nameEl.toggleAttribute('data-i18n-fallback', !user.displayName && !user.email);
         nameEl.textContent = name;
         nameEl.title = name;
         const emailEl = container.querySelector('.mobile-user-email');
