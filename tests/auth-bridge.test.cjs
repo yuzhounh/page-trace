@@ -98,7 +98,7 @@ function page(url = 'https://page-trace.pages.dev/auth.html', store = new Map())
     setTimeout(callback) { const id = ++timerId; timers.set(id, { callback, repeat: false }); return id; },
     clearTimeout: (id) => timers.delete(id)
   };
-  for (const id of ['loginBtn', 'avatarBtn', 'avatarImg', 'avatarFallback', 'dropdownAvatar',
+  for (const id of ['loginBtn', 'unauthLangBtn', 'avatarBtn', 'avatarImg', 'avatarFallback', 'dropdownAvatar',
     'dropdownName', 'dropdownEmail', 'userDropdown', 'notesList', 'trashModal']) sandbox[id] = element(id);
   p.context = vm.createContext(sandbox);
   sandbox.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };

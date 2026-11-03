@@ -235,7 +235,8 @@
     '.trash-item-title:not([data-i18n-fallback]), #dropdownName:not([data-i18n-fallback]), ' +
     '#dropdownEmail, #avatarFallback, .mobile-user-avatar, ' +
     '.mobile-user-name:not([data-i18n-fallback]), .mobile-user-email, ' +
-    '.pt-account-name:not([data-i18n-fallback]), .pt-account-mail, #menuLanguageLabel, option';
+    '.pt-account-name:not([data-i18n-fallback]), .pt-account-mail, ' +
+    '#menuLanguageLabel, #unauthLangLabel, #welcomeLangLabel, option';
   const attributes = ['placeholder', 'title', 'aria-label', 'alt'];
   let observer;
   const observation = { childList: true, characterData: true, subtree: true,
@@ -287,14 +288,32 @@
     return pad(String(text), result);
   }
 
+  function detectBrowserLang() {
+    try {
+      const nav = typeof navigator !== 'undefined' ? navigator : null;
+      const langs = nav ? (nav.languages && nav.languages.length ? nav.languages : [nav.language]) : [];
+      for (const l of langs) {
+        if (!l) continue;
+        const lower = String(l).toLowerCase();
+        if (lower.startsWith('zh')) return 'zh';
+        if (lower.startsWith('en')) return 'en';
+      }
+      return 'en';
+    } catch (e) {
+      return 'zh';
+    }
+  }
+
   function normalize(lang) {
     return SUPPORTED.includes(lang) ? lang : "zh";
   }
   function getLang() {
     try {
-      return normalize(localStorage.getItem(STORAGE_KEY) || "zh");
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored && SUPPORTED.includes(stored)) return stored;
+      return detectBrowserLang();
     } catch (e) {
-      return "zh";
+      return detectBrowserLang();
     }
   }
   function isEn() {
@@ -348,7 +367,7 @@
   function paused(callback) {
     observer?.disconnect();
     try { callback(); }
-    finally { observer?.observe(document.body, observation); }
+    finally { if (document?.body) observer?.observe(document.body, observation); }
   }
   function applyStatic() {
     paused(() => translateTree(document.body));
@@ -373,9 +392,14 @@
   }
   function syncSelects() {
     const lang = getLang();
+    const nextLabel = lang === "en" ? "简体中文" : "English";
     const label = document.getElementById("menuLanguageLabel");
+    const unauthLabel = document.getElementById("unauthLangLabel");
+    const welcomeLabel = document.getElementById("welcomeLangLabel");
     const b = document.getElementById("lang-select-drawer");
-    if (label) label.textContent = lang === "en" ? "简体中文" : "English";
+    if (label) label.textContent = nextLabel;
+    if (unauthLabel) unauthLabel.textContent = nextLabel;
+    if (welcomeLabel) welcomeLabel.textContent = nextLabel;
     if (b) b.value = lang;
   }
   function setLang(lang) {
@@ -405,17 +429,26 @@
     applyStatic();
     syncSelects();
     const button = document.getElementById("menuLanguageBtn");
+    const unauthBtn = document.getElementById("unauthLangBtn");
     const b = document.getElementById("lang-select-drawer");
     if (button) button.addEventListener("click", function () {
       toggleLang();
       button.closest(".user-dropdown")?.classList.remove("show");
     });
+    if (unauthBtn) unauthBtn.addEventListener("click", function () {
+      toggleLang();
+    });
     if (b) b.addEventListener("change", function (e) { setLang(e.target.value); });
+    window.addEventListener('storage', function (e) {
+      if (e.key === STORAGE_KEY && (e.newValue === 'zh' || e.newValue === 'en')) {
+        setLang(e.newValue);
+      }
+    });
     window.addEventListener('pagehide', () => observer.disconnect());
     window.addEventListener('pageshow', applyStatic);
   }
 
-  window.I18N = { getLang, isEn, t, tLabel, applyStatic, setLang, toggleLang, changeLang: setLang };
+  window.I18N = { getLang, isEn, t, tLabel, applyStatic, setLang, toggleLang, changeLang: setLang, detectBrowserLang };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();

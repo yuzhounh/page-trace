@@ -2681,6 +2681,19 @@
       color: var(--primary);
       background: var(--item-hover-bg);
     }
+    .welcome-sub-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .welcome-sub-divider {
+      color: var(--text-muted);
+      font-size: 13px;
+      opacity: 0.5;
+      user-select: none;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
@@ -2783,6 +2796,14 @@
         </button>
 
         <div class="user-panel">
+          <button class="header-btn unauth-lang-btn" id="unauthLangBtn" type="button" title="切换中英文 (L)" aria-keyshortcuts="L">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M3 12h18M12 3a17 17 0 0 1 0 18 17 17 0 0 1 0-18"></path>
+            </svg>
+            <span id="unauthLangLabel">English</span>
+            <span class="kbd-hint"><span>L</span></span>
+          </button>
           <button class="auth-btn" id="loginBtn">登录</button>
           <button class="avatar-btn" id="avatarBtn" title="个人信息与设置">
             <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
@@ -3343,6 +3364,7 @@
 
     // DOM 元素
     const loginBtn = document.getElementById('loginBtn');
+    const unauthLangBtn = document.getElementById('unauthLangBtn');
     const avatarBtn = document.getElementById('avatarBtn');
     const avatarImg = document.getElementById('avatarImg');
     const avatarFallback = document.getElementById('avatarFallback');
@@ -4079,6 +4101,7 @@
       currentUser = cachedUser;
       void calendarCounts?.connect(cachedUser);
       loginBtn.style.display = 'none';
+      const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'none';
       avatarBtn.style.display = 'inline-flex';
 
       if (cachedUser.photoURL) {
@@ -4112,6 +4135,7 @@
       if (user) {
         saveUserToCache(user);
         loginBtn.style.display = 'none';
+        const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'none';
         avatarBtn.style.display = 'inline-flex';
         
         if (user.photoURL) {
@@ -4138,6 +4162,7 @@
       } else {
         localStorage.removeItem('pagetrace_last_user');
         loginBtn.style.display = 'inline-flex';
+        const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
         userDropdown.classList.remove('show');
         if (unsubscribeNotes) unsubscribeNotes();
@@ -4759,14 +4784,24 @@
                 </svg>
                 <span>立即登录</span>
               </button>
-              <button type="button" class="welcome-doc-btn" id="welcomeDocBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-                <span>使用说明</span>
-              </button>
+              <div class="welcome-sub-actions">
+                <button type="button" class="welcome-doc-btn" id="welcomeDocBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <span>使用说明</span>
+                </button>
+                <span class="welcome-sub-divider">·</span>
+                <button type="button" class="welcome-doc-btn welcome-lang-btn" id="welcomeLangBtn" title="切换中英文 (L)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M3 12h18M12 3a17 17 0 0 1 0 18 17 17 0 0 1 0-18"></path>
+                  </svg>
+                  <span id="welcomeLangLabel">${window.I18N?.isEn() ? '简体中文' : 'English'}</span>
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -4780,6 +4815,12 @@
         if (wDoc) {
           wDoc.addEventListener('click', () => {
             if (menuDocBtn) menuDocBtn.click();
+          });
+        }
+        const wLang = document.getElementById('welcomeLangBtn');
+        if (wLang) {
+          wLang.addEventListener('click', () => {
+            window.I18N?.toggleLang();
           });
         }
         return;

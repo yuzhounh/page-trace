@@ -32,7 +32,7 @@ test('all empty-page static UI, help and memo placeholders translate', async t =
   const missing = [];
   let node;
   while ((node = walker.nextNode())) {
-    if (node.parentElement.closest('script, style, #menuLanguageLabel, option')) continue;
+    if (node.parentElement.closest('script, style, #menuLanguageLabel, #unauthLangLabel, #welcomeLangLabel, option')) continue;
     if (/\p{Script=Han}/u.test(node.nodeValue)) missing.push(node.nodeValue.trim());
   }
   assert.deepEqual(missing, []);
@@ -194,4 +194,45 @@ test('mobile range, selection and open menus follow switches without translating
   assert.equal(w.document.getElementById('ptTitle').textContent, '1 selected');
   assert.equal(w.document.querySelector('[data-sel="delete"]').textContent, 'Delete');
   assert.equal(w.document.getElementById('memo').textContent, '删除');
+});
+
+test('unauthenticated language option follows browser language by default and supports manual/storage toggling', async t => {
+  // 1. When localStorage is empty and navigator.language is zh, defaults to zh
+  const domZh = new JSDOM(read('index.html'), { url: 'http://localhost:3000/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const wZh = domZh.window;
+  t.after(() => wZh.close());
+  await new Promise(r => { if (wZh.document.readyState !== 'loading') r(); else wZh.document.addEventListener('DOMContentLoaded', r, { once: true }); });
+  Object.defineProperty(wZh.navigator, 'language', { value: 'zh-CN', configurable: true });
+  Object.defineProperty(wZh.navigator, 'languages', { value: ['zh-CN', 'zh'], configurable: true });
+  wZh.eval(read('i18n.js'));
+  assert.equal(wZh.I18N.getLang(), 'zh');
+  assert.equal(wZh.document.getElementById('unauthLangLabel').textContent, 'English');
+
+  // 2. When localStorage is empty and navigator.language is en, defaults to en
+  const domEn = new JSDOM(read('index.html'), { url: 'http://localhost:3000/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const wEn = domEn.window;
+  t.after(() => wEn.close());
+  await new Promise(r => { if (wEn.document.readyState !== 'loading') r(); else wEn.document.addEventListener('DOMContentLoaded', r, { once: true }); });
+  Object.defineProperty(wEn.navigator, 'language', { value: 'en-US', configurable: true });
+  Object.defineProperty(wEn.navigator, 'languages', { value: ['en-US', 'en'], configurable: true });
+  wEn.eval(read('i18n.js'));
+  assert.equal(wEn.I18N.getLang(), 'en');
+  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, '简体中文');
+
+  // 3. Clicking unauthLangBtn toggles language
+  const unauthBtn = wEn.document.getElementById('unauthLangBtn');
+  assert.ok(unauthBtn);
+  unauthBtn.click();
+  await tick(wEn);
+  assert.equal(wEn.I18N.getLang(), 'zh');
+  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, 'English');
+
+  // 4. Cross-tab storage event synchronization
+  const storageEvent = new wEn.Event('storage');
+  storageEvent.key = 'pagetrace_lang';
+  storageEvent.newValue = 'en';
+  wEn.dispatchEvent(storageEvent);
+  await tick(wEn);
+  assert.equal(wEn.I18N.getLang(), 'en');
+  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, '简体中文');
 });
