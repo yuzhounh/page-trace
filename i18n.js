@@ -236,7 +236,7 @@
     '#dropdownEmail, #avatarFallback, .mobile-user-avatar, ' +
     '.mobile-user-name:not([data-i18n-fallback]), .mobile-user-email, ' +
     '.pt-account-name:not([data-i18n-fallback]), .pt-account-mail, ' +
-    '#menuLanguageLabel, #unauthLangLabel, #welcomeLangLabel, option';
+    '#menuLanguageLabel, #welcomeLangLabel, option';
   const attributes = ['placeholder', 'title', 'aria-label', 'alt'];
   let observer;
   const observation = { childList: true, characterData: true, subtree: true,
@@ -394,11 +394,9 @@
     const lang = getLang();
     const nextLabel = lang === "en" ? "简体中文" : "English";
     const label = document.getElementById("menuLanguageLabel");
-    const unauthLabel = document.getElementById("unauthLangLabel");
     const welcomeLabel = document.getElementById("welcomeLangLabel");
     const b = document.getElementById("lang-select-drawer");
     if (label) label.textContent = nextLabel;
-    if (unauthLabel) unauthLabel.textContent = nextLabel;
     if (welcomeLabel) welcomeLabel.textContent = nextLabel;
     if (b) b.value = lang;
   }
@@ -429,14 +427,10 @@
     applyStatic();
     syncSelects();
     const button = document.getElementById("menuLanguageBtn");
-    const unauthBtn = document.getElementById("unauthLangBtn");
     const b = document.getElementById("lang-select-drawer");
     if (button) button.addEventListener("click", function () {
       toggleLang();
       button.closest(".user-dropdown")?.classList.remove("show");
-    });
-    if (unauthBtn) unauthBtn.addEventListener("click", function () {
-      toggleLang();
     });
     if (b) b.addEventListener("change", function (e) { setLang(e.target.value); });
     window.addEventListener('storage', function (e) {

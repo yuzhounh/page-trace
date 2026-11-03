@@ -2777,7 +2777,7 @@
       </div>
       <!-- 顶部功能按钮组（搜索、记笔记、用户） -->
       <div class="header-actions">
-        <button class="header-btn" id="openSearchBtn" title="搜索笔记">
+        <button class="header-btn" id="openSearchBtn" title="搜索笔记" style="display:none">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -2786,7 +2786,7 @@
           <span class="kbd-hint"><span>/</span></span>
         </button>
 
-        <button class="header-btn" id="openCreateBtn" title="新建速记">
+        <button class="header-btn" id="openCreateBtn" title="新建速记" style="display:none">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -2796,14 +2796,6 @@
         </button>
 
         <div class="user-panel">
-          <button class="header-btn unauth-lang-btn" id="unauthLangBtn" type="button" title="切换中英文 (L)" aria-keyshortcuts="L">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9"></circle>
-              <path d="M3 12h18M12 3a17 17 0 0 1 0 18 17 17 0 0 1 0-18"></path>
-            </svg>
-            <span id="unauthLangLabel">English</span>
-            <span class="kbd-hint"><span>L</span></span>
-          </button>
           <button class="auth-btn" id="loginBtn">登录</button>
           <button class="avatar-btn" id="avatarBtn" title="个人信息与设置">
             <img src="" alt="avatar" class="avatar-img" id="avatarImg" />
@@ -3364,8 +3356,7 @@
 
     // DOM 元素
     const loginBtn = document.getElementById('loginBtn');
-    const unauthLangBtn = document.getElementById('unauthLangBtn');
-    const avatarBtn = document.getElementById('avatarBtn');
+        const avatarBtn = document.getElementById('avatarBtn');
     const avatarImg = document.getElementById('avatarImg');
     const avatarFallback = document.getElementById('avatarFallback');
     const userDropdown = document.getElementById('userDropdown');
@@ -4101,8 +4092,9 @@
       currentUser = cachedUser;
       void calendarCounts?.connect(cachedUser);
       loginBtn.style.display = 'none';
-      const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'none';
       avatarBtn.style.display = 'inline-flex';
+      if (openSearchBtn) openSearchBtn.style.display = 'inline-flex';
+      if (openCreateBtn) openCreateBtn.style.display = 'inline-flex';
 
       if (cachedUser.photoURL) {
         avatarImg.src = cachedUser.photoURL;
@@ -4135,8 +4127,9 @@
       if (user) {
         saveUserToCache(user);
         loginBtn.style.display = 'none';
-        const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'none';
         avatarBtn.style.display = 'inline-flex';
+        if (openSearchBtn) openSearchBtn.style.display = 'inline-flex';
+        if (openCreateBtn) openCreateBtn.style.display = 'inline-flex';
         
         if (user.photoURL) {
           avatarImg.src = user.photoURL;
@@ -4162,8 +4155,9 @@
       } else {
         localStorage.removeItem('pagetrace_last_user');
         loginBtn.style.display = 'inline-flex';
-        const _uLang = document.getElementById('unauthLangBtn'); if (_uLang) _uLang.style.display = 'inline-flex';
         avatarBtn.style.display = 'none';
+        if (openSearchBtn) openSearchBtn.style.display = 'none';
+        if (openCreateBtn) openCreateBtn.style.display = 'none';
         userDropdown.classList.remove('show');
         if (unsubscribeNotes) unsubscribeNotes();
         unsubscribeNotes = null;

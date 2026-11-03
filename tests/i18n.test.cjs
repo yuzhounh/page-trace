@@ -32,7 +32,7 @@ test('all empty-page static UI, help and memo placeholders translate', async t =
   const missing = [];
   let node;
   while ((node = walker.nextNode())) {
-    if (node.parentElement.closest('script, style, #menuLanguageLabel, #unauthLangLabel, #welcomeLangLabel, option')) continue;
+    if (node.parentElement.closest('script, style, #menuLanguageLabel, #welcomeLangLabel, option')) continue;
     if (/\p{Script=Han}/u.test(node.nodeValue)) missing.push(node.nodeValue.trim());
   }
   assert.deepEqual(missing, []);
@@ -196,7 +196,7 @@ test('mobile range, selection and open menus follow switches without translating
   assert.equal(w.document.getElementById('memo').textContent, '删除');
 });
 
-test('unauthenticated language option follows browser language by default and supports manual/storage toggling', async t => {
+test('unauthenticated UI hides header search and note buttons, and language toggle is in welcome card', async t => {
   // 1. When localStorage is empty and navigator.language is zh, defaults to zh
   const domZh = new JSDOM(read('index.html'), { url: 'http://localhost:3000/', runScripts: 'outside-only', pretendToBeVisual: true });
   const wZh = domZh.window;
@@ -206,7 +206,11 @@ test('unauthenticated language option follows browser language by default and su
   Object.defineProperty(wZh.navigator, 'languages', { value: ['zh-CN', 'zh'], configurable: true });
   wZh.eval(read('i18n.js'));
   assert.equal(wZh.I18N.getLang(), 'zh');
-  assert.equal(wZh.document.getElementById('unauthLangLabel').textContent, 'English');
+  // Header search and note buttons are hidden when not logged in
+  assert.equal(wZh.document.getElementById('openSearchBtn').style.display, 'none');
+  assert.equal(wZh.document.getElementById('openCreateBtn').style.display, 'none');
+  // Header does not have unauth language button
+  assert.equal(wZh.document.getElementById('unauthLangBtn'), null);
 
   // 2. When localStorage is empty and navigator.language is en, defaults to en
   const domEn = new JSDOM(read('index.html'), { url: 'http://localhost:3000/', runScripts: 'outside-only', pretendToBeVisual: true });
@@ -217,15 +221,20 @@ test('unauthenticated language option follows browser language by default and su
   Object.defineProperty(wEn.navigator, 'languages', { value: ['en-US', 'en'], configurable: true });
   wEn.eval(read('i18n.js'));
   assert.equal(wEn.I18N.getLang(), 'en');
-  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, '简体中文');
+  assert.equal(wEn.document.getElementById('openSearchBtn').style.display, 'none');
+  assert.equal(wEn.document.getElementById('openCreateBtn').style.display, 'none');
 
-  // 3. Clicking unauthLangBtn toggles language
-  const unauthBtn = wEn.document.getElementById('unauthLangBtn');
-  assert.ok(unauthBtn);
-  unauthBtn.click();
+  // 3. Welcome card has the language button and switches language
+  const welcomeHost = wEn.document.createElement('div');
+  welcomeHost.innerHTML = `<button type="button" id="welcomeLangBtn"><span id="welcomeLangLabel">简体中文</span></button>`;
+  wEn.document.body.appendChild(welcomeHost);
+  const welcomeBtn = wEn.document.getElementById('welcomeLangBtn');
+  welcomeBtn.addEventListener('click', () => wEn.I18N.toggleLang());
+  assert.equal(wEn.document.getElementById('welcomeLangLabel').textContent, '简体中文');
+  welcomeBtn.click();
   await tick(wEn);
   assert.equal(wEn.I18N.getLang(), 'zh');
-  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, 'English');
+  assert.equal(wEn.document.getElementById('welcomeLangLabel').textContent, 'English');
 
   // 4. Cross-tab storage event synchronization
   const storageEvent = new wEn.Event('storage');
@@ -234,5 +243,5 @@ test('unauthenticated language option follows browser language by default and su
   wEn.dispatchEvent(storageEvent);
   await tick(wEn);
   assert.equal(wEn.I18N.getLang(), 'en');
-  assert.equal(wEn.document.getElementById('unauthLangLabel').textContent, '简体中文');
+  assert.equal(wEn.document.getElementById('welcomeLangLabel').textContent, '简体中文');
 });
