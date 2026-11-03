@@ -31,6 +31,8 @@
       "Select a single note to share via the toolbar. The system Back key first closes the current window or exits multi-select; closing help returns to the menu.",
     "当前速记弹窗": "Current note dialog",
     "登录": "Sign in",
+    "已登录": "Signed in",
+    "✓ 检测到已登录账号": "✓ Signed-in account detected",
     "点备注展开或收起，点链接打开原网页。长按记录可多选，底部工具栏提供复制、删除及更多操作；单选还可编辑和选择文字。":
       "Tap a memo to expand or collapse it; tap a link to open the original page. Long-press a record to multi-select; the bottom toolbar offers copy, delete and more. A single selection can also be edited or have its text selected.",
     "点右上角菜单登录 Google 账号，点右下角“＋”新建速记。支持横竖屏浏览，标题、链接或备注可按需填写。":
