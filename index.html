@@ -2610,19 +2610,28 @@
       align-items: center;
       gap: 10px;
       padding: 10px 14px;
+      min-height: 58px;
       border-radius: 12px;
       background: var(--bg);
       border: 1px solid var(--border);
       font-size: 13px;
+      line-height: 1.45;
       color: var(--text);
       box-sizing: border-box;
+    }
+    .welcome-feature-item > span:not(.welcome-feature-badge) {
+      flex: 1;
+      min-width: 0;
     }
     .welcome-feature-badge {
       font-weight: 600;
       font-size: 12px;
       color: var(--primary);
       white-space: nowrap;
-      flex-shrink: 0;
+      flex: 0 0 76px;
+      width: 76px;
+      display: inline-flex;
+      align-items: center;
     }
     .welcome-kbd {
       display: inline-block;
