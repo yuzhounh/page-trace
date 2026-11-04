@@ -175,9 +175,9 @@
     const m = badge && badge.textContent.match(/\d+/);
     return m ? Number(m[0]) : null;
   };
-  const rowHtml = (action, icon, label, { on = false, count = null, data = '' } = {}) =>
+  const rowHtml = (action, icon, label, { on = false, count = null, value = null, data = '' } = {}) =>
     `<button type="button" class="pt-row${on ? ' on' : ''}" data-action="${action}" ${data}>${svg(icon)}<span class="pt-row-label">${label}</span>` +
-    `${count !== null ? `<span class="pt-row-count">${count}</span>` : ''}</button>`;
+    `${value !== null ? `<span class="pt-row-count">${value}</span>` : (count !== null ? `<span class="pt-row-count">${count}</span>` : '')}</button>`;
   let versionText = '';
   let menuScrollTop = 0;
   let pickData = { year: [], month: [] };
@@ -215,11 +215,17 @@
         rowHtml('trash', 'trash', '回收站') + `</div>`;
     }
     const dark = root.getAttribute('data-theme') === 'dark';
+    const isEn = window.I18N && window.I18N.isEn();
+    const t = s => (window.I18N && window.I18N.t ? window.I18N.t(s) : s);
+    const themeLabel = isEn ? 'Theme' : '外观主题';
+    const themeTarget = isEn ? (dark ? 'Light' : 'Dark') : (dark ? '浅色' : '深色');
+    const langLabel = isEn ? 'Language' : '界面语言';
+    const langTarget = isEn ? '简体中文' : 'English';
     html += `<div class="pt-group">` +
-      (s.user ? rowHtml('copy-all', 'copy', '复制笔记') : '') +
-      rowHtml('doc', 'book', '使用说明') +
-      rowHtml('language', 'language', window.I18N?.isEn() ? '简体中文' : 'English') +
-      rowHtml('theme', dark ? 'sun' : 'moon', dark ? '浅色模式' : '深色模式') + `</div>`;
+      (s.user ? rowHtml('copy-all', 'copy', t('复制笔记')) : '') +
+      rowHtml('doc', 'book', t('使用说明')) +
+      rowHtml('language', 'language', langLabel, { value: langTarget }) +
+      rowHtml('theme', dark ? 'sun' : 'moon', themeLabel, { value: themeTarget }) + `</div>`;
     if (s.user) {
       const name = s.user.displayName || s.user.email || 'Google 用户';
       html += `<div class="pt-group"><div class="pt-account">${svg('user')}<span class="pt-account-name" id="ptAccName"></span><span class="pt-account-mail" id="ptAccMail"></span>` +

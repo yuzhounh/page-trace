@@ -88,6 +88,7 @@
     "Ctrl + 右键": "Ctrl + right click",
     "Ctrl + 左键": "Ctrl + left click",
     "PageTrace - 云端速记看板": "PageTrace — Cloud Note Board",
+    "界面语言": "Language",
     "语言 / Language": "Language",
     "切换中英文": "Switch between Chinese and English",
     "编辑": "Edit",
@@ -198,6 +199,7 @@
     "回到本月": "Back to this month",
     "快捷设置与导航": "Quick settings and navigation",
     "切换深色/浅色模式 (D)": "Toggle dark/light mode (D)",
+    "切换外观主题 (D)": "Toggle theme (D)",
     "切换中英文 (L)": "Toggle Chinese/English (L)",
     "切换外观主题": "Toggle theme",
     "上一个月": "Previous month",
@@ -213,6 +215,7 @@
     "移动端功能导航": "Mobile navigation",
     "永久清空回收站中所有笔记": "Permanently empty all notes in trash",
     "PageTrace 首页": "PageTrace home",
+    "界面语言": "Language",
     "语言 / Language": "Language",
   };
 

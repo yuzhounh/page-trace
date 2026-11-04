@@ -431,6 +431,12 @@
       border-color: rgba(255, 255, 255, 0.25);
       box-shadow: none;
     }
+    .dropdown-item-value {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
     .dropdown-item-btn .kbd-hint {
       margin-left: auto;
     }
@@ -2753,7 +2759,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.16.3" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.16.4" />
   <style>
     .lang-select-drawer{font:inherit;font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text);cursor:pointer;}
     .lang-select-drawer:hover{border-color:var(--accent,#0ea5e9);color:var(--accent,#0ea5e9);}
@@ -2827,10 +2833,11 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="m5 8 6 6m-7 0 6-6 2-5H2m5-2v2m7 18 5-11 5 11m-8-4h6"></path>
                 </svg>
-                <span id="menuLanguageLabel">English</span>
+                <span class="dropdown-item-title" data-i18n="界面语言">界面语言</span>
+                <span class="dropdown-item-value" id="menuLanguageLabel">English</span>
                 <span class="kbd-hint"><span>L</span></span>
               </button>
-              <button class="dropdown-item-btn" id="menuThemeBtn" title="切换深色/浅色模式 (D)">
+              <button class="dropdown-item-btn" id="menuThemeBtn" title="切换外观主题 (D)">
                 <svg id="menuThemeIconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="5"></circle>
                   <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -2845,7 +2852,8 @@
                 <svg id="menuThemeIconMoon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
-                <span id="menuThemeLabel">深色模式</span>
+                <span class="dropdown-item-title" data-i18n="外观主题">外观主题</span>
+                <span class="dropdown-item-value" id="menuThemeLabel">深色</span>
                 <span class="kbd-hint"><span>D</span></span>
               </button>
 
@@ -3457,33 +3465,34 @@
 
     function updateThemeUI(theme) {
       const isDark = theme === 'dark';
+      const isEn = window.I18N && window.I18N.isEn();
       if (isDark) {
         document.documentElement.setAttribute('data-theme', 'dark');
-        if (themeIconSun) themeIconSun.style.display = 'none';
-        if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
-        if (themeToggleLabel) themeToggleLabel.textContent = '浅色';
-        if (menuThemeIconSun) menuThemeIconSun.style.display = 'none';
-        if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'inline-block';
-        if (menuThemeLabel) menuThemeLabel.textContent = '浅色模式';
-      } else {
-        document.documentElement.removeAttribute('data-theme');
         if (themeIconSun) themeIconSun.style.display = 'inline-block';
         if (themeIconMoon) themeIconMoon.style.display = 'none';
-        if (themeToggleLabel) themeToggleLabel.textContent = '深色';
+        if (themeToggleLabel) themeToggleLabel.textContent = isEn ? 'Light' : '浅色';
         if (menuThemeIconSun) menuThemeIconSun.style.display = 'inline-block';
         if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'none';
-        if (menuThemeLabel) menuThemeLabel.textContent = '深色模式';
+        if (menuThemeLabel) menuThemeLabel.textContent = isEn ? 'Light' : '浅色';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (themeIconSun) themeIconSun.style.display = 'none';
+        if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
+        if (themeToggleLabel) themeToggleLabel.textContent = isEn ? 'Dark' : '深色';
+        if (menuThemeIconSun) menuThemeIconSun.style.display = 'none';
+        if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'inline-block';
+        if (menuThemeLabel) menuThemeLabel.textContent = isEn ? 'Dark' : '深色';
       }
 
       const dSun = document.getElementById('desktopThemeIconSun');
       const dMoon = document.getElementById('desktopThemeIconMoon');
-      if (dSun) dSun.style.display = isDark ? 'none' : 'inline-block';
-      if (dMoon) dMoon.style.display = isDark ? 'inline-block' : 'none';
+      if (dSun) dSun.style.display = isDark ? 'inline-block' : 'none';
+      if (dMoon) dMoon.style.display = isDark ? 'none' : 'inline-block';
 
       const mSun = document.getElementById('mobileThemeIconSun');
       const mMoon = document.getElementById('mobileThemeIconMoon');
-      if (mSun) mSun.style.display = isDark ? 'none' : 'inline-block';
-      if (mMoon) mMoon.style.display = isDark ? 'inline-block' : 'none';
+      if (mSun) mSun.style.display = isDark ? 'inline-block' : 'none';
+      if (mMoon) mMoon.style.display = isDark ? 'none' : 'inline-block';
 
       try {
         window.postMessage({ source: 'PAGETRACE_THEME_CHANGE', theme: isDark ? 'dark' : 'light' }, '*');

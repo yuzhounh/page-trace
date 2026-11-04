@@ -12,10 +12,23 @@ html.is-touch {
 }
 html.is-touch[data-theme="dark"] {
   --primary: #6C93E4; --primary-hover: #8AA9EC;
+  --text: #f8fafc; --text-muted: #94a3b8;
+  --border: #334155; --divider: #334155;
+  --badge-bg: rgba(108, 147, 228, 0.16); --badge-text: #93c5fd; --item-hover-bg: rgba(255, 255, 255, 0.05);
   --pt-tint: rgba(108, 147, 228, 0.18); --pt-panel: #1b2536; --pt-input: #0f172a; --pt-ripple: #226C93E4;
   --pt-search-bg: #1b2536;
   --pt-grad: linear-gradient(135deg, #0b1220 0%, #0f172a 50%, #131a2b 100%);
   --pt-top-bg: rgba(15, 23, 42, 0.94);
+}
+html.is-touch[data-theme="dark"] .pt-pop {
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+html.is-touch[data-theme="dark"] .pt-search {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+html.is-touch[data-theme="dark"].pt-select-mode .pt-selbar {
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.4);
 }
 html.is-touch.pt-collapsed { --pt-bar: 48px; --pt-head: 56px; }
 
