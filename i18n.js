@@ -395,12 +395,13 @@
   }
   function syncSelects() {
     const lang = getLang();
-    const nextLabel = lang === "en" ? "简体中文" : "English";
+    const curLabel = lang === "en" ? "English" : "简体中文";
+    const targetLabel = lang === "en" ? "简体中文" : "English";
     const label = document.getElementById("menuLanguageLabel");
     const welcomeLabel = document.getElementById("welcomeLangLabel");
     const b = document.getElementById("lang-select-drawer");
-    if (label) label.textContent = nextLabel;
-    if (welcomeLabel) welcomeLabel.textContent = nextLabel;
+    if (label) label.textContent = curLabel;
+    if (welcomeLabel) welcomeLabel.textContent = targetLabel;
     if (b) b.value = lang;
   }
   function setLang(lang) {

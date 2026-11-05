@@ -2834,7 +2834,7 @@
                   <path d="m5 8 6 6m-7 0 6-6 2-5H2m5-2v2m7 18 5-11 5 11m-8-4h6"></path>
                 </svg>
                 <span class="dropdown-item-title" data-i18n="界面语言">界面语言</span>
-                <span class="dropdown-item-value" id="menuLanguageLabel">English</span>
+                <span class="dropdown-item-value" id="menuLanguageLabel">简体中文</span>
                 <span class="kbd-hint"><span>L</span></span>
               </button>
               <button class="dropdown-item-btn" id="menuThemeBtn" title="切换外观主题 (D)">
@@ -3468,20 +3468,24 @@
       const isEn = window.I18N && window.I18N.isEn();
       if (isDark) {
         document.documentElement.setAttribute('data-theme', 'dark');
+        // Topbar quick toggle: action target is light (Sun icon)
         if (themeIconSun) themeIconSun.style.display = 'inline-block';
         if (themeIconMoon) themeIconMoon.style.display = 'none';
         if (themeToggleLabel) themeToggleLabel.textContent = isEn ? 'Light' : '浅色';
-        if (menuThemeIconSun) menuThemeIconSun.style.display = 'inline-block';
-        if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'none';
-        if (menuThemeLabel) menuThemeLabel.textContent = isEn ? 'Light' : '浅色';
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        if (themeIconSun) themeIconSun.style.display = 'none';
-        if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
-        if (themeToggleLabel) themeToggleLabel.textContent = isEn ? 'Dark' : '深色';
+        // Dropdown menu: current state is dark (Moon icon)
         if (menuThemeIconSun) menuThemeIconSun.style.display = 'none';
         if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'inline-block';
         if (menuThemeLabel) menuThemeLabel.textContent = isEn ? 'Dark' : '深色';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        // Topbar quick toggle: action target is dark (Moon icon)
+        if (themeIconSun) themeIconSun.style.display = 'none';
+        if (themeIconMoon) themeIconMoon.style.display = 'inline-block';
+        if (themeToggleLabel) themeToggleLabel.textContent = isEn ? 'Dark' : '深色';
+        // Dropdown menu: current state is light (Sun icon)
+        if (menuThemeIconSun) menuThemeIconSun.style.display = 'inline-block';
+        if (menuThemeIconMoon) menuThemeIconMoon.style.display = 'none';
+        if (menuThemeLabel) menuThemeLabel.textContent = isEn ? 'Light' : '浅色';
       }
 
       const dSun = document.getElementById('desktopThemeIconSun');

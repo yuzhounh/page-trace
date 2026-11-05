@@ -218,14 +218,14 @@
     const isEn = window.I18N && window.I18N.isEn();
     const t = s => (window.I18N && window.I18N.t ? window.I18N.t(s) : s);
     const themeLabel = isEn ? 'Theme' : '外观主题';
-    const themeTarget = isEn ? (dark ? 'Light' : 'Dark') : (dark ? '浅色' : '深色');
+    const themeCurrent = isEn ? (dark ? 'Dark' : 'Light') : (dark ? '深色' : '浅色');
     const langLabel = isEn ? 'Language' : '界面语言';
-    const langTarget = isEn ? '简体中文' : 'English';
+    const langCurrent = isEn ? 'English' : '简体中文';
     html += `<div class="pt-group">` +
       (s.user ? rowHtml('copy-all', 'copy', t('复制笔记')) : '') +
       rowHtml('doc', 'book', t('使用说明')) +
-      rowHtml('language', 'language', langLabel, { value: langTarget }) +
-      rowHtml('theme', dark ? 'sun' : 'moon', themeLabel, { value: themeTarget }) + `</div>`;
+      rowHtml('language', 'language', langLabel, { value: langCurrent }) +
+      rowHtml('theme', dark ? 'moon' : 'sun', themeLabel, { value: themeCurrent }) + `</div>`;
     if (s.user) {
       const name = s.user.displayName || s.user.email || 'Google 用户';
       html += `<div class="pt-group"><div class="pt-account">${svg('user')}<span class="pt-account-name" id="ptAccName"></span><span class="pt-account-mail" id="ptAccMail"></span>` +
