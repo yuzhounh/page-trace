@@ -75,7 +75,7 @@ Open [local PageTrace](http://localhost:3000/). The server reads `dist/web-<VERS
 
 Memos support Markdown headings, bold, italics, lists, quotations, links, tables and code blocks. Use `$x^2$` for inline math or `$$x^2$$` for display math; `\(…\)` and `\[…\]` are also supported. For multiline formulas, put the opening and closing `$$` on separate lines. Formula delimiters in code blocks remain literal, and formulas that cannot be parsed display their source.
 
-Editing and copying preserve original Markdown. Saving normalizes blank paragraph lines and removes standalone separator lines while keeping body links. Historical tables with blank lines between rows are rendered as tables. Existing memos render without rewriting cloud data, and raw HTML is displayed as text.
+Editing and copying preserve original Markdown. Saving normalizes blank paragraph lines and removes standalone separator lines while keeping body links. Table cells support `<br>`, `<br/>` and `<br />` line breaks. Extra blank lines between table rows and wrapped records that can be confirmed against the header column count are repaired for display; uncertain continuations stay unchanged. Existing memos render without rewriting cloud data. Raw HTML is displayed as text except for bare `<br>` tags inside tables; breaks inside code remain literal.
 
 Rendering dependencies are pinned and bundled with the site, without extra runtime CDNs. After maintaining dependencies, run `npm ci && npm run vendor`, publish the updated `vendor/` directory, and validate with `npm test`. Rendering follows [Marked's sanitization guidance](https://marked.js.org/) and [KaTeX security options](https://katex.org/docs/options).
 

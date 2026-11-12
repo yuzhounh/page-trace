@@ -31,9 +31,18 @@
         return `<code class="note-math-error">${escape(token.raw)}</code>`;
       }
     };
+    let inTable = false;
     parser = new window.marked.Marked({ gfm: true, breaks: true }, {
-      // Raw HTML is text, never an executable part of a note.
-      renderer: { html: token => escape(token.text) },
+      // Only bare line breaks in tables are HTML; attributes and other tags stay text.
+      renderer: {
+        html: token => inTable && /^<br\s*\/?>$/i.test(token.text) ? '<br>' : escape(token.text),
+        table(token) {
+          const previous = inTable;
+          inTable = true;
+          try { return window.marked.Renderer.prototype.table.call(this, token); }
+          finally { inTable = previous; }
+        }
+      },
       extensions: [{
         name: 'blockMath', level: 'block',
         start: src => src.search(/\$\$|\\\[/),
@@ -58,37 +67,100 @@
     });
     return parser;
   }
-  function repairSpacedTables(source) {
-    if (!/\n[ \t]*\n[ \t]*\|/.test(source)) return source;
+  function repairTables(source) {
+    if (!source.includes('|')) return source;
     const markdown = getParser();
-    const tokens = markdown.lexer(source);
-    const isRows = token => ['paragraph', 'table'].includes(token?.type) &&
-      token.raw.trim().split('\n').every(line => /^\s*\|/.test(line));
-    const parts = [];
-    for (let i = 0; i < tokens.length; i++) {
-      let raw = tokens[i].raw;
-      if (isRows(tokens[i])) {
-        while (isRows(tokens[i + 1]) ||
-          (tokens[i + 1]?.type === 'space' && isRows(tokens[i + 2]))) {
-          raw += tokens[++i].raw;
+    // Match GFM's escaped-pipe rules, including even/odd runs of backslashes.
+    function pipes(row) {
+      const positions = [];
+      let slashes = 0;
+      for (let i = 0; i < row.length; i++) {
+        if (row[i] === '|' && slashes % 2 === 0) positions.push(i);
+        slashes = row[i] === '\\' ? slashes + 1 : 0;
+      }
+      return positions;
+    }
+    function cells(row) {
+      const positions = pipes(row.trim());
+      return positions.length + 1 - (positions[0] === 0 ? 1 : 0) -
+        (positions.at(-1) === row.trim().length - 1 ? 1 : 0);
+    }
+    const startsRow = line => /^ {0,3}\|/.test(line);
+    const endsRow = line => pipes(line.trim()).at(-1) === line.trim().length - 1;
+    const delimiter = line => /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/.test(line);
+    function repairChunk(raw) {
+      const lines = raw.split('\n');
+      const result = [];
+      const nextNonempty = start => {
+        while (start < lines.length && !lines[start].trim()) start++;
+        return start;
+      };
+      for (let i = 0; i < lines.length; i++) {
+        const divider = nextNonempty(i + 1);
+        if (!startsRow(lines[i]) || !delimiter(lines[divider] || '')) {
+          result.push(lines[i]);
+          continue;
         }
-        const joined = raw.replace(/\n(?:[ \t]*\n)+(?=[ \t]*\|)/g, '\n');
-        if (joined !== raw) {
-          const checked = markdown.lexer(joined);
-          if (checked[0]?.type === 'table' && checked.every(token => ['table', 'space'].includes(token.type))) {
-            raw = joined;
+        const header = markdown.lexer(lines[i] + '\n' + lines[divider] + '\n')[0];
+        if (header?.type !== 'table') {
+          result.push(lines[i]);
+          continue;
+        }
+        result.push(lines[i], lines[divider]);
+        i = divider;
+        const columns = header.header.length;
+        while (true) {
+          const start = nextNonempty(i + 1);
+          if (!startsRow(lines[start] || '') || delimiter(lines[start])) break;
+          // A second header starts a separate table, even with no blank line.
+          if (delimiter(lines[nextNonempty(start + 1)] || '')) break;
+          let row = lines[start];
+          let end = start;
+          if (cells(row) < columns || !endsRow(row)) {
+            let candidate = row;
+            for (let j = start + 1; j < lines.length; j++) {
+              const line = lines[j];
+              if (!line.trim()) continue;
+              if (startsRow(line) || /^(?: {4}|\t)|^ {0,3}(?:#{1,6}\s|>|`{3,}|~{3,}|[-+*]\s|\d+[.)]\s)/.test(line)) break;
+              const gap = /<br\s*\/?>\s*$/i.test(candidate) || /^\s*<br\s*\/?>/i.test(line) || endsRow(candidate) ? ' ' : '<br>';
+              candidate += gap + line.trim();
+              const count = cells(candidate);
+              if (count > columns) break;
+              if (count === columns && endsRow(candidate)) {
+                row = candidate;
+                end = j;
+                break;
+              }
+            }
           }
+          result.push(row);
+          i = end;
         }
       }
-      parts.push(raw);
+      return result.join('\n');
     }
+    // Leave code and nested blocks intact; their contents are not top-level rows.
+    const parts = [];
+    let cursor = 0;
+    let tokenCursor = 0;
+    for (const token of markdown.lexer(source)) {
+      // Definitions live in lexer metadata, not tokens; retain source gaps verbatim.
+      const start = source.indexOf(token.raw, tokenCursor);
+      if (start < 0) return source;
+      tokenCursor = start + token.raw.length;
+      if (['code', 'list', 'blockquote', 'blockMath'].includes(token.type)) {
+        parts.push(repairChunk(source.slice(cursor, start)), token.raw);
+        cursor = tokenCursor;
+      }
+    }
+    parts.push(repairChunk(source.slice(cursor)));
     return parts.join('');
   }
   function render(text) {
     const source = normalizeSource(text);
     if (!window.marked || !window.DOMPurify) return escape(source).replace(/\n/g, '<br>');
     try {
-      const fragment = window.DOMPurify.sanitize(getParser().parse(repairSpacedTables(source)), {
+      const fragment = window.DOMPurify.sanitize(getParser().parse(repairTables(source)), {
         RETURN_DOM_FRAGMENT: true, ADD_TAGS: ['annotation'], ADD_ATTR: ['encoding']
       });
       fragment.querySelectorAll('a').forEach(link => {

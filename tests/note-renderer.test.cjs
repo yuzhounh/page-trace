@@ -58,6 +58,83 @@ test('table recovery preserves fenced code, surrounding prose and ordinary pipe-
   assert.equal(root.lastElementChild.textContent, '结尾');
   assert.equal(render('| 普通文字 |\n\n| 另一段 |').querySelector('table'), null);
 });
+
+test('only bare HTML breaks in table cells render, with code and other HTML kept literal', () => {
+  const { render, dom } = setup();
+  const source = '| 名称<br>说明 | 内容 |\n| --- | --- |\n' +
+    '| 甲<br>乙<BR/>丙<br />丁 | `<br>` <br onmouseover="alert(1)"> <img src=x onerror=alert(1)> |\n\n' +
+    '正文<br>保持文字';
+  const root = render(source);
+  assert.equal(root.querySelectorAll('th br').length, 1);
+  assert.equal(root.querySelectorAll('td br').length, 3);
+  assert.equal(root.querySelector('td code').textContent, '<br>');
+  assert.equal(root.querySelector('img,[onmouseover],[onerror]'), null);
+  assert.match(root.querySelectorAll('td')[1].textContent, /<br onmouseover=/);
+  assert.equal(root.querySelector('p').textContent, '正文<br>保持文字');
+  assert.match(dom.window.PageTraceNotes.preview(source), /甲 乙 丙 丁/);
+});
+
+test('six-column records split by breaks and blank lines recover before and after saving', () => {
+  const { render, dom } = setup();
+  const source = '开头\n\n| 模型 | 定位 | 状态 | 延迟 | 成本 | 场景 |\n\n| --- | --- | --- | --- | --- | --- |\n\n' +
+    '| **Helix** | Flash-Lite<br>\n\n<br>端侧 | 未发布<br>\n\n<br>测试阶段 | 快 | $0.30 / $2.50 | 清洗 |\n\n' +
+    '| **Hydrogen**<br>\n\n<br>氢 | Flash<br>\n\n<br>主力 | 灰度 | 300 tok/s<br>\n\n<br>高吞吐 | 低 | 日常 |\n\n' +
+    '| Argon | Pro | 已发布 | 中速 | $2 / $10 | 长上下文\n理解 |\n\n' +
+    '## 后续\n\n结尾';
+  for (const text of [source, dom.window.PageTraceNotes.normalizeForSave(source)]) {
+    const root = render(text);
+    assert.equal(root.querySelectorAll('table').length, 1);
+    assert.equal(root.querySelectorAll('th').length, 6);
+    assert.equal(root.querySelectorAll('tbody tr').length, 3);
+    const rows = [...root.querySelectorAll('tbody tr')];
+    assert.equal(rows[0].children[1].innerHTML, 'Flash-Lite<br> <br>端侧');
+    assert.match(rows[1].children[0].innerHTML, /<strong>Hydrogen<\/strong><br> <br>氢/);
+    assert.equal(rows[2].children[5].innerHTML, '长上下文<br>理解');
+    assert.equal(root.querySelector('h2').textContent, '后续');
+    assert.equal(root.lastElementChild.textContent, '结尾');
+  }
+});
+
+test('wrapped rows preserve escaped pipes, alignment, inline code, math and safe links', () => {
+  const { render } = setup();
+  const root = render('| A | B | C |\n| :--- | :---: | ---: |\n' +
+    '| a\\|b<br>\n续行 | `c\\|d` | [链接](https://example.com)<br>\n$x^2$ |');
+  assert.equal(root.querySelectorAll('td').length, 3);
+  assert.match(root.querySelector('td').innerHTML, /a\|b<br> 续行/);
+  assert.equal(root.querySelector('code').textContent, 'c|d');
+  assert.equal(root.querySelector('a').rel, 'noopener noreferrer');
+  assert.equal(root.querySelectorAll('.katex').length, 1);
+  assert.equal(root.querySelectorAll('th')[2].getAttribute('align'), 'right');
+});
+
+test('table repair stops at new rows, headings and code, leaving incomplete records intact', () => {
+  const { render } = setup();
+  const wrapped = '| A | B | C |\n| --- | --- | --- |\n| 1 | x<br>\n\n<br>y | 3 |';
+  const root = render('```text\n' + wrapped + '\n```\n\n' +
+    '    | A | B |\n    | --- | --- |\n    | 1 | 2 |\n\n' +
+    '| A | B | C |\n| --- | --- | --- |\n| incomplete |\n\n正文保持独立\n\n' +
+    '## 标题\n\n' + wrapped + '\n\n| next | row | intact |\n\n结尾');
+  assert.equal(root.querySelector('pre code').textContent, wrapped + '\n');
+  assert.equal(root.querySelectorAll('pre').length, 2);
+  assert.equal(root.querySelectorAll('table').length, 2);
+  assert.ok([...root.querySelectorAll('p')].some(p => p.textContent === '正文保持独立'));
+  assert.equal(root.querySelectorAll('table')[1].querySelectorAll('tbody tr').length, 2);
+  assert.equal(root.lastElementChild.textContent, '结尾');
+  assert.equal(render('| A | B |\n| --- | --- |\n| 1 | 2 |\n\n| X | Y |\n| --- | --- |\n| 3 | 4 |').querySelectorAll('table').length, 2);
+});
+
+test('table recovery retains reference definitions and nested blocks', () => {
+  const { render } = setup();
+  const root = render('[before]: https://example.com/before\n\n[前文][before]\n\n' +
+    '```text\n| literal |\n```\n\n' +
+    '[after]: https://example.com/after\n\n' +
+    '| A | B |\n\n| --- | --- |\n\n| [后文][after]<br>\n\n续行 | 2 |\n\n' +
+    '> 引用<br>\n> | 保持引用 |\n\n- 列表<br>\n  接续');
+  assert.equal(root.querySelector('p a').href, 'https://example.com/before');
+  assert.equal(root.querySelector('td a').href, 'https://example.com/after');
+  assert.match(root.querySelector('blockquote').textContent, /引用<br>/);
+  assert.match(root.querySelector('li').textContent, /列表<br>/);
+});
 test('invalid formulas and unavailable libraries fall back to readable safe text', () => {
   const { dom, render } = setup();
   assert.match(render(String.raw`$\notARealCommand$`).textContent, /notARealCommand/);
