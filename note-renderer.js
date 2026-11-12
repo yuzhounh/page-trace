@@ -167,6 +167,34 @@
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
       });
+      fragment.querySelectorAll('table').forEach(table => {
+        const scroll = document.createElement('div');
+        scroll.className = 'note-table-scroll';
+        table.replaceWith(scroll);
+        scroll.append(table);
+        // Soft-wrap long URLs/identifiers without lowering every word's minimum width.
+        const walker = document.createTreeWalker(table, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) {
+          if (!walker.currentNode.parentElement.closest('.katex,pre')) nodes.push(walker.currentNode);
+        }
+        for (const node of nodes) {
+          const matches = [...node.textContent.matchAll(/[^\s\u3000-\u9fff]{32,}/gu)];
+          if (!matches.length) continue;
+          const replacement = document.createDocumentFragment();
+          let offset = 0;
+          for (const match of matches) {
+            replacement.append(node.textContent.slice(offset, match.index));
+            const token = document.createElement('span');
+            token.className = 'note-table-long-token';
+            token.textContent = match[0];
+            replacement.append(token);
+            offset = match.index + match[0].length;
+          }
+          replacement.append(node.textContent.slice(offset));
+          node.replaceWith(replacement);
+        }
+      });
       const container = document.createElement('div');
       container.append(fragment);
       return container.innerHTML;

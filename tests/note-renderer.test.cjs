@@ -135,6 +135,23 @@ test('table recovery retains reference definitions and nested blocks', () => {
   assert.match(root.querySelector('blockquote').textContent, /引用<br>/);
   assert.match(root.querySelector('li').textContent, /列表<br>/);
 });
+
+test('long table identifiers wrap without changing text, links, code or formulas', () => {
+  const { render, dom } = setup();
+  const identifier = 'identifier'.repeat(16);
+  const url = 'https://example.com/' + 'segment'.repeat(24);
+  const root = render('| 名称 | 说明 |\n| --- | --- |\n' +
+    '| Hydrogen | `' + identifier + '` [' + url + '](' + url + ') $x^2$ |');
+  assert.equal(root.querySelector('td').textContent, 'Hydrogen');
+  assert.equal(root.querySelector('code').textContent, identifier);
+  assert.equal(root.querySelector('a').textContent, url);
+  assert.equal(root.querySelector('a').href, url);
+  assert.equal(root.querySelector('a').rel, 'noopener noreferrer');
+  assert.equal(root.querySelector('.katex annotation').textContent, 'x^2');
+  assert.equal(root.querySelector('.katex .note-table-long-token'), null);
+  assert.equal(root.querySelector('.note-table-scroll').firstElementChild.tagName, 'TABLE');
+  assert.match(dom.window.PageTraceNotes.preview('| A | B |\n| --- | --- |\n| Hydrogen | `' + identifier + '` |'), new RegExp('Hydrogen ' + identifier));
+});
 test('invalid formulas and unavailable libraries fall back to readable safe text', () => {
   const { dom, render } = setup();
   assert.match(render(String.raw`$\notARealCommand$`).textContent, /notARealCommand/);
