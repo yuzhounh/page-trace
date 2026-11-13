@@ -2759,7 +2759,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.16.4-reading-position" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.16.4-keep-below" />
   <style>
     .lang-select-drawer{font:inherit;font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text);cursor:pointer;}
     .lang-select-drawer:hover{border-color:var(--accent,#0ea5e9);color:var(--accent,#0ea5e9);}
@@ -3371,8 +3371,6 @@
     let currentEditingId = null;
     let currentSearchKeyword = '';
     const expandedNoteIds = new Set();
-    const noteReadingPositions = new Map();
-    let noteReadingContext = '';
     let finishNotePositionRestore = null;
 
     // DOM 元素
@@ -4756,7 +4754,6 @@
 
     // 渲染主列表（默认显示 50 条，滚动到底加载 50 条；支持按月切换）
     function renderList() {
-      syncNoteReadingContext();
       if (!currentUser) {
         monthNavBar.classList.remove('show');
         notesList.innerHTML = `
@@ -5097,22 +5094,14 @@
     });
     if (document.fonts) document.fonts.ready.then(updateNoteExpandButtons);
 
-    function syncNoteReadingContext() {
-      const context = JSON.stringify([currentUser?.uid, selectedYear, selectedMonth, currentSearchKeyword]);
-      if (context !== noteReadingContext) {
-        finishNotePositionRestore?.();
-        noteReadingPositions.clear();
-        noteReadingContext = context;
-      }
-      return context;
-    }
-
-    function restoreNoteReadingPosition(id, saved, collapse) {
+    function collapseNoteKeepingBelow(row, collapse) {
       finishNotePositionRestore?.();
-      const context = syncNoteReadingContext();
       const root = document.documentElement;
       root.classList.add('note-position-restoring');
-      window.PageTraceMobile?.restoreReadingPosition(saved?.mobile);
+      const before = row.getBoundingClientRect();
+      // All following notes share this boundary. A touch in the middle of a
+      // long body has no visible lower boundary, so show its collapsed card.
+      const keepBelow = !phoneLayout.matches || before.bottom <= window.innerHeight;
       let frame;
       const cancelEvents = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
       const finish = () => {
@@ -5125,27 +5114,17 @@
       finishNotePositionRestore = finish;
       for (const event of cancelEvents) window.addEventListener(event, finish, { capture: true, passive: true });
       collapse();
-      const align = () => {
-        if (syncNoteReadingContext() !== context || finishNotePositionRestore !== finish) return false;
-        const row = document.getElementById(`noteBody-${id}`)?.closest('.note-item-row');
-        if (!row) { finish(); return false; }
-        const rect = row.getBoundingClientRect();
-        const bar = document.getElementById('ptTop');
-        const inset = root.classList.contains('is-touch') && bar ? bar.getBoundingClientRect().bottom + 8 : 8;
-        const bottomLimit = Math.max(inset, window.innerHeight - Math.min(rect.height, 48) - 8);
-        const top = Math.max(inset, Math.min(saved?.top ?? inset, bottomLimit));
-        window.scrollTo({ top: window.scrollY + rect.top - top, behavior: 'instant' });
-        return true;
-      };
-      // Correct after the collapsed preview and mobile font measurements settle.
-      // Resolve the row again because a cloud update may have replaced its DOM.
-      if (!align()) return;
-      frame = requestAnimationFrame(() => {
-        if (!align()) return;
-        frame = requestAnimationFrame(() => {
-          if (align()) frame = requestAnimationFrame(finish);
-        });
-      });
+      // Measure the finished preview before one synchronous scroll. Native
+      // document-edge clamping gives minimum movement without adding space.
+      window.PageTraceMobile?.settleReadingLayout();
+      const after = row.getBoundingClientRect();
+      const bar = document.getElementById('ptTop');
+      const inset = root.classList.contains('is-touch') && bar ? bar.getBoundingClientRect().bottom + 8 : 8;
+      const target = keepBelow ? window.scrollY + after.bottom - before.bottom : window.scrollY + after.top - inset;
+      window.scrollTo({ top: target, behavior: 'instant' });
+      window.PageTraceMobile?.finishReadingPositionRestore();
+      // Release suppression after the scroll event; never scroll again later.
+      frame = requestAnimationFrame(() => { frame = requestAnimationFrame(finish); });
     }
 
     window.toggleNoteExpanded = function(e, id) {
@@ -5158,24 +5137,17 @@
       const item = notesData.find(n => n.id === id);
       if (!item) return;
 
-      syncNoteReadingContext();
       finishNotePositionRestore?.();
       const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
-        noteReadingPositions.set(id, {
-          top: row.getBoundingClientRect().top,
-          mobile: window.PageTraceMobile?.captureReadingPosition()
-        });
         expandedNoteIds.add(id);
         body.classList.remove('is-collapsed');
         body.classList.add('is-expanded');
         btn.textContent = '收起';
         btn.setAttribute('aria-expanded', 'true');
       } else {
-        const saved = noteReadingPositions.get(id);
-        noteReadingPositions.delete(id);
         expandedNoteIds.delete(id);
-        restoreNoteReadingPosition(id, saved, () => {
+        collapseNoteKeepingBelow(row, () => {
           body.classList.remove('is-expanded');
           body.classList.add('is-collapsed');
           btn.textContent = '展开';
@@ -6525,7 +6497,7 @@
   </script>
   <script src="android-bridge.js"></script>
   <script src="touch-ui.js?v=1.16.3"></script>
-  <script src="mobile-ui.js?v=1.16.4-reading-position"></script>
+  <script src="mobile-ui.js?v=1.16.4-keep-below"></script>
   <script src="i18n.js?v=1.16.3"></script>
 </body>
 </html>

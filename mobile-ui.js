@@ -517,11 +517,9 @@
 
   window.PageTraceMobile = {
     select: enterSelect, exitSelect, openMenu, closeMenu, refresh,
-    captureReadingPosition: () => ({ collapsed: root.classList.contains('pt-collapsed') }),
-    restoreReadingPosition(saved) {
-      if (saved) root.classList.toggle('pt-collapsed', saved.collapsed);
-      lastY = window.scrollY;
+    settleReadingLayout() {
       layoutPreviewDomains();
+      lastY = window.scrollY;
     },
     finishReadingPositionRestore() { lastY = window.scrollY; }
   };

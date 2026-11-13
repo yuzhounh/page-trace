@@ -36,23 +36,22 @@ function setup() {
   return { w, calls };
 }
 const frame = w => new Promise(r => w.requestAnimationFrame(() => r()));
-test('restoring a note preserves the saved mobile header state and resumes ordinary scrolling afterwards', () => {
+test('collapse compensation preserves the current mobile header state and resumes ordinary scrolling afterwards', () => {
   const { w } = setup();
   const root = w.document.documentElement;
-  const saved = w.PageTraceMobile.captureReadingPosition();
   root.classList.add('pt-collapsed', 'note-position-restoring');
   Object.defineProperty(w, 'scrollY', { value: 6000, configurable: true });
-  w.PageTraceMobile.restoreReadingPosition(saved);
+  w.PageTraceMobile.settleReadingLayout();
   Object.defineProperty(w, 'scrollY', { value: 500, configurable: true });
   w.dispatchEvent(new w.Event('scroll'));
-  assert.ok(!root.classList.contains('pt-collapsed'));
+  assert.ok(root.classList.contains('pt-collapsed'));
   w.PageTraceMobile.finishReadingPositionRestore();
   root.classList.remove('note-position-restoring');
   w.dispatchEvent(new w.Event('scroll'));
-  assert.ok(!root.classList.contains('pt-collapsed'));
-  Object.defineProperty(w, 'scrollY', { value: 550, configurable: true });
-  w.dispatchEvent(new w.Event('scroll'));
   assert.ok(root.classList.contains('pt-collapsed'));
+  Object.defineProperty(w, 'scrollY', { value: 450, configurable: true });
+  w.dispatchEvent(new w.Event('scroll'));
+  assert.ok(!root.classList.contains('pt-collapsed'));
   w.close();
 });
 test('title follows the selected range and search state', async () => {
