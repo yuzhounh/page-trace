@@ -1,4 +1,6 @@
-# PageTrace Android 1.15.5
+# PageTrace Android 1.16.4
+
+2026-11-13 手机摘要排版修订：当前 APK 为 `../dist/PageTrace-1.16.4-code27-preview-layout.apk`，已保留数据覆盖安装到 REDMI K80 Pro，实读 1.16.4/code27。完整摘要和域名能同排时只有一行摘要；否则正文最多两行，域名固定在末行右侧，仅末行可省略。改用独立网格行和浏览器文字测量，处理长网址、长域名、空摘要和系统字号变化；隐藏测量内容不增加滚动空白，重绘时清理尺寸观察器。129 项测试、176 组真实浏览器布局检查、Web 构建及 assembleRelease/lintRelease 通过；真机 GPT 6.2 的完整短摘要和 x.com 已同排。包名、签名、首次安装时间、数据路径和登录保持；未修改笔记。回执 `../tmp/Preview Layout/install.json`。本段记录手机安装验收；源码与网页同步沿用 GitHub Pages 和 Cloudflare 入口，实际部署回执见维护台账。以下为此前历史记录。
 
 当前源码为1.15.5/code21，交付路径统一为 `../dist/PageTrace-1.15.5-code21.apk`；电脑网页、手机网页与Android App的来源域名统一改为灰色辅助文字、透明背景，保留现有位置与长域名省略。网页、脚本与Android版本一致，实际构建、手机安装及网页上线结果记录在维护中心 `PROJECT_RELEASES.md`。沿用原签名和包名覆盖更新，保留账户、缓存与草稿。以下为历史安装记录，不代表当前安装状态。
 

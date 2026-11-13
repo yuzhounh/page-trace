@@ -92,15 +92,52 @@ html.is-touch .note-header.no-title { position: static; width: 100%; }
 html.is-touch .note-header-time { display: block; flex-shrink: 0; margin-left: auto; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 html.is-touch :is(.note-quote, .note-plain-content) { font-size: 14px; line-height: 1.55 !important; }
 html.is-touch .note-body .note-preview { -webkit-line-clamp: 2; line-clamp: 2; min-height: 0; line-height: 1.55; }
-html.is-touch .note-preview-domain-spacer { display: none; float: right; width: 0; overflow: hidden; height: var(--pt-note-line, 1.55em); }
-html.is-touch .note-preview.domain-second { min-height: calc(2 * var(--pt-note-line, 1.55em)); }
-html.is-touch .note-preview.domain-second .note-preview-domain-spacer { display: block; }
+html.is-touch .note-preview-domain-spacer { display: none; }
 html.is-touch :is(.note-preview-domain, .note-meta-domain) {
   display: block; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 0; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 400; line-height: 1.4;
 }
-html.is-touch .note-preview-domain { display: flex; align-items: center; float: right; clear: right; margin-left: 8px; height: var(--pt-note-line, 21.7px); }
+html.is-touch .note-preview-domain { display: flex; align-items: center; }
 html.is-touch .note-preview-domain-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Independent rows prevent labels from participating in text clamping. */
+html.is-touch .note-body .note-preview.preview-rows {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(40%);
+  column-gap: 8px;
+  align-items: center;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+html.is-touch .preview-rows .note-preview-text { display: none; }
+html.is-touch .note-preview-first { grid-area: 1 / 1 / 2 / -1; }
+html.is-touch .note-preview-last { grid-area: 2 / 1 / 3 / -1; text-overflow: ellipsis; }
+html.is-touch :is(.note-preview-first, .note-preview-last) {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+}
+html.is-touch .note-preview-last[hidden] { display: none; }
+html.is-touch .preview-has-domain.preview-single .note-preview-first,
+html.is-touch .preview-has-domain .note-preview-last { grid-column-end: 2; }
+html.is-touch .preview-rows .note-preview-domain {
+  grid-area: 2 / 2;
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+}
+html.is-touch .preview-single .note-preview-domain { grid-row: 1; }
+html.is-touch :is(.note-preview-measure, .note-preview-font) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+html.is-touch .note-preview-measure { height: 0; overflow: hidden; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+html.is-touch .note-preview-font { white-space: pre; }
 html.is-touch .domain-is-title { display: none; }
 html.is-touch .note-meta { font-size: 12px; color: var(--text-muted); }
 html.is-touch .note-meta { justify-content: flex-end; opacity: 1; }
