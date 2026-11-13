@@ -33,6 +33,12 @@
     };
     let inTable = false;
     parser = new window.marked.Marked({ gfm: true, breaks: true }, {
+      tokenizer: {
+        // Single tildes denote ranges in notes; only ~~ opens strikethrough.
+        del(src) {
+          if (src.startsWith('~~')) return false;
+        }
+      },
       // Only bare line breaks in tables are HTML; attributes and other tags stay text.
       renderer: {
         html: token => inTable && /^<br\s*\/?>$/i.test(token.text) ? '<br>' : escape(token.text),

@@ -22,6 +22,31 @@ test('Markdown lists, tables, links, code and original indentation survive rende
   assert.match(root.querySelector('pre').textContent, /^  const x/);
   assert.equal(root.querySelector('pre .katex'), null);
 });
+test('single tildes in ranges stay literal in paragraphs, tables and previews', () => {
+  const { dom, render } = setup();
+  const paragraph = '你的直觉非常敏锐：**第三方订阅的最高倍率，确实不可能达到官方订阅的 60~80 倍，但在特定档位上（尤其是具有 VC 补贴的 Agent 平台），有少数第三方能做到 5~7 倍的极高性价比。**';
+  const text = paragraph.replaceAll('**', '');
+  const root = render(paragraph);
+  assert.equal(root.querySelector('del'), null);
+  assert.equal(root.querySelector('p').textContent, text);
+  assert.match(root.querySelector('strong').textContent, /60~80.*5~7/);
+  assert.equal(dom.window.PageTraceNotes.preview(paragraph), text);
+  assert.equal(render('60~80 倍\n5~7 倍').querySelector('del'), null);
+  const table = render('| 范围 | 说明 |\n| --- | --- |\n| 60~80 倍，5~7 倍 | ~约数~ |');
+  assert.equal(table.querySelector('del'), null);
+  assert.equal(table.querySelector('td').textContent, '60~80 倍，5~7 倍');
+});
+test('double-tilde deletion still works alongside literal ranges, code and escaped tildes', () => {
+  const { render } = setup();
+  const root = render('60~80 与 5~7；~~删除 **加粗**~~；~原样~；`~~代码~~`；\\~转义\\~\n\n~~~text\n~原样~ ~~代码~~\n~~~');
+  assert.equal(root.querySelectorAll('del').length, 1);
+  assert.equal(root.querySelector('del').textContent, '删除 加粗');
+  assert.equal(root.querySelector('del strong').textContent, '加粗');
+  assert.match(root.querySelector('p').textContent, /60~80 与 5~7/);
+  assert.match(root.querySelector('p').textContent, /~原样~.*~转义~/);
+  assert.equal(root.querySelector('p code').textContent, '~~代码~~');
+  assert.equal(root.querySelector('pre code').textContent, '~原样~ ~~代码~~\n');
+});
 test('inline and display math preserve TeX before Markdown interprets underscores', () => {
   const { render } = setup();
   const root = render(String.raw`作者 $\rightarrow$ 论文；$x_i^2$；\(a_b\)` + '\n\n' + String.raw`$$
