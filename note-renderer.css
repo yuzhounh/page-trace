@@ -1,4 +1,5 @@
 .note-body { white-space: normal; min-width: 0; }
+html.note-position-restoring { overflow-anchor: none; scroll-behavior: auto; }
 .note-body > :first-child { margin-top: 0; }
 .note-body > :last-child { margin-bottom: 0; }
 .note-body p, .note-body ul, .note-body ol, .note-body blockquote,

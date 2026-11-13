@@ -47,6 +47,9 @@ html.is-touch .pt-top {
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
 .pt-bar { display: flex; align-items: center; gap: 8px; height: var(--pt-bar); transition: height 180ms ease; }
+html.note-position-restoring .pt-bar,
+html.note-position-restoring .pt-title,
+html.note-position-restoring .pt-search { transition: none; }
 .pt-titlewrap { flex: 1; min-width: 0; }
 .pt-title { font-size: 18px; font-weight: 700; line-height: 1.25; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: font-size 180ms ease; }
 html.is-touch.pt-collapsed .pt-title { font-size: 16px; }

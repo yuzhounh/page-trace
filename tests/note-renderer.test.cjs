@@ -214,7 +214,11 @@ test('expand and collapse retain formatted DOM', () => {
   root.innerHTML = `<div class="note-item-row"><div class="note-body is-collapsed">${formatted}</div><button></button></div>`;
   dom.window.notesData = [{ id: 'test', note: '**重点** $x^2$' }];
   dom.window.expandedNoteIds = new Set();
-  const code = html.slice(html.indexOf('    window.toggleNoteExpanded ='), html.indexOf('    // 年份与月份下拉打开/切换'));
+  dom.window.eval("var currentUser = { uid: 'u' }, selectedYear = '2026', selectedMonth = '11', currentSearchKeyword = '', noteReadingPositions = new Map(), noteReadingContext = '', finishNotePositionRestore = null;");
+  dom.window.requestAnimationFrame = () => 1;
+  dom.window.cancelAnimationFrame = () => {};
+  dom.window.scrollTo = () => {};
+  const code = html.slice(html.indexOf('    function syncNoteReadingContext()'), html.indexOf('    // 年份与月份下拉打开/切换'));
   dom.window.eval(code);
   const event = { stopPropagation() {}, currentTarget: root.querySelector('button') };
   dom.window.toggleNoteExpanded(event, 'test');

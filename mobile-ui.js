@@ -211,6 +211,7 @@
   let lastY = window.scrollY;
   window.addEventListener('scroll', () => {
     const y = window.scrollY, dy = y - lastY;
+    if (root.classList.contains('note-position-restoring')) { lastY = y; return; }
     if (document.activeElement === ptSearch) { lastY = y; return; }
     if (y < 12 || dy < -6) { root.classList.remove('pt-collapsed'); lastY = y; }
     else if (dy > 8 && y > 80) { root.classList.add('pt-collapsed'); lastY = y; }
@@ -514,7 +515,16 @@
     }
   });
 
-  window.PageTraceMobile = { select: enterSelect, exitSelect, openMenu, closeMenu, refresh };
+  window.PageTraceMobile = {
+    select: enterSelect, exitSelect, openMenu, closeMenu, refresh,
+    captureReadingPosition: () => ({ collapsed: root.classList.contains('pt-collapsed') }),
+    restoreReadingPosition(saved) {
+      if (saved) root.classList.toggle('pt-collapsed', saved.collapsed);
+      lastY = window.scrollY;
+      layoutPreviewDomains();
+    },
+    finishReadingPositionRestore() { lastY = window.scrollY; }
+  };
 
   // Keep title, status, counts and selection marks in step with the page.
   const watch = (el, options) => { if (el) new MutationObserver(refresh).observe(el, options); };

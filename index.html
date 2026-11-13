@@ -2759,7 +2759,7 @@
   <link rel="stylesheet" href="note-renderer.css" />
   <link rel="stylesheet" href="touch-ui.css" />
   <link rel="stylesheet" href="android-ui.css" />
-  <link rel="stylesheet" href="mobile-ui.css?v=1.16.4-preview-rows" />
+  <link rel="stylesheet" href="mobile-ui.css?v=1.16.4-reading-position" />
   <style>
     .lang-select-drawer{font:inherit;font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text);cursor:pointer;}
     .lang-select-drawer:hover{border-color:var(--accent,#0ea5e9);color:var(--accent,#0ea5e9);}
@@ -3371,6 +3371,9 @@
     let currentEditingId = null;
     let currentSearchKeyword = '';
     const expandedNoteIds = new Set();
+    const noteReadingPositions = new Map();
+    let noteReadingContext = '';
+    let finishNotePositionRestore = null;
 
     // DOM 元素
     const loginBtn = document.getElementById('loginBtn');
@@ -4753,6 +4756,7 @@
 
     // 渲染主列表（默认显示 50 条，滚动到底加载 50 条；支持按月切换）
     function renderList() {
+      syncNoteReadingContext();
       if (!currentUser) {
         monthNavBar.classList.remove('show');
         notesList.innerHTML = `
@@ -5090,10 +5094,59 @@
       const button = body.nextElementSibling;
       if (!button?.classList.contains('note-expand-btn') || (button.hidden && !expanded)) return;
       button.click();
-      // After collapsing a long note, keep its card in view instead of leaving the reader far below it.
-      if (expanded) body.closest('.note-item-row')?.scrollIntoView({ block: 'nearest' });
     });
     if (document.fonts) document.fonts.ready.then(updateNoteExpandButtons);
+
+    function syncNoteReadingContext() {
+      const context = JSON.stringify([currentUser?.uid, selectedYear, selectedMonth, currentSearchKeyword]);
+      if (context !== noteReadingContext) {
+        finishNotePositionRestore?.();
+        noteReadingPositions.clear();
+        noteReadingContext = context;
+      }
+      return context;
+    }
+
+    function restoreNoteReadingPosition(id, saved, collapse) {
+      finishNotePositionRestore?.();
+      const context = syncNoteReadingContext();
+      const root = document.documentElement;
+      root.classList.add('note-position-restoring');
+      window.PageTraceMobile?.restoreReadingPosition(saved?.mobile);
+      let frame;
+      const cancelEvents = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+      const finish = () => {
+        cancelAnimationFrame(frame);
+        root.classList.remove('note-position-restoring');
+        window.PageTraceMobile?.finishReadingPositionRestore();
+        for (const event of cancelEvents) window.removeEventListener(event, finish, true);
+        if (finishNotePositionRestore === finish) finishNotePositionRestore = null;
+      };
+      finishNotePositionRestore = finish;
+      for (const event of cancelEvents) window.addEventListener(event, finish, { capture: true, passive: true });
+      collapse();
+      const align = () => {
+        if (syncNoteReadingContext() !== context || finishNotePositionRestore !== finish) return false;
+        const row = document.getElementById(`noteBody-${id}`)?.closest('.note-item-row');
+        if (!row) { finish(); return false; }
+        const rect = row.getBoundingClientRect();
+        const bar = document.getElementById('ptTop');
+        const inset = root.classList.contains('is-touch') && bar ? bar.getBoundingClientRect().bottom + 8 : 8;
+        const bottomLimit = Math.max(inset, window.innerHeight - Math.min(rect.height, 48) - 8);
+        const top = Math.max(inset, Math.min(saved?.top ?? inset, bottomLimit));
+        window.scrollTo({ top: window.scrollY + rect.top - top, behavior: 'instant' });
+        return true;
+      };
+      // Correct after the collapsed preview and mobile font measurements settle.
+      // Resolve the row again because a cloud update may have replaced its DOM.
+      if (!align()) return;
+      frame = requestAnimationFrame(() => {
+        if (!align()) return;
+        frame = requestAnimationFrame(() => {
+          if (align()) frame = requestAnimationFrame(finish);
+        });
+      });
+    }
 
     window.toggleNoteExpanded = function(e, id) {
       e.stopPropagation();
@@ -5105,19 +5158,29 @@
       const item = notesData.find(n => n.id === id);
       if (!item) return;
 
+      syncNoteReadingContext();
+      finishNotePositionRestore?.();
       const shouldExpand = !expandedNoteIds.has(id);
       if (shouldExpand) {
+        noteReadingPositions.set(id, {
+          top: row.getBoundingClientRect().top,
+          mobile: window.PageTraceMobile?.captureReadingPosition()
+        });
         expandedNoteIds.add(id);
         body.classList.remove('is-collapsed');
         body.classList.add('is-expanded');
         btn.textContent = '收起';
         btn.setAttribute('aria-expanded', 'true');
       } else {
+        const saved = noteReadingPositions.get(id);
+        noteReadingPositions.delete(id);
         expandedNoteIds.delete(id);
-        body.classList.remove('is-expanded');
-        body.classList.add('is-collapsed');
-        btn.textContent = '展开';
-        btn.setAttribute('aria-expanded', 'false');
+        restoreNoteReadingPosition(id, saved, () => {
+          body.classList.remove('is-expanded');
+          body.classList.add('is-collapsed');
+          btn.textContent = '展开';
+          btn.setAttribute('aria-expanded', 'false');
+        });
       }
     };
 
@@ -6462,7 +6525,7 @@
   </script>
   <script src="android-bridge.js"></script>
   <script src="touch-ui.js?v=1.16.3"></script>
-  <script src="mobile-ui.js?v=1.16.4-preview-rows"></script>
+  <script src="mobile-ui.js?v=1.16.4-reading-position"></script>
   <script src="i18n.js?v=1.16.3"></script>
 </body>
 </html>
