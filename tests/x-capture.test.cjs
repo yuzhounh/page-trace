@@ -15,6 +15,8 @@ test('X title rules use only the page title and leave notes and links alone', t 
     ['Lonely on X: "🎉 牛逼！后续正文" / X', '🎉 牛逼！后续正文'],
     ['作者 on X: “正文包含"内部引号"。后续” / X', '正文包含"内部引号"。后续'],
     ['作者 on X: "' + '长'.repeat(90) + '" / X', '长'.repeat(90)],
+    ['(1) Google Ships Gemini 4 Family and Antigravity Upgrades in Busy Week / X', 'Google Ships Gemini 4 Family and Antigravity Upgrades in Busy Week / X'],
+    ['(12) 作者 on X: "正文" / X', '正文'],
     ['Home / X', 'Home / X']
   ]) {
     w.document.title = title;
@@ -23,4 +25,14 @@ test('X title rules use only the page title and leave notes and links alone', t 
   dom.reconfigure({ url: 'https://example.com/article' });
   w.document.title = 'Lonely on X: "正文" / X';
   assert.equal(w.capture().title, w.document.title);
+  for (const [title, expected] of [
+    [' (99+) Article title', 'Article title'],
+    ['(2)Article title', 'Article title'],
+    ['Article (1) title', 'Article (1) title'],
+    ['(2026 edition) Article title', '(2026 edition) Article title'],
+    ['(1)', '(1)']
+  ]) {
+    w.document.title = title;
+    assert.equal(w.capture().title, expected);
+  }
 });
